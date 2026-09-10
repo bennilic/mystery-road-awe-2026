@@ -1,0 +1,267 @@
+:root {
+  --bg: #12141a;
+  --panel-bg: #1b1e27;
+  --panel-border: #2c303c;
+  --text: #eef0f5;
+  --text-dim: #a6acbb;
+  --accent: #5b9dff;
+  --accent-contrast: #06111f;
+  --spotlight-ring: #ffcf4d;
+  --code-bg: #0e1016;
+  --code-text: #d9e0ee;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+body {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  background: #000;
+}
+
+#appFrame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #fff;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+#appFrame.dimmed {
+  filter: brightness(0.25) saturate(0.6);
+}
+
+/* Spotlight: a dark mask over the whole stage with a bright cutout ring
+   positioned over the highlighted element via box-shadow spread. */
+#spotlight {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 10px;
+  box-shadow: 0 0 0 4px var(--spotlight-ring), 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease, opacity 0.15s ease;
+  z-index: 5;
+}
+
+#spotlight.hidden {
+  opacity: 0;
+  box-shadow: none;
+}
+
+#codePanel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5vh 5vw;
+  z-index: 6;
+}
+
+#codePanel.hidden {
+  display: none;
+}
+
+.code-panel-inner {
+  width: 100%;
+  max-width: 900px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--code-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.code-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.code-tab {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.code-tab.active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+
+.code-tab.hidden {
+  display: none;
+}
+
+.code-file-label {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.open-in-editor {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.open-in-editor:hover {
+  border-color: var(--accent);
+  background: rgba(91, 157, 255, 0.12);
+}
+
+.open-in-editor.hidden {
+  display: none;
+}
+
+#codeBlock {
+  margin: 0;
+  padding: 20px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--code-text);
+  white-space: pre;
+}
+
+#narration {
+  flex: 0 0 340px;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--panel-border);
+  gap: 10px;
+}
+
+#stepCounter {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+#stepTitle {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+#stepBody {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.55;
+  flex: 1 1 auto;
+  overflow: auto;
+  white-space: pre-line;
+}
+
+#controls {
+  display: flex;
+  gap: 8px;
+}
+
+#controls button {
+  flex: 1 1 0;
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: #262a35;
+  color: var(--text);
+  cursor: pointer;
+}
+
+#controls button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+#controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#hideChromeBtn {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px dashed var(--panel-border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+#hideChromeBtn:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
+#hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+
+#showChromeBtn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 20;
+  font: inherit;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+#showChromeBtn.hidden {
+  display: none;
+}
+
+/* "Hide overlay" mode: drop all presenter chrome, hand the full window to the raw app. */
+body.chrome-hidden #narration,
+body.chrome-hidden #spotlight,
+body.chrome-hidden #codePanel {
+  display: none;
+}

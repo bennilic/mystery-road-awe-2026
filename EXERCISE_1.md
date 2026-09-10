@@ -15,6 +15,16 @@ Several theory questions ask you to explain a specific change you made, and for 
 real commits is the easiest way to show a before/after live in class**. E.g. commit the reproduction
 state (or just note the commit hash before your fix) so you can diff it against your fix on demand.
 
+## Corresponding manuscript reading
+
+This exercise corresponds to the following chapters in the course manuscript:
+
+- **Chapter 2, Scope, Closures, and Function Forms** — PDF pp. 19–28
+- **Chapter 3, Values, References, Mutation, and Prototypes** — PDF pp. 29–34
+- **Chapter 4, The Browser Runtime, DOM Events, and Debugging** — PDF pp. 36–39
+- **Chapter 5, ES Modules and Maintainable Boundaries** — PDF pp. 41–45
+- **Chapter 6, Promises, `async`/`await`, and Error Flow** — PDF pp. 47–52
+
 ## Self-Check
 
 The exercise is organized into 10 individual tasks with corresponding questions, that are

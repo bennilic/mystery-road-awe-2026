@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presentation — Project ReMotion</title>
+<link rel="stylesheet" href="present.css">
+</head>
+<body>
+
+  <div id="stage">
+    <iframe id="appFrame" src="../index.html" title="Project ReMotion app"></iframe>
+    <div id="spotlight" class="hidden" aria-hidden="true"></div>
+
+    <div id="codePanel" class="hidden">
+      <div class="code-panel-inner">
+        <div class="code-tabs">
+          <button type="button" id="tabBefore" class="code-tab hidden">Before</button>
+          <button type="button" id="tabAfter" class="code-tab hidden">After</button>
+          <span id="codeFileLabel" class="code-file-label"></span>
+          <a id="openInEditorLink" class="open-in-editor hidden" href="#">Open in VS Code &rarr;</a>
+        </div>
+        <pre id="codeBlock"><code id="codeContent"></code></pre>
+      </div>
+    </div>
+  </div>
+
+  <aside id="narration">
+    <div id="stepCounter">Step 1 / 1</div>
+    <h2 id="stepTitle">Loading…</h2>
+    <p id="stepBody"></p>
+    <div id="controls">
+      <button type="button" id="prevBtn">&larr; Back</button>
+      <button type="button" id="nextBtn">Next &rarr;</button>
+    </div>
+    <button type="button" id="hideChromeBtn">Hide overlay (h)</button>
+    <p id="hint">← → to navigate · h / Esc to hide overlay</p>
+  </aside>
+
+  <button type="button" id="showChromeBtn" class="hidden">Show presenter overlay (h)</button>
+
+  <script src="present.js"></script>
+</body>
+</html>
