@@ -30,6 +30,12 @@ Don't get ahead of the course — note ideas for later rather than implementing 
 Keep a running change log (commit messages are fine) so bug fixes can be diffed live in class:
 commit the reproduction state (or note the pre-fix commit hash) before applying a fix.
 
+### Commit message convention
+
+Format commits as: `Exercise <N> | Demo <M> | Additional Info`
+
+Example: `Exercise 1 | Demo 1 | Split app.js into ES modules`
+
 ## Running the app
 
 Must be served over HTTP (uses `fetch()` for local JSON — `file://` will not work):

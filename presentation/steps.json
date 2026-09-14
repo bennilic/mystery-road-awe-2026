@@ -1,56 +1,68 @@
 {
   "title": "Exercise 1 — Project ReMotion Refactor",
   "localRoot": "/Users/benjaminlichtenstein/Developer/VSCode/mystery-road-awe-2026",
-  "note": "Starter/example steps generated before any Exercise 1 task was done. Replace/extend these via the create-presentation skill once real refactors and bug fixes land — see .claude/skills/create-presentation/SKILL.md.",
+  "note": "Starter/example steps generated before any Exercise 1 task was done. Replace/extend these via the create-presentation skill once real refactors and bug fixes land — see .claude/skills/create-presentation/SKILL.md. Every step carries exercise/demo tags; steps.json's raw array order below is deliberately NOT exercise/demo-sorted (the two 'Example:' steps are out of order on purpose) to prove present.js's sort actually reorders them at presentation time.",
   "steps": [
     {
       "id": "intro-dashboard",
       "type": "app",
       "title": "Project ReMotion — Dashboard",
       "narration": "This is the investigation portal: a fictional incident where the ReMotion rehab robot loaded the wrong calibration profile and emergency-stopped. The dashboard summarizes the case.",
+      "exercise": 1,
+      "demo": 0,
       "view": "dashboard",
       "highlight": "#dashboardContent"
+    },
+    {
+      "id": "example-code-slide",
+      "type": "code",
+      "title": "Example: code slide (no diff yet)",
+      "narration": "Code steps can show a single snippet (like this one, before any refactor exists) or Before/After tabs once you have a real fix commit to pull from. See SKILL.md for how before/after snippets get authored from git history. The \"Open in VS Code\" link jumps straight to this file at the first changed line. Note this step is tagged demo 4 but appears near the TOP of steps.json's raw array — it still presents LAST among these example/intro steps, proving the exercise/demo sort (not array order) controls playback order.",
+      "exercise": 1,
+      "demo": 4,
+      "file": "app.js",
+      "line": 4,
+      "after": "// Top-level globals — this is what Demo 1 splits into modules\n// and Demo 8 converts from var to let/const.\nvar allEvidence = [];\nvar filteredEvidence = [];\nvar selectedEvidence = null;\nvar bookmarks = [];\nvar currentPage = \"dashboard\";\n\nvar allPeople = [];\nvar allLocations = [];\nvar allTimeline = [];\nvar caseData = {};"
     },
     {
       "id": "intro-evidence",
       "type": "app",
       "title": "Evidence catalogue",
       "narration": "Evidence supports search, filter, sort, bookmark, and a detail view.",
+      "exercise": 1,
+      "demo": 0,
       "view": "evidence",
       "highlight": "#evidenceToolbar",
       "waitFor": ".evidence-card"
-    },
-    {
-      "id": "example-interaction",
-      "type": "app",
-      "title": "Example: live interaction step",
-      "narration": "Steps can fire a real click before spotlighting — this one presses \"Clear filters\" live, exactly like a bug-repro or feature-demo step would. Replace this with an actual repro step from Demos 2–4.",
-      "view": "evidence",
-      "highlight": "#clearFiltersBtn",
-      "action": { "type": "click", "selector": "#clearFiltersBtn" }
-    },
-    {
-      "id": "example-code-slide",
-      "type": "code",
-      "title": "Example: code slide (no diff yet)",
-      "narration": "Code steps can show a single snippet (like this one, before any refactor exists) or Before/After tabs once you have a real fix commit to pull from. See SKILL.md for how before/after snippets get authored from git history. The \"Open in VS Code\" link jumps straight to this file at the first changed line.",
-      "file": "app.js",
-      "line": 4,
-      "after": "// Top-level globals — this is what Demo 1 splits into modules\n// and Demo 8 converts from var to let/const.\nvar allEvidence = [];\nvar filteredEvidence = [];\nvar selectedEvidence = null;\nvar bookmarks = [];\nvar currentPage = \"dashboard\";\n\nvar allPeople = [];\nvar allLocations = [];\nvar allTimeline = [];\nvar caseData = {};"
     },
     {
       "id": "intro-people",
       "type": "app",
       "title": "People & Locations",
       "narration": "Profile cards for the investigation team and the six key locations, with a tab switch between the two panels.",
+      "exercise": 1,
+      "demo": 0,
       "view": "people",
       "highlight": "#peoplePanel"
+    },
+    {
+      "id": "example-interaction",
+      "type": "app",
+      "title": "Example: live interaction step",
+      "narration": "Steps can fire a real click before spotlighting — this one presses \"Clear filters\" live, exactly like a bug-repro or feature-demo step would. Replace this with an actual repro step from Demos 2-4. Tagged demo 2, so despite appearing AFTER the demo-4 code slide above in steps.json's raw array, it presents BEFORE it — again proof of the sort, not decoration.",
+      "exercise": 1,
+      "demo": 2,
+      "view": "evidence",
+      "highlight": "#clearFiltersBtn",
+      "action": { "type": "click", "selector": "#clearFiltersBtn" }
     },
     {
       "id": "intro-timeline",
       "type": "app",
       "title": "Timeline",
       "narration": "Chronological case events, filterable, cross-linked to evidence.",
+      "exercise": 1,
+      "demo": 0,
       "view": "timeline",
       "highlight": "#timelineContainer"
     },
@@ -59,6 +71,8 @@
       "type": "app",
       "title": "Investigator workspace",
       "narration": "Bookmarks, notes, and the hypothesis form — persisted to localStorage under the remotion_* keys.",
+      "exercise": 1,
+      "demo": 0,
       "view": "workspace",
       "highlight": "#hypothesisForm"
     }

@@ -45,7 +45,7 @@ async function init() {
     return;
   }
   const data = await res.json();
-  state.steps = Array.isArray(data.steps) ? data.steps : [];
+  state.steps = sortStepsByExerciseDemo(Array.isArray(data.steps) ? data.steps : []);
   state.localRoot = typeof data.localRoot === "string" ? data.localRoot.replace(/\/+$/, "") : null;
   if (data.title) document.title = data.title;
 
@@ -71,6 +71,27 @@ async function init() {
   } else {
     el.frame.addEventListener("load", runFirst, { once: true });
   }
+}
+
+// Steps are authored in whatever order they were *completed* in class (SKILL.md's own
+// procedure says "append new steps for newly-completed demos"), not necessarily Demo order —
+// e.g. a Demo 4 fix that lands before Demo 2 gets appended first. This sorts the deck into
+// (exercise, demo) order so presentation order always matches the course's numeric order,
+// independent of steps.json's raw array order. Missing exercise/demo fields default to 0,
+// which intentionally matches the convention for general app-tour steps not tied to a specific
+// demo (see SKILL.md "Steps schema") — both untagged legacy steps and intro-tour steps sort
+// first within their exercise, ahead of any demo-tagged step. Array.prototype.sort has been
+// spec-guaranteed stable since ES2019, so steps with equal (exercise, demo) keep their original
+// relative array order as the tiebreak — no manual index bookkeeping needed.
+function sortStepsByExerciseDemo(steps) {
+  return [...steps].sort((a, b) => {
+    const exerciseA = Number.isInteger(a.exercise) ? a.exercise : 0;
+    const exerciseB = Number.isInteger(b.exercise) ? b.exercise : 0;
+    if (exerciseA !== exerciseB) return exerciseA - exerciseB;
+    const demoA = Number.isInteger(a.demo) ? a.demo : 0;
+    const demoB = Number.isInteger(b.demo) ? b.demo : 0;
+    return demoA - demoB;
+  });
 }
 
 function currentStep() {
