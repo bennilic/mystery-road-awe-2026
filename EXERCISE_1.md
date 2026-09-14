@@ -103,9 +103,9 @@ to be independent turn out to be linked).
 
 **Tasks**
 
-- [ ] Reproduce the bug reliably and write down the exact steps.
-- [ ] Form a hypothesis for the root cause and confirm it (not just patch the symptom).
-- [ ] Fix it, and verify the fix doesn't break anything else nearby.
+- [x] Reproduce the bug reliably and write down the exact steps.
+- [x] Form a hypothesis for the root cause and confirm it (not just patch the symptom).
+- [x] Fix it, and verify the fix doesn't break anything else nearby.
 
 **Questions** (depend on the task above)
 

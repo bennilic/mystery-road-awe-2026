@@ -141,6 +141,48 @@
       "file": "js/dataLoading.js",
       "line": 60,
       "after": "function loadEvidenceData() {\n  fetch(\"data/evidence.json\")\n    .then(function (res) {\n      return res.json();\n    })\n    .then(function (data) {\n      state.allEvidence = data;\n      applyStoredBookmarkFlags();\n      state.filteredEvidence = state.allEvidence;\n      renderDashboard();\n      populateAllDropdowns();\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .catch(function (err) {\n      console.error(\"Failed to load evidence.json\", err);\n      alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n    });\n}"
+    },
+    {
+      "id": "demo2-repro-baseline",
+      "type": "app",
+      "title": "D2 - T1 (1/2) — Reproducing the bug: baseline state before touching Evidence sort",
+      "narration": "Repro setup: I added a private note to E01 (“Morning calibration failure report”) and a private note to E02 (“Robot diagnostic log”) from the Evidence detail view, then opened Workspace. The Personal Notes list shows them in id order — E01 first, then E02 — and the hypothesis form's “Selected supporting evidence” picker below it lists all 18 items E01…E18 in that same original load order. Nothing here touches the Evidence catalogue's own sort control yet — this is just the honest baseline I compare against next.",
+      "exercise": 1,
+      "demo": 2,
+      "view": "workspace",
+      "highlight": "#notesList"
+    },
+    {
+      "id": "demo2-repro-trigger",
+      "type": "app",
+      "title": "D2 - T1 (2/2) — Reproducing the bug: sorting the Evidence catalogue",
+      "narration": "From Workspace I navigate to Evidence and change only the “Sort evidence” dropdown to “Title (Z–A)” — I don't touch bookmarks, notes, or the hypothesis form at all. That fires handleSortChange() in views/evidence.js, which calls state.filteredEvidence.sort(...). Going straight back to Workspace afterward (no reload), the Personal Notes list now reads E02 then E01 — flipped — and the hypothesis evidence picker is now in full title-descending order (E18, E02, E09, E14…). A control on a completely different view silently reordered data two other views depend on. This reproduces every single time, from a fresh page load, with no timing sensitivity.",
+      "exercise": 1,
+      "demo": 2,
+      "view": "evidence",
+      "highlight": "#sortEvidence"
+    },
+    {
+      "id": "demo2-root-cause-fix",
+      "type": "code",
+      "title": "D2 - T2 — Root cause: filteredEvidence aliased allEvidence instead of copying it",
+      "narration": "js/dataLoading.js's loadEvidenceData did `state.filteredEvidence = state.allEvidence;` — that's an assignment of the array reference, not a copy, so allEvidence and filteredEvidence were literally the same array object in memory. state.allEvidence is meant to be the canonical, stable list every other view relies on (Dashboard, Workspace's notes list, the hypothesis picker); state.filteredEvidence is meant to be a disposable, re-derived “current view” that the Evidence catalogue filters and sorts. Because they were the same object, handleSortChange()'s in-place `state.filteredEvidence.sort(...)` reordered allEvidence too. Normally getFilteredEvidence() (evidence.js) would break that alias the first time the Evidence list actually renders — it does `state.filteredEvidence = results` with a freshly built array. But a separate, pre-existing bug (state.evidenceViewLoading is initialized true in state.js and is never set back to false anywhere in the codebase — confirmed by grepping the whole repo) means renderEvidenceList() always takes its early-return branch and getFilteredEvidence() never runs, so in the current build that alias is never broken and the corruption is permanent, not just a narrow race. I confirmed this directly in the console (`(await import('/js/state.js')).state.allEvidence === state.filteredEvidence` → true before the fix) rather than just inferring it from the symptom. The fix: copy on load with `.slice()`, so filteredEvidence is independent from the very first assignment — exactly matching what getFilteredEvidence() already does on every real render, just applied at load time too. (The evidenceViewLoading stuck-flag bug itself is real but separate — noted for a later demo, not fixed here.)",
+      "exercise": 1,
+      "demo": 2,
+      "file": "js/dataLoading.js",
+      "line": 75,
+      "before": "function loadEvidenceData() {\n  fetch(\"data/evidence.json\")\n    .then(function (res) {\n      return res.json();\n    })\n    .then(function (data) {\n      state.allEvidence = data;\n      applyStoredBookmarkFlags();\n      state.filteredEvidence = state.allEvidence;\n      renderDashboard();\n      populateAllDropdowns();\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .catch(function (err) {\n      console.error(\"Failed to load evidence.json\", err);\n      alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n    });\n}",
+      "after": "function loadEvidenceData() {\n  fetch(\"data/evidence.json\")\n    .then(function (res) {\n      return res.json();\n    })\n    .then(function (data) {\n      state.allEvidence = data;\n      applyStoredBookmarkFlags();\n      // A copy, not the same array: allEvidence is the canonical, stable\n      // list (order relied on by the Dashboard, Workspace notes list,\n      // hypothesis evidence picker, etc.), while filteredEvidence is a\n      // disposable \"current view\" of it that the Evidence catalogue filters\n      // and sorts in place (see handleSortChange in views/evidence.js,\n      // which calls state.filteredEvidence.sort(...)). Assigning the same\n      // array reference to both meant sorting the catalogue's view\n      // silently reordered the canonical list too.\n      state.filteredEvidence = state.allEvidence.slice();\n      renderDashboard();\n      populateAllDropdowns();\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .catch(function (err) {\n      console.error(\"Failed to load evidence.json\", err);\n      alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n    });\n}"
+    },
+    {
+      "id": "demo2-verify-fix",
+      "type": "app",
+      "title": "D2 - T3 — Verifying the fix: Workspace order now stays stable, nearby features untouched",
+      "narration": "I repeated the exact repro after the fix: seed the same two notes, note the Workspace baseline (E01, E02, full E01…E18 picker order), go sort the Evidence catalogue every which way (title asc/desc, date asc/desc), then come straight back to Workspace — the Personal Notes list and the hypothesis evidence picker never move now, confirmed via `state.allEvidence === state.filteredEvidence` reading false right after load. I also spot-checked the features nearest to this code: the Evidence detail panel (notes, status, relevance editing) still works exactly as before — opened via Timeline's quick-view “Open full evidence” button, since the catalogue's own card list has its own separate stuck-loading bug unrelated to this fix, left untouched for a later demo — and the Dashboard's evidence/people/location counts and the People view's per-person evidence counts, which don't depend on array order at all, were unaffected either way.",
+      "exercise": 1,
+      "demo": 2,
+      "view": "workspace",
+      "highlight": "#notesList"
     }
   ]
 }
