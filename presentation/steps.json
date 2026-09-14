@@ -4,6 +4,14 @@
   "note": "Starter/example steps generated before any Exercise 1 task was done. Replace/extend these via the create-presentation skill once real refactors and bug fixes land — see .claude/skills/create-presentation/SKILL.md. Every step carries exercise/demo tags; steps.json's raw array order below is deliberately NOT exercise/demo-sorted (the two 'Example:' steps are out of order on purpose) to prove present.js's sort actually reorders them at presentation time.",
   "steps": [
     {
+      "id": "exercise-1-intro",
+      "type": "app",
+      "title": "Exercise 1 — Project ReMotion Refactor",
+      "narration": "Section marker: everything from here through the end of the deck is Exercise 1 — refactoring app.js into ES modules and fixing bugs, per EXERCISE_1.md.",
+      "exercise": 1,
+      "demo": -1
+    },
+    {
       "id": "intro-dashboard",
       "type": "app",
       "title": "Project ReMotion — Dashboard",
@@ -79,7 +87,7 @@
     {
       "id": "demo1-state-module-boundary",
       "type": "code",
-      "title": "Demo 1: a shared state object, not scattered module lets",
+      "title": "D1 - T1 — Module boundary: a shared state object, not scattered module lets",
       "narration": "app.js had ~15 top-level `var`s that every function could read AND write. Splitting into modules, I could have made each one its own exported `let` — but an ES module import binding is read-only in the importing module: `import { allEvidence } from './state.js'; allEvidence = x` throws, because only the module that declared a binding may reassign it. Almost every one of these values gets reassigned (not just read) from a DIFFERENT module than the one that first sets it — e.g. evidence.js does `state.allEvidence = data` after a fetch that actually happens in dataLoading.js. So instead of exported `let`s plus a setter function per variable, I put them all as properties on one exported `state` object: mutating a property of an imported object is fine, only rebinding the imported name itself is restricted. Same values, same semantics as the old globals — just relocated so the read/write rule is explicit instead of implicit.",
       "exercise": 1,
       "demo": 1,
@@ -91,7 +99,7 @@
     {
       "id": "demo1-index-html-module-script",
       "type": "code",
-      "title": "Demo 1: loading the entry point as a module script",
+      "title": "D1 - T2 — Loading the entry point as a module script",
       "narration": "A classic `<script src=\"app.js\">` executes eagerly, in the global scope, in non-strict mode, and has no import/export syntax available — every function and var in app.js became a `window` property, which is exactly why 6-7 of app.js's functions had to leak onto `window` again after the split, just to satisfy inline onclick/onchange HTML attributes that only ever run in global scope. `<script type=\"module\">` instead: runs in strict mode automatically, gets its own module-level scope (so `js/main.js`'s top-level names don't become globals), is deferred by default (doesn't block parsing, runs after the DOM is parsed), and only this tag can use `import`/`export` at all — without it, every `import` statement in js/main.js and everything it pulls in would be a syntax error. It also only works over HTTP, not `file://` — same CORS-style same-origin restriction that already forced this app to be served via `python -m http.server` for `fetch()` to work.",
       "exercise": 1,
       "demo": 1,
@@ -103,7 +111,7 @@
     {
       "id": "demo1-q-script-vs-module-scope",
       "type": "code",
-      "title": "Demo 1 Q: classic <script> vs <script type=\"module\">",
+      "title": "D1 - Q1 — classic <script> vs <script type=\"module\">",
       "narration": "Two behavioral differences that actually mattered here: (1) module scripts execute after the DOM is parsed, in document order, like `defer` — a classic `<script src=\"app.js\">` at the end of body instead ran immediately, blocking parsing at that point. (2) A module's top-level declarations are scoped to that module, not attached to `window` — classic-script top-level `var`/function declarations do leak onto `window`. That's exactly why `js/main.js` has to explicitly do `window.navigateTo = navigateTo` and five more like it: the HTML's inline `onclick=\"navigateTo(...)\"` attributes always execute in global scope, so functions the HTML calls by name have to be deliberately re-attached to `window` now that they're module-private by default.",
       "exercise": 1,
       "demo": 1,
@@ -114,7 +122,7 @@
     {
       "id": "demo1-q-cross-module-allEvidence",
       "type": "code",
-      "title": "Demo 1 Q: reading/writing allEvidence across modules",
+      "title": "D1 - Q2 — reading/writing allEvidence across modules",
       "narration": "Before the refactor, `allEvidence` was a bare global `var` — any code in `app.js` read or wrote it by name directly. After the split, a different module has to `import { state } from \"./state.js\"` (see js/views/evidence.js:10) and go through `state.allEvidence` — property reads/writes on the imported object are fine (e.g. js/dataLoading.js:65's `state.allEvidence = data;`), but you can never rebind the imported `state` name itself, and a module that never imported it at all can't reference `allEvidence` bare. Forget the import and reference `allEvidence` directly in a module: `ReferenceError: allEvidence is not defined`. That error is actually useful — modules are strict mode and have no implicit-global fallback, so the failure is loud and immediate, pointing exactly at the missing import, rather than the old classic-script failure mode of silently creating a stray global or reading stale data with no error at all.",
       "exercise": 1,
       "demo": 1,
@@ -126,7 +134,7 @@
     {
       "id": "demo1-q-named-export-lookup",
       "type": "code",
-      "title": "Demo 1 Q: named export — js/lookup.js",
+      "title": "D1 - Q3 (1/2) — named export: js/lookup.js",
       "narration": "A named export (js/lookup.js: `findEvidenceById`, `findPersonById`, `findLocationById`, and four more not shown here) exports several specifically-named, equally-weighted bindings — there's no single 'main' thing lookup.js provides, so each helper gets its own named export, imported elsewhere as `import { findEvidenceById, ... } from \"../lookup.js\"`. Contrast with js/dataLoading.js:97's default export (next slide) — chose default there specifically because `loadAllData` really is the one and only public entry point of that module, whereas lookup.js has seven small, independent utilities and no such single 'main' export to prefer.",
       "exercise": 1,
       "demo": 1,
@@ -137,7 +145,7 @@
     {
       "id": "demo1-q-default-export-dataloading",
       "type": "code",
-      "title": "Demo 1 Q: default export — js/dataLoading.js",
+      "title": "D1 - Q3 (2/2) — default export: js/dataLoading.js",
       "narration": "A default export is for a module with exactly one thing external code needs. js/dataLoading.js's `loadCorePeopleAndLocations`, `loadEvidenceData`, `loadTimelineData`, `showLoadingOverlay`, and `hideLoadingStep` all stay unexported — only `loadAllData` is ever called from outside the module (js/main.js:16: `import loadAllData from \"./dataLoading.js\"` — no braces, unlike a named import). Contrast with the previous slide's js/lookup.js, where seven independent, equally-weighted helpers each need their own named export instead.",
       "exercise": 1,
       "demo": 1,
@@ -148,7 +156,7 @@
     {
       "id": "demo1-q-file-protocol-fetch",
       "type": "code",
-      "title": "Demo 1 Q: why file:// breaks both modules and fetch()",
+      "title": "D1 - Q4 — why file:// breaks both modules and fetch()",
       "narration": "Same underlying cause, two different enforcement points. Module scripts resolve each `import` as its own network-style request under CORS/same-origin rules — under `file://` there's no real origin to satisfy that, so the browser refuses to load the module graph at all (a console error like 'Cross origin requests are only supported for HTTP' before any of this code even runs). The app's own `fetch()` calls for `data/*.json` in dataLoading.js hit the identical restriction for the identical reason — no valid origin under `file://`. So: same root cause (no HTTP origin under `file://`), just tripped by two separate browser mechanisms — module resolution vs. runtime `fetch()`.",
       "exercise": 1,
       "demo": 1,
