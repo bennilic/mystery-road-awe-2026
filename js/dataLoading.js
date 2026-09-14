@@ -64,7 +64,15 @@ function loadEvidenceData() {
     .then(function (data) {
       state.allEvidence = data;
       applyStoredBookmarkFlags();
-      state.filteredEvidence = state.allEvidence;
+      // A copy, not the same array: allEvidence is the canonical, stable
+      // list (order relied on by the Dashboard, Workspace notes list,
+      // hypothesis evidence picker, etc.), while filteredEvidence is a
+      // disposable "current view" of it that the Evidence catalogue filters
+      // and sorts in place (see handleSortChange in views/evidence.js,
+      // which calls state.filteredEvidence.sort(...)). Assigning the same
+      // array reference to both meant sorting the catalogue's view
+      // silently reordered the canonical list too.
+      state.filteredEvidence = state.allEvidence.slice();
       renderDashboard();
       populateAllDropdowns();
       if (state.currentPage === "evidence") renderEvidenceList();
