@@ -40,7 +40,7 @@ your fix works.
 
 | # | Demo | Ready? |
 |---|---|---|
-| 1 | Split the app into JS modules | ☐ |
+| 1 | Split the app into JS modules | ☑ |
 | 2 | Bug hunt — mutation/reference bug | ☐ |
 | 3 | Bug hunt — an asynchronous/Promise-handling bug | ☐ |
 | 4 | Bug hunt — silent (console-only) bug | ☐ |
@@ -65,28 +65,28 @@ directly.
 
 **Tasks**
 
-- [ ] Design a module boundary you can justify, and implement it (e.g. data loading, shared state,
+- [x] Design a module boundary you can justify, and implement it (e.g. data loading, shared state,
       one module per view's rendering, `localStorage` helpers, small formatting/lookup utilities,
       and an entry-point module that wires up navigation and event listeners on startup).
-- [ ] Update `index.html` to load your entry point with `<script type="module" src="...">` instead
+- [x] Update `index.html` to load your entry point with `<script type="module" src="...">` instead
       of the current plain `<script src="app.js">`.
-- [ ] Do this as a **pure refactor first**: the app must behave identically before and after (bugs
+- [x] Do this as a **pure refactor first**: the app must behave identically before and after (bugs
       and all — you are not fixing anything yet in this demo). Re-run the app after every few
       changes and confirm nothing new broke.
-- [ ] Decide deliberately, function by function, what needs to be exported and what can stay
+- [x] Decide deliberately, function by function, what needs to be exported and what can stay
       private to its module. Not everything needs to be public.
 
 **Questions** (depend on the tasks above)
 
-- [ ] What is the difference between a classic `<script>` and a `<script type="module">`? Name at
+- [x] What is the difference between a classic `<script>` and a `<script type="module">`? Name at
       least two behavioral differences that are relevant to this app.
-- [ ] Before your refactor, `allEvidence` was a global `var`, readable and writable from anywhere in
+- [x] Before your refactor, `allEvidence` was a global `var`, readable and writable from anywhere in
       `app.js`. After splitting into modules, what has to happen for a different module to read or
       change that value? What error do you get if you forget, and why is that error actually
       useful?
-- [ ] What's the difference between a named export and a default export? Point to one place in your
+- [x] What's the difference between a named export and a default export? Point to one place in your
       refactor where you chose one over the other, and explain why.
-- [ ] Why won't `type="module"` scripts run at all if you open `index.html` directly from disk
+- [x] Why won't `type="module"` scripts run at all if you open `index.html` directly from disk
       (`file://...`) instead of through a local HTTP server? (You already need a server for
       `fetch()` — is this the same reason, a different one, or both?)
 

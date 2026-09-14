@@ -36,6 +36,61 @@ Format commits as: `Exercise <N> | Demo <M> | Additional Info`
 
 Example: `Exercise 1 | Demo 1 | Split app.js into ES modules`
 
+### Checkbox-ticking convention (EXERCISE_1.md)
+
+Each exercise file's Self-Check table has two kinds of checkboxes per demo: **Tasks** and
+**Questions**.
+
+- **Tasks** get ticked by the agent once genuinely completed *and verified* (e.g. the refactor was
+  run and its behavior checked against the pre-refactor app, not just "the code was written").
+  Ticking a Task box is a factual claim that the work was done and confirmed working — back it with
+  evidence (a commit hash, a test run, a before/after comparison), not just intent.
+- **Questions** are nominally Benjamin's own live-demo readiness check — "can I explain this out
+  loud, right now, without notes" — which is why EXERCISE_1.md itself says "I fixed it" isn't
+  enough, he needs to be able to explain *why*. By default, wait for Benjamin to supply the answer
+  himself before ticking a Question box.
+  Benjamin has explicitly asked agents to answer Questions on his behalf when he says so, add the
+  answer to the presentation narration, and tick the box once added. Do this only on that explicit
+  ask, not proactively — and flag once (not every time) that a box ticked this way reflects an
+  AI-authored answer, not verified personal command of the material, so the readiness signal is
+  weaker than the checklist's own stated bar.
+- Tick only what was actually verified in the current work session — leave a box unticked rather
+  than tick speculatively. An unticked box is fine per the exercise's own rules; a wrongly-ticked
+  one misrepresents demo readiness.
+
+### Presentation updates after each finished step
+
+Whenever a task/demo step is finished (a Task checkbox gets ticked in `EXERCISE_1.md`), also add a
+slide for it to `presentation/steps.json` in the same pass — via the `create-presentation` skill —
+before moving on to the next step. Don't batch this up for later or wait until a whole demo is
+done: one finished, verified step gets one slide, immediately.
+
+Each added slide's `narration` must be a real explanation, not a restatement of the diff: say *why*
+the change was made and *why* it fixes/achieves what it does, matching the "explain the change and
+*why*, not just what" guidance already in the skill. Tag it with the correct `exercise`/`demo` per
+the skill's schema.
+
+### Slide title convention
+
+Every slide that answers a specific Task or Question from `EXERCISE_1.md`'s per-demo checklist
+must lead its `title` with a `D<demo> - T<n>` or `D<demo> - Q<n>` tag, matching that item's position
+in the demo's own Tasks/Questions lists (e.g. Demo 1's 2nd listed Task → `D1 - T2`, its 3rd listed
+Question → `D1 - Q3`) — followed by a dash and as much extra description as useful, e.g.
+`"D1 - Q2 — reading/writing allEvidence across modules"`. This keeps navigation legible: Benjamin
+can tell which checklist item a slide answers at a glance instead of hunting through narration. If
+one Task/Question needs more than one slide, suffix with `(1/2)`/`(2/2)` etc. rather than inventing
+a new numbering scheme. General app-tour slides not tied to a specific Task/Question (`demo: 0`)
+don't get this prefix — they're not answering a checklist item.
+
+### Exercise intro slide
+
+Each exercise gets exactly one section-marker slide at the very front of its block — before even
+that exercise's `demo: 0` tour steps — titled `"Exercise <N> — <exercise name>"`, so the deck always
+shows which exercise is currently being presented. Give it `"demo": -1` (sorts before `demo: 0`
+per `present.js`'s numeric sort) and no `view`/`highlight` (it's a pure narration marker, not tied
+to any app screen). Add this once per exercise, the first time that exercise gets any real slides —
+don't add it again on every subsequent update to the same exercise's slides.
+
 ## Running the app
 
 Must be served over HTTP (uses `fetch()` for local JSON — `file://` will not work):
