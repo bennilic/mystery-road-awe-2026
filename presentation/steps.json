@@ -75,6 +75,30 @@
       "demo": 0,
       "view": "workspace",
       "highlight": "#hypothesisForm"
+    },
+    {
+      "id": "demo1-state-module-boundary",
+      "type": "code",
+      "title": "Demo 1: a shared state object, not scattered module lets",
+      "narration": "app.js had ~15 top-level `var`s that every function could read AND write. Splitting into modules, I could have made each one its own exported `let` — but an ES module import binding is read-only in the importing module: `import { allEvidence } from './state.js'; allEvidence = x` throws, because only the module that declared a binding may reassign it. Almost every one of these values gets reassigned (not just read) from a DIFFERENT module than the one that first sets it — e.g. evidence.js does `state.allEvidence = data` after a fetch that actually happens in dataLoading.js. So instead of exported `let`s plus a setter function per variable, I put them all as properties on one exported `state` object: mutating a property of an imported object is fine, only rebinding the imported name itself is restricted. Same values, same semantics as the old globals — just relocated so the read/write rule is explicit instead of implicit.",
+      "exercise": 1,
+      "demo": 1,
+      "file": "js/state.js",
+      "line": 19,
+      "before": "// app.js — top-level GLOBAL STATE block (all `var`, readable/writable\n// from anywhere in the 1085-line file)\nvar allEvidence = [];\nvar filteredEvidence = [];\nvar selectedEvidence = null;\nvar bookmarks = [];\nvar currentPage = \"dashboard\";\n\nvar allPeople = [];\nvar allLocations = [];\nvar allTimeline = [];\nvar caseData = {};\n\nvar currentPeopleTab = \"people\";\nvar loadingStepsRemaining = 2;\n\nvar evidenceViewLoading = true;\n\nvar viewRendered = {\n  dashboard: false,\n  evidence: false,\n  people: false,\n  timeline: false,\n  workspace: false\n};\n\nvar notesStore = {};\nvar modalCloseListenerCount = 0;\n\nvar STORAGE_KEY_BOOKMARKS = \"remotion_bookmarks\";\nvar STORAGE_KEY_NOTES = \"remotion_notes\";\nvar STORAGE_KEY_HYPOTHESIS = \"remotion_hypothesis\";",
+      "after": "// js/state.js — every other module imports `state` and reads/writes\n// its properties (legal); only this module could reassign `state` itself\n// (never needs to — the object identity never changes).\nexport const state = {\n  allEvidence: [],\n  filteredEvidence: [],\n  selectedEvidence: null,\n  bookmarks: [],\n  currentPage: \"dashboard\",\n\n  allPeople: [],\n  allLocations: [],\n  allTimeline: [],\n  caseData: {},\n\n  currentPeopleTab: \"people\",\n  loadingStepsRemaining: 2,\n\n  evidenceViewLoading: true,\n\n  viewRendered: {\n    dashboard: false,\n    evidence: false,\n    people: false,\n    timeline: false,\n    workspace: false\n  },\n\n  notesStore: {},\n  modalCloseListenerCount: 0\n};\n\n// Pure constants, never reassigned anywhere — plain named exports rather\n// than state properties, since nothing treats them as mutable.\nexport const STORAGE_KEY_BOOKMARKS = \"remotion_bookmarks\";\nexport const STORAGE_KEY_NOTES = \"remotion_notes\";\nexport const STORAGE_KEY_HYPOTHESIS = \"remotion_hypothesis\";"
+    },
+    {
+      "id": "demo1-index-html-module-script",
+      "type": "code",
+      "title": "Demo 1: loading the entry point as a module script",
+      "narration": "A classic `<script src=\"app.js\">` executes eagerly, in the global scope, in non-strict mode, and has no import/export syntax available — every function and var in app.js became a `window` property, which is exactly why 6-7 of app.js's functions had to leak onto `window` again after the split, just to satisfy inline onclick/onchange HTML attributes that only ever run in global scope. `<script type=\"module\">` instead: runs in strict mode automatically, gets its own module-level scope (so `js/main.js`'s top-level names don't become globals), is deferred by default (doesn't block parsing, runs after the DOM is parsed), and only this tag can use `import`/`export` at all — without it, every `import` statement in js/main.js and everything it pulls in would be a syntax error. It also only works over HTTP, not `file://` — same CORS-style same-origin restriction that already forced this app to be served via `python -m http.server` for `fetch()` to work.",
+      "exercise": 1,
+      "demo": 1,
+      "file": "index.html",
+      "line": 261,
+      "before": "<script src=\"app.js\"></script>",
+      "after": "<script type=\"module\" src=\"js/main.js\"></script>"
     }
   ]
 }
