@@ -99,6 +99,62 @@
       "line": 261,
       "before": "<script src=\"app.js\"></script>",
       "after": "<script type=\"module\" src=\"js/main.js\"></script>"
+    },
+    {
+      "id": "demo1-q-script-vs-module-scope",
+      "type": "code",
+      "title": "Demo 1 Q: classic <script> vs <script type=\"module\">",
+      "narration": "Two behavioral differences that actually mattered here: (1) module scripts execute after the DOM is parsed, in document order, like `defer` — a classic `<script src=\"app.js\">` at the end of body instead ran immediately, blocking parsing at that point. (2) A module's top-level declarations are scoped to that module, not attached to `window` — classic-script top-level `var`/function declarations do leak onto `window`. That's exactly why `js/main.js` has to explicitly do `window.navigateTo = navigateTo` and five more like it: the HTML's inline `onclick=\"navigateTo(...)\"` attributes always execute in global scope, so functions the HTML calls by name have to be deliberately re-attached to `window` now that they're module-private by default.",
+      "exercise": 1,
+      "demo": 1,
+      "file": "js/main.js",
+      "line": 26,
+      "after": "// Functions reached only through inline HTML attributes (onclick=\"...\",\n// onchange=\"...\", or the onchange string set via setAttribute below) must\n// exist as globals — inline handler attributes are evaluated in the global\n// scope, not in this module's scope.\nwindow.navigateTo = navigateTo;\nwindow.switchPeopleTab = switchPeopleTab;\nwindow.handleSortChange = handleSortChange;\nwindow.saveHypothesis = saveHypothesis;\nwindow.closeEvidenceDetail = closeEvidenceDetail;\nwindow.saveCurrentNote = saveCurrentNote;\nwindow.renderEvidenceList = renderEvidenceList; // needed by the setAttribute(\"onchange\", ...) below"
+    },
+    {
+      "id": "demo1-q-cross-module-allEvidence",
+      "type": "code",
+      "title": "Demo 1 Q: reading/writing allEvidence across modules",
+      "narration": "Before the refactor, `allEvidence` was a bare global `var` — any code in `app.js` read or wrote it by name directly. After the split, a different module has to `import { state } from \"./state.js\"` (see js/views/evidence.js:10) and go through `state.allEvidence` — property reads/writes on the imported object are fine (e.g. js/dataLoading.js:65's `state.allEvidence = data;`), but you can never rebind the imported `state` name itself, and a module that never imported it at all can't reference `allEvidence` bare. Forget the import and reference `allEvidence` directly in a module: `ReferenceError: allEvidence is not defined`. That error is actually useful — modules are strict mode and have no implicit-global fallback, so the failure is loud and immediate, pointing exactly at the missing import, rather than the old classic-script failure mode of silently creating a stray global or reading stale data with no error at all.",
+      "exercise": 1,
+      "demo": 1,
+      "file": "js/state.js",
+      "line": 19,
+      "before": "var allEvidence = [];  // app.js pre-refactor: a bare global var — read or\n                        // reassigned directly, by name, from anywhere in the file.",
+      "after": "export const state = {\n  allEvidence: [],\n  filteredEvidence: [],\n  selectedEvidence: null,\n  bookmarks: [],\n  currentPage: \"dashboard\","
+    },
+    {
+      "id": "demo1-q-named-export-lookup",
+      "type": "code",
+      "title": "Demo 1 Q: named export — js/lookup.js",
+      "narration": "A named export (js/lookup.js: `findEvidenceById`, `findPersonById`, `findLocationById`, and four more not shown here) exports several specifically-named, equally-weighted bindings — there's no single 'main' thing lookup.js provides, so each helper gets its own named export, imported elsewhere as `import { findEvidenceById, ... } from \"../lookup.js\"`. Contrast with js/dataLoading.js:97's default export (next slide) — chose default there specifically because `loadAllData` really is the one and only public entry point of that module, whereas lookup.js has seven small, independent utilities and no such single 'main' export to prefer.",
+      "exercise": 1,
+      "demo": 1,
+      "file": "js/lookup.js",
+      "line": 12,
+      "after": "// All are exported as named exports — there are seven equally-weighted\n// utilities here, with no single \"primary\" one that would justify a\n// default export.\nimport { state } from \"./state.js\";\n\nexport function findEvidenceById(id) {\n  for (var i = 0; i < state.allEvidence.length; i++) {\n    if (state.allEvidence[i].id === id) return state.allEvidence[i];\n  }\n  return null;\n}\n\nexport function findPersonById(id) {\n  for (var i = 0; i < state.allPeople.length; i++) {\n    if (state.allPeople[i].id === id) return state.allPeople[i];\n  }\n  return null;\n}\n\nexport function findLocationById(id) {\n  for (var i = 0; i < state.allLocations.length; i++) {\n    if (state.allLocations[i].id === id) return state.allLocations[i];\n  }\n  return null;\n}"
+    },
+    {
+      "id": "demo1-q-default-export-dataloading",
+      "type": "code",
+      "title": "Demo 1 Q: default export — js/dataLoading.js",
+      "narration": "A default export is for a module with exactly one thing external code needs. js/dataLoading.js's `loadCorePeopleAndLocations`, `loadEvidenceData`, `loadTimelineData`, `showLoadingOverlay`, and `hideLoadingStep` all stay unexported — only `loadAllData` is ever called from outside the module (js/main.js:16: `import loadAllData from \"./dataLoading.js\"` — no braces, unlike a named import). Contrast with the previous slide's js/lookup.js, where seven independent, equally-weighted helpers each need their own named export instead.",
+      "exercise": 1,
+      "demo": 1,
+      "file": "js/dataLoading.js",
+      "line": 97,
+      "after": "// Only `loadAllData` is ever called from outside this module (main.js's\n// initApp) — every other function here is an internal step of that one\n// loading sequence. One real \"public\" thing to offer justifies a default\n// export rather than a named one; everything else stays unexported.\n\n// ... loadCorePeopleAndLocations / loadEvidenceData / loadTimelineData /\n// showLoadingOverlay / hideLoadingStep — all module-private, omitted here ...\n\nexport default function loadAllData() {\n  showLoadingOverlay(\"Loading case file…\");\n  state.loadingStepsRemaining = 2;\n  return loadCorePeopleAndLocations().then(function () {\n    loadEvidenceData();\n    loadTimelineData();\n  });\n}"
+    },
+    {
+      "id": "demo1-q-file-protocol-fetch",
+      "type": "code",
+      "title": "Demo 1 Q: why file:// breaks both modules and fetch()",
+      "narration": "Same underlying cause, two different enforcement points. Module scripts resolve each `import` as its own network-style request under CORS/same-origin rules — under `file://` there's no real origin to satisfy that, so the browser refuses to load the module graph at all (a console error like 'Cross origin requests are only supported for HTTP' before any of this code even runs). The app's own `fetch()` calls for `data/*.json` in dataLoading.js hit the identical restriction for the identical reason — no valid origin under `file://`. So: same root cause (no HTTP origin under `file://`), just tripped by two separate browser mechanisms — module resolution vs. runtime `fetch()`.",
+      "exercise": 1,
+      "demo": 1,
+      "file": "js/dataLoading.js",
+      "line": 60,
+      "after": "function loadEvidenceData() {\n  fetch(\"data/evidence.json\")\n    .then(function (res) {\n      return res.json();\n    })\n    .then(function (data) {\n      state.allEvidence = data;\n      applyStoredBookmarkFlags();\n      state.filteredEvidence = state.allEvidence;\n      renderDashboard();\n      populateAllDropdowns();\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .catch(function (err) {\n      console.error(\"Failed to load evidence.json\", err);\n      alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n    });\n}"
     }
   ]
 }
