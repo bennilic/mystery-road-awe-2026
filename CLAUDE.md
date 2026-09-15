@@ -47,13 +47,15 @@ Each exercise file's Self-Check table has two kinds of checkboxes per demo: **Ta
   evidence (a commit hash, a test run, a before/after comparison), not just intent.
 - **Questions** are nominally Benjamin's own live-demo readiness check — "can I explain this out
   loud, right now, without notes" — which is why EXERCISE_1.md itself says "I fixed it" isn't
-  enough, he needs to be able to explain *why*. By default, wait for Benjamin to supply the answer
-  himself before ticking a Question box.
-  Benjamin has explicitly asked agents to answer Questions on his behalf when he says so, add the
-  answer to the presentation narration, and tick the box once added. Do this only on that explicit
-  ask, not proactively — and flag once (not every time) that a box ticked this way reflects an
-  AI-authored answer, not verified personal command of the material, so the readiness signal is
-  weaker than the checklist's own stated bar.
+  enough, he needs to be able to explain *why*.
+  Standing instruction (2026-09-15): always answer Questions too, not just Tasks, when working a
+  Demo/Exercise — don't wait for a per-demo ask. Add the answer to the presentation narration (per
+  the slide title convention below) and tick the box once added. Flag once per session (not on
+  every box) that Question boxes ticked this way reflect an AI-authored answer, not verified
+  personal command of the material — the readiness signal is weaker than the checklist's own
+  stated bar of "can I explain this out loud, right now, without notes," so Benjamin should treat
+  these as a drafted answer to review/internalize before presenting, not as already-demonstrated
+  readiness.
 - Tick only what was actually verified in the current work session — leave a box unticked rather
   than tick speculatively. An unticked box is fine per the exercise's own rules; a wrongly-ticked
   one misrepresents demo readiness.
