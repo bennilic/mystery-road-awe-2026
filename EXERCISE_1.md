@@ -42,7 +42,7 @@ your fix works.
 |---|---|---|
 | 1 | Split the app into JS modules | ☑ |
 | 2 | Bug hunt — mutation/reference bug | ☑ |
-| 3 | Bug hunt — an asynchronous/Promise-handling bug | ☐ |
+| 3 | Bug hunt — an asynchronous/Promise-handling bug | ☑ |
 | 4 | Bug hunt — silent (console-only) bug | ☐ |
 | 5 | Bug hunt — full walkthrough & reflection | ☐ |
 | 6 | Use the JavaScript debugger | ☐ |
@@ -126,17 +126,36 @@ flaky or timing-sensitive to reproduce. The point is that you can't explain the 
 
 **Tasks**
 
-- [ ] Reproduce the bug reliably and write down the exact steps.
-- [ ] Form a hypothesis for the root cause, expressed in terms of the async operation involved (what
+- [x] Reproduce the bug reliably and write down the exact steps.
+- [x] Form a hypothesis for the root cause, expressed in terms of the async operation involved (what
       was supposed to happen once it resolved, and what actually happened instead), and confirm it.
-- [ ] Fix it, and verify the fix actually addresses the async handling rather than papering over the
+- [x] Fix it, and verify the fix actually addresses the async handling rather than papering over the
       symptom (e.g. don't just add a delay or a retry if the real issue is a missing state update).
 
 **Questions** (depend on the task above)
 
-- [ ] Explain the async operation this bug revolves around: what does it fetch/return, and at what
+- [x] Explain the async operation this bug revolves around: what does it fetch/return, and at what
       point in its lifecycle (before it starts, while pending, on success, on failure) does the bug
       actually happen? How did you confirm that, rather than just guessing?
+
+      The async operation is `fetch("data/evidence.json")` in `loadEvidenceData()`
+      (`js/dataLoading.js`). It fetches the full evidence catalogue (18 items) that the Evidence
+      view's card list renders. The bug isn't in the fetch itself — it resolves and delivers data
+      correctly (confirmed live: the Dashboard's "Evidence items" stat correctly showed 18 even
+      while the Evidence catalogue stayed empty). The bug is in what *should* have happened on
+      success but didn't: `state.evidenceViewLoading` starts `true` (in `js/state.js`) specifically
+      to make `renderEvidenceList()` show a "Loading evidence…" placeholder while this fetch is
+      pending, but nothing in the success (or failure) callback ever set it back to `false` once the
+      Promise settled. So `renderEvidenceList()` (in `js/views/evidence.js`) kept early-returning the
+      placeholder forever — not because data was missing, but because the one piece of state that
+      was supposed to be flipped by the resolved Promise's callback simply never was. I confirmed
+      this by reading `js/state.js` and `js/views/evidence.js` first (grepping for
+      `evidenceViewLoading` showed only its `true` initialization and the `if` check reading it —
+      no callback anywhere set it `false`), then reproduced live with Playwright: loaded the app,
+      confirmed via the Dashboard stat that `state.allEvidence` had all 18 items, then navigated to
+      the Evidence view and confirmed the card container was empty with the loading indicator still
+      visible — proving the data had arrived but the view-loading flag governing the placeholder had
+      not been updated to reflect that.
 
 ---
 

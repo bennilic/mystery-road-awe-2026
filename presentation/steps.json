@@ -205,6 +205,60 @@
       "demo": 2,
       "view": "evidence",
       "highlight": "#sortEvidence"
+    },
+    {
+      "id": "demo3-repro-dashboard-baseline",
+      "type": "app",
+      "title": "D3 - T1 (1/2) — Reproducing the bug: confirming the data itself loaded fine",
+      "narration": "Before blaming the fetch, I ruled it out: on a fresh load, the Dashboard's 'Evidence items' stat reads 18 — that number comes straight from state.allEvidence.length inside renderDashboard(), so seeing it correct is independent proof that fetch(\"data/evidence.json\") in loadEvidenceData() succeeded and state.allEvidence was fully populated. Whatever's broken next, it isn't the fetch failing or the data never arriving.",
+      "exercise": 1,
+      "demo": 3,
+      "view": "dashboard",
+      "highlight": "#dashboardContent"
+    },
+    {
+      "id": "demo3-repro-evidence-stuck",
+      "type": "app",
+      "title": "D3 - T1 (2/2) — Reproducing the bug: the catalogue never leaves \"Loading evidence…\"",
+      "narration": "Navigating straight to Evidence from that same load — no reload, no delay — the card list stayed permanently empty and the \"Loading evidence…\" placeholder never went away, even though the Dashboard (previous slide) had just proven the data had arrived. I confirmed this with Playwright, not just eyeballing it: querying #evidenceList showed zero .evidence-card elements and #evidenceLoadingIndicator without the 'hidden' class, reliably, on every fresh load — not flaky, not a timing race, just permanently stuck.",
+      "exercise": 1,
+      "demo": 3,
+      "view": "evidence",
+      "highlight": "#evidenceListContainer"
+    },
+    {
+      "id": "demo3-root-cause",
+      "type": "code",
+      "title": "D3 - T2 — Root cause: evidenceViewLoading is set true and never set back to false",
+      "narration": "renderEvidenceList() (js/views/evidence.js) gates the whole catalogue render on state.evidenceViewLoading — while true it shows the placeholder and returns immediately, before ever reaching getFilteredEvidence() or building any cards. That flag is declared `evidenceViewLoading: true` in js/state.js, clearly meant to flip false once the evidence.json fetch that's supposed to populate the catalogue resolves. I grepped the entire repo for every reference to it and found exactly three: the `true` initialization, this `if` check, and nothing else — no callback, anywhere, ever assigned it `false`. So the flag wasn't reset by a slow fetch or a race; it was never going to be reset at all, by design-gone-wrong: the person who wrote the placeholder logic never wired up the code that was supposed to clear it once loadEvidenceData()'s fetch settled. I confirmed this is the actual cause (not just a plausible-looking dead flag) live: after load, state.allEvidence.length was 18 while state.evidenceViewLoading was still true — the exact combination this hypothesis predicts.",
+      "exercise": 1,
+      "demo": 3,
+      "file": "js/views/evidence.js",
+      "line": 87,
+      "after": "export function renderEvidenceList() {\n  var container = document.getElementById(\"evidenceList\");\n  if (!container) return;\n\n  var loadingIndicator = document.getElementById(\"evidenceLoadingIndicator\");\n  if (state.evidenceViewLoading) {\n    if (loadingIndicator) loadingIndicator.classList.remove(\"hidden\");\n    container.innerHTML = \"\";\n    return; // <-- always taken: state.evidenceViewLoading (js/state.js:34,\n            //     initialized true) is never set false by any callback\n            //     anywhere in the codebase (repo-wide grep confirmed it).\n  }\n  if (loadingIndicator) loadingIndicator.classList.add(\"hidden\");\n\n  var results = getFilteredEvidence();\n  // ...card rendering never reached..."
+    },
+    {
+      "id": "demo3-fix",
+      "type": "code",
+      "title": "D3 - T3 — Fix: set evidenceViewLoading false once the fetch that promised it settles",
+      "narration": "The fix sets state.evidenceViewLoading = false directly inside loadEvidenceData()'s fetch chain, in both the success .then (right after the data it's waiting for has actually landed in state.allEvidence/state.filteredEvidence) and the failure .catch (the fetch has settled either way — leaving the placeholder up forever on a failed load would be just as broken). This isn't a delay or a retry papering over a symptom: it's the exact state update the async success/failure callbacks were supposed to make and never did, added at the exact point in the Promise lifecycle where it belongs — once resolved/rejected, not before. Verified live post-fix: #evidenceList now shows all 18 .evidence-card elements and #evidenceLoadingIndicator has 'hidden' set, matching the Dashboard's count from the very first repro slide.",
+      "exercise": 1,
+      "demo": 3,
+      "file": "js/dataLoading.js",
+      "line": 59,
+      "before": "function loadEvidenceData() {\n  fetch(\"data/evidence.json\")\n    .then(function (res) {\n      return res.json();\n    })\n    .then(function (data) {\n      state.allEvidence = data;\n      applyStoredBookmarkFlags();\n      // A copy, not the same array: allEvidence is the canonical, stable\n      // list (order relied on by the Dashboard, Workspace notes list,\n      // hypothesis evidence picker, etc.), while filteredEvidence is a\n      // disposable \"current view\" of it that the Evidence catalogue filters\n      // and sorts in place (see handleSortChange in views/evidence.js,\n      // which calls state.filteredEvidence.sort(...)). Assigning the same\n      // array reference to both meant sorting the catalogue's view\n      // silently reordered the canonical list too.\n      state.filteredEvidence = state.allEvidence.slice();\n      renderDashboard();\n      populateAllDropdowns();\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .catch(function (err) {\n      console.error(\"Failed to load evidence.json\", err);\n      alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n    });\n}",
+      "after": "function loadEvidenceData() {\n  fetch(\"data/evidence.json\")\n    .then(function (res) {\n      return res.json();\n    })\n    .then(function (data) {\n      state.allEvidence = data;\n      applyStoredBookmarkFlags();\n      state.filteredEvidence = state.allEvidence.slice();\n      // The catalogue's own loading placeholder (see renderEvidenceList in\n      // views/evidence.js) is gated on this flag, not on state.allEvidence\n      // being populated. It starts true so the placeholder shows before\n      // this fetch resolves; it must flip false here, once the data this\n      // fetch promised has actually landed in state, or renderEvidenceList\n      // keeps early-returning the placeholder forever, even after the data\n      // it's waiting for has arrived.\n      state.evidenceViewLoading = false;\n      renderDashboard();\n      populateAllDropdowns();\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .catch(function (err) {\n      console.error(\"Failed to load evidence.json\", err);\n      alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n      // Also clear on failure: the fetch has settled either way, and\n      // leaving this true would strand the catalogue on \"Loading evidence…\"\n      // forever instead of showing the (empty) result of the failed load.\n      state.evidenceViewLoading = false;\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    });\n}"
+    },
+    {
+      "id": "demo3-q1-async-lifecycle",
+      "type": "app",
+      "title": "D3 - Q1 — the async operation, and where in its lifecycle the bug actually lived",
+      "narration": "The operation is fetch(\"data/evidence.json\") in loadEvidenceData() (js/dataLoading.js) — it fetches the full 18-item evidence catalogue that this view's card list renders. The bug isn't before the fetch starts (evidenceViewLoading correctly starts true so the placeholder shows while pending) and it isn't a failure-path bug either — it's on the success path: once the Promise resolved and handed back real data, the success callback was supposed to flip evidenceViewLoading to false so renderEvidenceList() would stop early-returning the placeholder, and it just never did. I didn't guess this — I confirmed it two ways: (1) reading the code, grepping the whole repo for every reference to evidenceViewLoading and finding no write site anywhere except the true initializer; (2) reproducing live with Playwright and checking both values directly after load — state.allEvidence.length was 18 (the fetch had resolved and delivered data) while state.evidenceViewLoading was still true (the flag its resolution was supposed to update never moved). That combination — data present, flag never flipped — is only explainable by something that should have run on the Promise's success path never running, which is exactly what Demo 3 is asking for.",
+      "exercise": 1,
+      "demo": 3,
+      "view": "evidence",
+      "highlight": "#evidenceListContainer",
+      "waitFor": ".evidence-card"
     }
   ]
 }
