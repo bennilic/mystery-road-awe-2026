@@ -43,7 +43,7 @@ your fix works.
 | 1 | Split the app into JS modules | ☑ |
 | 2 | Bug hunt — mutation/reference bug | ☑ |
 | 3 | Bug hunt — an asynchronous/Promise-handling bug | ☑ |
-| 4 | Bug hunt — silent (console-only) bug | ☐ |
+| 4 | Bug hunt — silent (console-only) bug | ☑ |
 | 5 | Bug hunt — full walkthrough & reflection | ☐ |
 | 6 | Use the JavaScript debugger | ☐ |
 | 7 | DevTools tour (Console/Network/Application/Elements) | ☐ |
@@ -167,14 +167,40 @@ testing session. Find a bug that produces **no visible change in the UI** — on
 
 **Tasks**
 
-- [ ] Reproduce the bug and capture the exact console output.
-- [ ] Trace it back to the line(s) of code responsible.
-- [ ] Fix it, and confirm the console is clean for that scenario afterward.
+- [x] Reproduce the bug and capture the exact console output.
+- [x] Trace it back to the line(s) of code responsible.
+- [x] Fix it, and confirm the console is clean for that scenario afterward.
 
 **Questions** (depend on the task above)
 
-- [ ] How did you notice this bug in the first place, given that nothing looked broken? Why is
+- [x] How did you notice this bug in the first place, given that nothing looked broken? Why is
       "nothing looks broken" not the same as "nothing is broken"?
+
+      Standing instruction: keep DevTools open with the Console tab visible for the whole testing
+      session. I found this one exactly that way — not by seeing anything wrong on screen, but by
+      clicking through every nav button (Dashboard, Evidence, People & Locations, Timeline,
+      Workspace) with the console panel visible, and watching a `TypeError: Cannot read properties
+      of undefined (reading 'getAttribute')` appear at `js/main.js:44` on every single click. The
+      page itself never showed anything wrong: the URL hash updated, the correct view rendered, the
+      active nav button highlighted — because navigation is actually driven by the separate
+      `onclick="navigateTo(...)"` attribute on each button in `index.html`, not by the
+      `addEventListener` block in `js/main.js` that's actually throwing. That listener is dead
+      weight left over from an earlier version of the code — it exists, runs, and fails on every
+      click, but nothing downstream depends on its result, so the failure has zero visible
+      consequence.
+
+      "Nothing looks broken" only means the *parts of the app a user happens to be looking at*
+      still behave correctly for the *paths currently exercised*. It says nothing about: (a) code
+      that runs but whose result nobody consumes (exactly this bug — the crashing handler's
+      `console.log` never fires, but nothing else needed it to), (b) code paths not currently
+      exercised (a different browser, a different click sequence, or later code that starts relying
+      on this handler would hit the same crash with real consequences), or (c) silent correctness
+      bugs elsewhere that just haven't been looked at yet — Demo 5's whole premise is that this app
+      has more than three bugs, and most of them won't announce themselves visually either. The only
+      way to know the difference between "quiet because it's fine" and "quiet because nobody's
+      looking" is to actually open the console and watch it, which is why this demo's rule (console
+      open for the *entire* session, not just when something already looks wrong) is the actual
+      practice being tested, not just a formality.
 
 ---
 

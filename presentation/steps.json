@@ -259,6 +259,51 @@
       "view": "evidence",
       "highlight": "#evidenceListContainer",
       "waitFor": ".evidence-card"
+    },
+    {
+      "id": "demo4-repro-console-error",
+      "type": "app",
+      "title": "D4 - T1 — Reproducing the bug: a TypeError on every nav-button click, zero UI symptom",
+      "narration": "With DevTools' Console tab open for the whole session (Demo 4's rule), clicking any nav button — Dashboard, Evidence, People & Locations, Timeline, Workspace — throws `TypeError: Cannot read properties of undefined (reading 'getAttribute')` at js/main.js:44, every single time. But look at the page itself: the URL hash updates, the correct view renders, the clicked button gets the active state — nothing visibly broke. That's the whole point of this demo: an error is firing on every interaction and the UI gives no indication anything is wrong.",
+      "exercise": 1,
+      "demo": 4,
+      "view": "dashboard",
+      "highlight": ".nav-btn[data-view=\"evidence\"]",
+      "action": { "type": "click", "selector": ".nav-btn[data-view=\"evidence\"]" }
+    },
+    {
+      "id": "demo4-root-cause",
+      "type": "code",
+      "title": "D4 - T2 — Root cause: var in a for loop shares one binding across every closure",
+      "narration": "setupEventListeners() (js/main.js) loops over the 5 nav buttons and calls addEventListener(\"click\", function() {...}) once per button, and each of those callback closures reads `navButtons[i]`. `var i` is function-scoped, not block-scoped — there is exactly ONE `i` variable for the whole loop, shared by all 5 closures, not a fresh one per iteration. By the time a user actually clicks a button — always later, after the loop has already finished all 5 iterations — `i` has already reached its final value, `navButtons.length` (5). `navButtons[5]` is `undefined`, so `.getAttribute(\"data-view\")` throws. This is a textbook closure-over-a-shared-loop-variable bug (course Chapter 2 — Scope, Closures, and Function Forms): the closures don't capture the value of `i` at creation time, they capture the variable itself, and that variable keeps changing after each closure is created.",
+      "exercise": 1,
+      "demo": 4,
+      "file": "js/main.js",
+      "line": 41,
+      "before": "var navButtons = document.querySelectorAll(\".nav-btn\");\nfor (var i = 0; i < navButtons.length; i++) {\n  navButtons[i].addEventListener(\"click\", function () {\n    var targetView = navButtons[i].getAttribute(\"data-view\");\n    console.log(\"nav clicked:\", targetView);\n  });\n}",
+      "after": "var navButtons = document.querySelectorAll(\".nav-btn\");\nfor (let i = 0; i < navButtons.length; i++) {\n  navButtons[i].addEventListener(\"click\", function () {\n    var targetView = navButtons[i].getAttribute(\"data-view\");\n    console.log(\"nav clicked:\", targetView);\n  });\n}"
+    },
+    {
+      "id": "demo4-fix-verify",
+      "type": "code",
+      "title": "D4 - T3 — Fix: let instead of var gives each closure its own binding; console now clean",
+      "narration": "Changing `var i` to `let i` is the whole fix — `let` in a `for` loop header creates a brand-new, independently-scoped binding of `i` for each iteration, initialized to that iteration's value, so each of the 5 click closures captures its own `i` (0 through 4) instead of all 5 sharing one final, out-of-range `i`. No other line changes: this listener was already dead weight (actual navigation runs through the separate onclick=\"navigateTo(...)\" attribute in index.html), so the minimal, scope-correct fix is exactly right here rather than restructuring the listener. Verified live after the fix: clicking Dashboard → Evidence → People → Timeline → Workspace in sequence now logs `nav clicked: dashboard`, `nav clicked: evidence`, `nav clicked: people`, `nav clicked: timeline`, `nav clicked: workspace` — each matching the actual button clicked — with zero console errors, where before every single click produced the TypeError.",
+      "exercise": 1,
+      "demo": 4,
+      "file": "js/main.js",
+      "line": 42,
+      "before": "for (var i = 0; i < navButtons.length; i++) {",
+      "after": "for (let i = 0; i < navButtons.length; i++) {"
+    },
+    {
+      "id": "demo4-q1-noticed-silent-bug",
+      "type": "app",
+      "title": "D4 - Q1 — How I noticed it, and why \"looks fine\" isn't \"is fine\"",
+      "narration": "I noticed this only because DevTools' Console was open and visible for the entire session, per Demo 4's rule, not because anything on screen prompted me to look. Every nav-button click renders correctly — the crashing addEventListener block in js/main.js is dead code left over from an earlier version: real navigation runs entirely through the separate onclick=\"navigateTo(...)\" attribute on each button in index.html, so nothing downstream ever depends on the crashing handler's result. \"Nothing looks broken\" only tells you the specific paths you happened to exercise, with the specific outputs something else happened to consume, behaved correctly — it says nothing about code that runs and fails but whose result nobody reads (exactly this bug), code paths nobody has clicked through yet, or other silent bugs sitting elsewhere in the app that Demo 5 is explicitly built to go find. The only way to tell \"quiet because it's actually fine\" apart from \"quiet because nobody's watching\" is to keep the console open and actually look — which is the real practice this demo is testing, not a formality.",
+      "exercise": 1,
+      "demo": 4,
+      "view": "dashboard",
+      "highlight": "#dashboardContent"
     }
   ]
 }
