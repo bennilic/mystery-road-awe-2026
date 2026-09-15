@@ -183,6 +183,28 @@
       "demo": 2,
       "view": "workspace",
       "highlight": "#notesList"
+    },
+    {
+      "id": "demo2-q1-reference-vs-copy",
+      "type": "code",
+      "title": "D2 - Q1 — reference vs. copy, and how aliasing caused this bug",
+      "narration": "A *copy* is an independent array/object in memory holding the same current contents — changing one afterward doesn't touch the other. A *reference* is just another variable pointing at the SAME object — mutating through either name changes the one underlying object both point at, and `===` between them is true. Before the fix, `state.filteredEvidence = state.allEvidence;` assigned the reference, not the contents, so `state.allEvidence === state.filteredEvidence` was true (I re-confirmed live: false on the current fixed build, and it was true on the pre-fix commit bf8e25d). Because handleSortChange() in js/views/evidence.js calls `.sort()` directly on state.filteredEvidence, and Array.prototype.sort mutates its array in place and returns that same reference rather than a new array, sorting 'the catalogue's view' and sorting 'the canonical list' were literally the same operation on the same object — there was only one array to sort. The fix, `state.allEvidence.slice()`, makes a shallow copy: a new, independent array holding references to the same evidence item objects. That's the right depth of copy — I verified live that `state.allEvidence[0] === state.filteredEvidence[0]` is still true post-fix, which is correct and intentional: editing an item's status/relevance/note in the detail view is supposed to stay visible from both arrays. Only the arrays' element ORDER needed to become independent, not the item objects themselves.",
+      "exercise": 1,
+      "demo": 2,
+      "file": "js/dataLoading.js",
+      "line": 75,
+      "before": "state.filteredEvidence = state.allEvidence; // same array object — not a copy\n// state.allEvidence === state.filteredEvidence  →  true",
+      "after": "state.filteredEvidence = state.allEvidence.slice(); // shallow copy: new array,\n// same item objects\n// state.allEvidence === state.filteredEvidence  →  false\n// state.allEvidence[0] === state.filteredEvidence[0]  →  true (intentional)"
+    },
+    {
+      "id": "demo2-q2-walkthrough-static-analysis",
+      "type": "app",
+      "title": "D2 - Q2 — the exact trigger sequence, and could static reading have caught it",
+      "narration": "Exact trigger, reproduced live: load the app fresh, add a note to E01 and to E02 via the Evidence detail panel, open Workspace — Notes list reads in the canonical load order (E01, E02). Go to Evidence and change ONLY the 'Sort evidence' dropdown to 'Title (Z–A)' — nothing else touched. That fires handleSortChange() (js/views/evidence.js), which runs state.filteredEvidence.sort(...) in place. At that exact moment, because state.filteredEvidence and state.allEvidence were still the same array object (the aliasing bug), the in-place sort reordered both simultaneously. Navigate back to Workspace without reloading — the Notes list and the hypothesis evidence picker are now in title-descending order, even though neither view's own code ever touched sorting.\n\nCould reading top-to-bottom, without running it, have found this? Only partially, and it's not a fair 'obvious at a glance' bug. `state.filteredEvidence = state.allEvidence;`, read in isolation inside loadEvidenceData, looks like ordinary initialization — nothing on that single line signals danger unless you're already actively watching for reference-aliasing. The bug only becomes visible once you additionally know two more facts that live in a DIFFERENT file: that Array.prototype.sort() mutates in place rather than returning a new array (unlike, say, .map() or .filter()), and that handleSortChange() calls that mutating sort directly on state.filteredEvidence. Neither fact is visible from dataLoading.js alone — you'd have to trace every consumer of state.filteredEvidence across the codebase, recognize handleSortChange as one of them, and separately recall .sort()'s in-place semantics, to connect it back to the aliasing assignment three files away. That's a multi-file, semantics-dependent trace, not a pattern-match on one suspicious line — which is exactly why I found this by running the app and noticing the symptom (Workspace order changing after an Evidence-only action), not by reading the source first.",
+      "exercise": 1,
+      "demo": 2,
+      "view": "evidence",
+      "highlight": "#sortEvidence"
     }
   ]
 }

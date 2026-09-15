@@ -41,7 +41,7 @@ your fix works.
 | # | Demo | Ready? |
 |---|---|---|
 | 1 | Split the app into JS modules | ☑ |
-| 2 | Bug hunt — mutation/reference bug | ☐ |
+| 2 | Bug hunt — mutation/reference bug | ☑ |
 | 3 | Bug hunt — an asynchronous/Promise-handling bug | ☐ |
 | 4 | Bug hunt — silent (console-only) bug | ☐ |
 | 5 | Bug hunt — full walkthrough & reflection | ☐ |
@@ -109,9 +109,9 @@ to be independent turn out to be linked).
 
 **Questions** (depend on the task above)
 
-- [ ] Explain — in your own words — the difference between a *reference* and a *copy* in
+- [x] Explain — in your own words — the difference between a *reference* and a *copy* in
       JavaScript, and how that distinction explains what you observed.
-- [ ] Walk through the exact user actions and system state that trigger the bug. Could you have
+- [x] Walk through the exact user actions and system state that trigger the bug. Could you have
       found it by reading the code top-to-bottom without running it? Why or why not?
 
 ---
