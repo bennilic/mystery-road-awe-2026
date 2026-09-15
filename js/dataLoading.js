@@ -73,6 +73,14 @@ function loadEvidenceData() {
       // array reference to both meant sorting the catalogue's view
       // silently reordered the canonical list too.
       state.filteredEvidence = state.allEvidence.slice();
+      // The catalogue's own loading placeholder (see renderEvidenceList in
+      // views/evidence.js) is gated on this flag, not on state.allEvidence
+      // being populated. It starts true so the placeholder shows before
+      // this fetch resolves; it must flip false here, once the data this
+      // fetch promised has actually landed in state, or renderEvidenceList
+      // keeps early-returning the placeholder forever, even after the data
+      // it's waiting for has arrived.
+      state.evidenceViewLoading = false;
       renderDashboard();
       populateAllDropdowns();
       if (state.currentPage === "evidence") renderEvidenceList();
@@ -80,6 +88,11 @@ function loadEvidenceData() {
     .catch(function (err) {
       console.error("Failed to load evidence.json", err);
       alert("Evidence could not be loaded. Some views may be incomplete.");
+      // Also clear on failure: the fetch has settled either way, and
+      // leaving this true would strand the catalogue on "Loading evidence…"
+      // forever instead of showing the (empty) result of the failed load.
+      state.evidenceViewLoading = false;
+      if (state.currentPage === "evidence") renderEvidenceList();
     });
 }
 
