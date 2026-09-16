@@ -526,6 +526,94 @@
       "demo": 6,
       "view": "evidence",
       "highlight": "#evidenceLoadingIndicator"
+    },
+    {
+      "id": "demo7-tour-intro",
+      "type": "app",
+      "title": "D7 - DevTools tour: Console, Network, Application, Elements",
+      "narration": "A guided tour of where things live in DevTools, driven live against this running app via a real Chrome CDP session rather than screenshots of a separate panel — so every number and message on the next 8 slides is something that was actually captured, not described from memory. Console, Network, Application/Storage, and Elements each get one real, verified pass.",
+      "exercise": 1,
+      "demo": 7,
+      "view": "dashboard"
+    },
+    {
+      "id": "demo7-t1-console-filters",
+      "type": "app",
+      "title": "D7 - T1 — Console: log-level filters, text filter, Preserve log",
+      "narration": "DevTools' log-level filter buttons key off exactly the field CDP's Runtime.consoleAPICalled reports as `type`. Filtering to Info: 6 real console.log entries from clicking every nav button (\"nav clicked: evidence\", js/main.js:44) plus \"First note preview:\" (main.js:86). Filtering to Warnings: corrupting localStorage key remotion_notes with invalid JSON and reloading produced a real console.warn — \"Could not read stored notes, starting empty\" with a full SyntaxError stack from js/storage.js:43. Filtering to Errors: forcing data/evidence.json to return a real 404 and reloading produced two real error-level entries, including the app's own console.error at js/dataLoading.js:89. The text filter box is just a substring match against the visible line list — filtering the captured events for \"Could not read stored notes\" isolates exactly that one warning. Preserve log has no page-JS-observable state, so it's described and confirmed against documented Chrome behavior rather than clicked: by default the Console panel clears on every navigation; Preserve Log keeps entries visible across reloads instead — and every capture here used a fresh listener per reload, which is exactly the default (Preserve Log OFF) behavior.",
+      "exercise": 1,
+      "demo": 7,
+      "view": "evidence",
+      "highlight": "#evidenceList"
+    },
+    {
+      "id": "demo7-t2-network-throttle",
+      "type": "app",
+      "title": "D7 - T2 — Network: inspecting and throttling the JSON data requests",
+      "narration": "A real CDP Network session found all 5 data/*.json requests on a normal reload (case, people, locations, evidence, timeline — all 200/application/json), and pulled the full response body for data/evidence.json via Network.getResponseBody, starting with the real E01 record. Then throttled to Slow 3G (400kbps, 2000ms latency, Chrome's documented preset) via Network.emulateNetworkConditions and reloaded for real: case.json measured 2047ms, versus sub-1ms unthrottled — confirming Time here is dominated by the simulated latency floor, not payload size, since these files are tiny. What that throttled reload actually looked like on screen is Q4.",
+      "exercise": 1,
+      "demo": 7,
+      "view": "dashboard",
+      "highlight": "#loadingOverlay"
+    },
+    {
+      "id": "demo7-t3-localstorage-edit-corrupt",
+      "type": "app",
+      "title": "D7 - T3 — Application: inspecting, editing, and corrupting localStorage",
+      "narration": "This app keeps 3 keys in localStorage (all defined in js/state.js): remotion_bookmarks, remotion_notes, remotion_hypothesis. After actually using the app — starring a card, saving a hypothesis draft — their real values were inspected live. Then, DevTools-panel-style, remotion_bookmarks was overwritten directly to [\"E01\",\"E05\"] and the page reloaded: exactly those two cards rendered starred afterward, proving bookmarks are read from storage once at boot (loadBookmarksFromStorage), not kept live-synced. Separately, remotion_notes was overwritten with the literal invalid-JSON string \"not valid json {{{\" and reloaded — see Q3 for exactly what happened and why.",
+      "exercise": 1,
+      "demo": 7,
+      "view": "evidence",
+      "highlight": ".evidence-card .bookmark-btn.active"
+    },
+    {
+      "id": "demo7-t4-elements-card-to-code",
+      "type": "code",
+      "title": "D7 - T4 — Elements: tracing a rendered evidence card back to its code",
+      "narration": "The real rendered DOM for evidence card E01 was pulled via outerHTML and matched line-for-line against renderEvidenceCardHTML(ev) in js/views/evidence.js:148-168: the data-id and starred bookmark button come from checking ev.id against state.bookmarks; title, meta line, and summary are direct template interpolation of ev.title/ev.id/ev.type/formatDate(ev.timestamp)/ev.summary; the three badges come from getStatusBadgeClass()/getRelevanceBadgeClass() in js/lookup.js. Tracing this surfaced a real code smell: getRelevanceBadgeClass's fallback (lookup.js:56) reuses the same badge-unreviewed CSS class as the status badge, so two semantically different badges render identically styled — left for Demo 8's code-smell hunt, not fixed here, since this demo is a tour, not a bug hunt.",
+      "exercise": 1,
+      "demo": 7,
+      "file": "js/views/evidence.js",
+      "line": 148,
+      "after": "function renderEvidenceCardHTML(ev) {\n  var isBookmarked = state.bookmarks.indexOf(ev.id) !== -1;\n  var html = '<div class=\"evidence-card\" data-id=\"' + ev.id + '\">';\n  html += '<button class=\"bookmark-btn ' + (isBookmarked ? \"active\" : \"\") + '\" ...>' + ...;\n  html += \"<h3>\" + ev.title + \"</h3>\";\n  html += '<div class=\"evidence-meta\">' + ev.id + \" &middot; \" + ev.type + \" &middot; \" + formatDate(ev.timestamp) + \"</div>\";\n  html += '<div class=\"evidence-summary\">' + ev.summary + \"</div>\";\n  ...\n  html += '<span class=\"badge \" + getStatusBadgeClass(ev.status) + '\">' + ev.status + \"</span>\";\n  html += '<span class=\"badge \" + getRelevanceBadgeClass(ev.relevance) + '\">' + ev.relevance + \"</span>\";\n  ...\n}"
+    },
+    {
+      "id": "demo7-q1-log-warn-error-difference",
+      "type": "app",
+      "title": "D7 - Q1 — console.log vs. warn vs. error, beyond the color",
+      "narration": "Beyond color: each carries a distinct CDP type (log/warning/error) — exactly what DevTools' filter buttons and error/warning badge counters key off, not the rendered color. error/warn also attach a full stack trace; log doesn't unless you pass one explicitly — confirmed live, since the captured evidence.json console.error carried a real SyntaxError stack while the nav-click console.log entries carried none. And automated tooling — CI assertions, error trackers, this session's own CDP capture — typically watches error/warning types specifically and ignores log, so the choice determines whether a real problem is visible to anything beyond a human scrolling the panel.",
+      "exercise": 1,
+      "demo": 7,
+      "view": "dashboard"
+    },
+    {
+      "id": "demo7-q2-status-type-time-404",
+      "type": "app",
+      "title": "D7 - Q2 — Status/Type/Time, and what a 404 would actually do",
+      "narration": "For data/evidence.json: Status is the HTTP code (200 normally, 404 in the forced-failure test); Type is the request/response kind (fetch, application/json body); Time is sub-1ms unthrottled versus a real 2047ms under Slow 3G — latency-dominated since the payload is tiny. What a 404 does was confirmed live, not guessed: loadEvidenceData() in js/dataLoading.js never checks res.ok before calling .json(). A 404 with a non-JSON body throws a SyntaxError inside .json(), which the existing .catch() handles — logs console.error, shows an alert, and correctly resets state.evidenceViewLoading = false so the Evidence view falls back to its normal empty state instead of hanging on the loading placeholder forever. The Demo 3 fix holds even on this failure path.",
+      "exercise": 1,
+      "demo": 7,
+      "view": "evidence",
+      "highlight": "#evidenceList"
+    },
+    {
+      "id": "demo7-q3-localstorage-keys-corruption",
+      "type": "app",
+      "title": "D7 - Q3 — localStorage keys, and why corrupting one doesn't crash the app",
+      "narration": "Three keys: remotion_bookmarks (bookmarked evidence IDs), remotion_notes (evidence ID to note text), remotion_hypothesis (the Workspace hypothesis draft) — all in js/state.js. Corrupting remotion_notes with invalid JSON and reloading, live: the app did not crash, specifically because loadNotesFromStorage() in js/storage.js wraps JSON.parse in a try/catch added during Demo 5's bug-fix pass, catches the SyntaxError, logs a real console.warn, and falls back to state.notesStore = {} in memory. Before that fix, this exact corruption threw uncaught during initApp() and aborted the entire boot sequence — the same failure class Demo 4 documented for a different function. The corrupted raw string itself is never auto-repaired in storage; only the in-memory fallback differs, confirmed by reading localStorage back after the reload. loadBookmarksFromStorage and loadHypothesisFromStorage carry the identical guard for the same reason.",
+      "exercise": 1,
+      "demo": 7,
+      "view": "workspace"
+    },
+    {
+      "id": "demo7-q4-throttled-load-order",
+      "type": "app",
+      "title": "D7 - Q4 — What throttling revealed about load order",
+      "narration": "Under real Slow 3G throttle, nothing populated incrementally: the loading overlay's text stayed frozen on \"Loading case file...\" — set once at boot, never updated per-step — for 10+ measured seconds, with every part of the UI appearing at once only once all three loading steps (the sequential case.json to people.json to locations.json chain, then evidence and timeline) finished and hideLoadingStep()'s shared counter in js/dataLoading.js hit zero. Order matters because that core chain is sequential, not parallel — exactly what Demo 9 will refactor — so each step's throttled latency stacks on top of the last before the user sees anything at all: roughly 3x2000ms of the core chain alone under Slow 3G, before an all-or-nothing reveal. A real, observed UX cost of the current sequential architecture, noted here and left for Demo 9 rather than fixed now.",
+      "exercise": 1,
+      "demo": 7,
+      "view": "dashboard",
+      "highlight": "#loadingOverlay"
     }
   ]
 }

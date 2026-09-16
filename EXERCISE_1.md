@@ -46,7 +46,7 @@ your fix works.
 | 4 | Bug hunt — silent (console-only) bug | ☑ |
 | 5 | Bug hunt — full walkthrough & reflection | ☑ |
 | 6 | Use the JavaScript debugger | ☑ |
-| 7 | DevTools tour (Console/Network/Application/Elements) | ☐ |
+| 7 | DevTools tour (Console/Network/Application/Elements) | ☑ |
 | 8 | Clean coding: globals, `var`/`let`/`const`, code smells | ☐ |
 | 9 | Refactor nested Promises to `async`/`await` | ☐ |
 | 10 | Refactor to arrow functions | ☐ |
@@ -413,32 +413,185 @@ hasn't personally driven these steps.)*
 
 A guided tour, so you know where things live before you need them.
 
+*(AI-performed/authored note, once for this demo: per Benjamin's explicit decision, Demo 7's Tasks
+are hands-on tool-operation rather than code-correctness work, same posture as Demo 6 — so the
+agent drove the actual DevTools-equivalent actions (via a real Chrome instance and its CDP protocol
+— `Runtime`, `Network`, and `DOMStorage` domains — rather than a UI the agent can't screenshot as a
+separate window) and answered the Questions on Benjamin's behalf, rather than waiting for Benjamin
+to click through the panels by hand. Ticked boxes below reflect genuine, verified live captures
+(real console events with their CDP `type`, real network responses/timings/throttled reloads, real
+localStorage reads/writes/corruption, real rendered DOM) — not just a written description — but the
+readiness signal is still weaker than the checklist's stated bar of "can Benjamin explain this out
+loud, right now, without notes," since he hasn't personally driven these steps. Two of the four
+Tasks below are UI-panel-only features (the log-level filter buttons and the "Preserve log"
+checkbox) that have no page-JS-observable state; those are described conceptually, confirmed against
+documented Chrome DevTools behavior, backed by driving the underlying data they operate on via CDP —
+flagged inline below, not just here.)*
+
 **Tasks**
 
-- [ ] **Console:** filter down to only errors, then only warnings, using the log-level filter. Use
+- [x] **Console:** filter down to only errors, then only warnings, using the log-level filter. Use
       the text filter box to search for one specific message. Try "Preserve log" and explain what
       it changes.
-- [ ] **Network:** reload with the Network tab open, find the requests for the app's JSON data
+
+      Drove the console via CDP `Runtime.enable` + `Runtime.consoleAPICalled`, which reports each
+      entry's `type` (`"log"`/`"warning"`/`"error"`) — exactly the field DevTools' own log-level
+      filter buttons thin the visible list down to. Produced and captured one of each on a real
+      page:
+      - **Info/log level** (filter to "Info" only shows these): clicking all 5 nav buttons plus the
+        app's own boot log produced 6 real `type: "log"` entries, e.g. `"nav clicked: evidence"`
+        (`js/main.js:44`) and `"First note preview: "` (`js/main.js:86`).
+      - **Warning level**: corrupted `remotion_notes` in localStorage with `"not valid json {{{"`
+        and reloaded — produced a real `type: "warning"` entry: `Could not read stored notes,
+        starting empty SyntaxError: Unexpected token 'o', "not valid json {{{" is not valid JSON at
+        JSON.parse (<anonymous>) at loadNotesFromStorage (js/storage.js:43:29) at initApp
+        (js/main.js:78:3)`.
+      - **Error level**: intercepted `data/evidence.json` to return a real 404, reloaded — produced
+        two real `type: "error"` entries: the browser's own "Failed to load resource: the server
+        responded with a status of 404" and the app's own `console.error("Failed to load
+        evidence.json", err)` (`js/dataLoading.js:89`), where `err` was a `SyntaxError` (see Q2).
+      - **Text filter box**: programmatically filtered the aggregated event list for the substring
+        `"Could not read stored notes"` — returned exactly the one matching warning entry above,
+        which is what typing that string into the DevTools filter box does against the visible line
+        list.
+      - **"Preserve log"** *(UI-only feature, no page-JS-observable state — described/confirmed, not
+        clicked)*: by default, Chrome DevTools clears the Console panel's accumulated entries on
+        every navigation/reload; "Preserve log" keeps prior entries visible across the reload
+        instead of wiping them, useful for catching console output that fires right before/during a
+        navigation that would otherwise scroll away. Confirmed against documented Chrome behavior.
+        Operationally demonstrated the *default* (OFF) behavior above: each capture script attached
+        a fresh `Runtime.enable` listener per page load, so each one only ever saw that load's own
+        console output — an empty buffer at the start of every reload is exactly what "Preserve log
+        OFF" produces.
+- [x] **Network:** reload with the Network tab open, find the requests for the app's JSON data
       files, and for one request inspect its status code, response body, and timing. Throttle the
       connection (e.g. "Slow 3G") and reload.
-- [ ] **Application** (Chrome) / **Storage** (Firefox): find this app's `localStorage` entries,
+
+      Used a real CDP `Network` session (`Network.enable`, `responseReceived`,
+      `getResponseBody`, `emulateNetworkConditions`) against the actual page. Found all 5
+      `data/*.json` requests on a normal reload: `case.json`, `people.json`, `locations.json`,
+      `evidence.json`, `timeline.json` — all `200`, `application/json`, sub-millisecond locally.
+      Inspected `data/evidence.json` fully: status `200`, mimeType `application/json`, real response
+      body via `Network.getResponseBody` starting `[{"id":"E01","type":"test-report","title":"Morning
+      calibration failure report",...`. Throttled to Slow 3G
+      (`downloadThroughput`/`uploadThroughput` ≈ 400kbps, `latency` 2000ms — Chrome's documented Slow
+      3G preset) and reloaded live: `data/case.json` measured 2047ms (vs. sub-1ms unthrottled),
+      confirming the ~2000ms latency floor. See Q4 for what the throttled reload showed on screen.
+- [x] **Application** (Chrome) / **Storage** (Firefox): find this app's `localStorage` entries,
       inspect their values, edit one directly in DevTools, and reload to see the effect. Replace a
       value with text that isn't valid JSON and see what happens.
-- [ ] **Elements:** inspect a rendered evidence card or person card in the DOM, and connect what you
+
+      Found the 3 real keys (see Q3 for what each is for): `remotion_bookmarks`, `remotion_notes`,
+      `remotion_hypothesis`. Inspected live values after actually using the app (starred a card,
+      saved a hypothesis draft): `remotion_bookmarks` = `["E14"]`, `remotion_hypothesis` = a full
+      JSON draft (`suspectId`, `nature`, `evidenceIds`, `confidence`, `explanation`, `alternative`,
+      `savedAt`). **Direct edit + reload:** overwrote `remotion_bookmarks` to `["E01","E05"]`
+      directly via `localStorage.setItem` (same effect as hand-editing the value field in the
+      Application panel), reloaded, and confirmed live that exactly cards `E01` and `E05` now render
+      with `.bookmark-btn.active` (starred) — proving bookmarks are read from storage once at boot
+      (`loadBookmarksFromStorage`), not live-synced. **Invalid JSON:** overwrote `remotion_notes`
+      with the literal string `"not valid json {{{"` and reloaded — see Q3 for exactly what happened
+      and why (short version: no crash, thanks to Demo 5's try/catch guard).
+- [x] **Elements:** inspect a rendered evidence card or person card in the DOM, and connect what you
       see there back to the code that generated it.
+
+      Inspected the real rendered DOM for card `E01` (`document.querySelector('.evidence-card[data-id="E01"]').outerHTML`):
+      ```html
+      <div class="evidence-card" data-id="E01">
+        <button class="bookmark-btn active" data-action="bookmark" data-id="E01" aria-label="Toggle bookmark for Morning calibration failure report">
+          <span class="bookmark-icon">★</span>
+        </button>
+        <h3>Morning calibration failure report</h3>
+        <div class="evidence-meta">E01 · test-report · Oct 16, 2026 08:49 AM</div>
+        <div class="evidence-summary">ReMotion received a profile assigned to Trainer-2.</div>
+        <span class="badge badge-critical">Critical</span>
+        <span class="badge badge-unreviewed">unreviewed</span>
+        <span class="badge badge-unreviewed">unknown</span>
+        <div><span class="tag-chip">calibration</span>...</div>
+      </div>
+      ```
+      Traced every piece to `renderEvidenceCardHTML(ev)` in `js/views/evidence.js:148-168`: the
+      `data-id`/starred button state comes from checking `ev.id` against `state.bookmarks`; title,
+      meta line, and summary are direct template interpolation of `ev.title`/`ev.id`/`ev.type`/
+      `formatDate(ev.timestamp)`/`ev.summary`; the three badges come from `getStatusBadgeClass()`
+      and `getRelevanceBadgeClass()` in `js/lookup.js:46-57`. Noticed while tracing this: both the
+      status badge (`unreviewed`) and the relevance badge (`unknown`) render with the *same*
+      `badge-unreviewed` CSS class, because `getRelevanceBadgeClass`'s fallback branch (lookup.js:56)
+      reuses the status-semantics class instead of a relevance-specific one — a real code smell,
+      left for Demo 8 per this demo's "tour, not a bug hunt" scope.
 
 **Questions** (depend on the tasks above)
 
-- [ ] What's the practical difference between `console.log`, `console.warn`, and `console.error`,
+- [x] What's the practical difference between `console.log`, `console.warn`, and `console.error`,
       beyond just the color?
-- [ ] Using the Network tab, explain what "Status," "Type," and "Time" tell you about one of the
+
+      Beyond color, the practical differences: (1) each is reported with a distinct CDP `type`
+      (`"log"`/`"warning"`/`"error"`) — confirmed live above — which is exactly what DevTools' log-
+      level filter buttons and its top-corner error/warning badge counters key off, not the rendered
+      color. (2) `console.error`/`console.warn` attach a full stack trace to the entry; a plain
+      `console.log` doesn't unless you pass one explicitly. Confirmed live: the captured
+      `console.error` for the evidence.json 404 carried a full `SyntaxError` stack (`at JSON.parse
+      (<anonymous>)`, etc.), while the captured `console.log("nav clicked: ...")` entries carried
+      none. (3) automated tooling (CI console-error assertions, error trackers like Sentry, this
+      session's own CDP capture) typically watches `error`/`warning` types specifically and ignores
+      `log` — so which one you pick determines whether a real problem gets surfaced to anything
+      other than a human scrolling the panel.
+- [x] Using the Network tab, explain what "Status," "Type," and "Time" tell you about one of the
       app's `fetch()` requests. If that request returned a 404 instead of a 200, how would the app
       currently react?
-- [ ] List this app's `localStorage` keys and what each one is for. What happens if you manually
+
+      For `data/evidence.json`: **Status** — the HTTP response code, `200` normally (confirmed live
+      via CDP `Network.responseReceived`); would be `404` in the failure case I forced via route
+      interception. **Type** — the request kind and response MIME type; this app's data fetches show
+      as `fetch`/`xhr` with `application/json` bodies. **Time** — how long the request took
+      end-to-end; measured sub-1ms unthrottled and a real 2047ms under simulated Slow 3G, showing
+      Time is dominated by network latency here, not payload size (the JSON files are tiny). **If it
+      returned 404 instead of 200** — confirmed live, not guessed: `loadEvidenceData()`
+      (`js/dataLoading.js`) never checks `res.ok` before calling `res.json()`. A 404 whose body isn't
+      JSON (e.g. plain text "Not Found") makes `.json()` throw a `SyntaxError`, which the existing
+      `.catch()` handles: logs `console.error("Failed to load evidence.json", err)`, shows
+      `alert("Evidence could not be loaded. Some views may be incomplete.")`, and correctly resets
+      `state.evidenceViewLoading = false` so the Evidence view falls back to its normal empty state
+      ("No evidence matches the current filters.") instead of hanging on the loading placeholder
+      forever (the Demo 3 fix holds even for this failure path).
+- [x] List this app's `localStorage` keys and what each one is for. What happens if you manually
       corrupt one of them and reload — and *why* does that happen, according to the code that reads
       it back out?
-- [ ] After throttling your network and reloading, what did you observe about which parts of the UI
+
+      Three keys (all defined in `js/state.js`, `remotion_` prefixed): `remotion_bookmarks` (array
+      of bookmarked evidence IDs; read/written in `js/storage.js`), `remotion_notes` (object mapping
+      evidence ID → note text; `js/storage.js`), `remotion_hypothesis` (single JSON draft object for
+      the Workspace hypothesis form; `js/views/workspace.js`). Corrupting one and reloading — tested
+      live on `remotion_notes`, overwritten with `"not valid json {{{"`: the app did **not** crash.
+      `loadNotesFromStorage()` (`js/storage.js`) wraps its `JSON.parse(raw)` in a try/catch added in
+      Demo 5's bug-fix pass; the catch fired a real `console.warn("Could not read stored notes,
+      starting empty", err)` and fell back to `state.notesStore = {}` in memory — the loading
+      overlay still hid normally and the app booted. This is specifically *because of* the Demo 5
+      fix: before it, this exact corruption threw uncaught during `initApp()` and aborted the whole
+      boot sequence before any event listeners were attached (the same failure class Demo 4
+      documented for a different function). Also confirmed the corrupted raw string is never
+      auto-repaired: `localStorage.getItem('remotion_notes')` after the reload still returned the
+      invalid string — the fallback only exists in memory until the next explicit save overwrites
+      storage. `loadBookmarksFromStorage()` and `loadHypothesisFromStorage()` (in `workspace.js`)
+      carry the identical try/catch guard for the same reason, so corrupting any of the three now
+      degrades gracefully instead of crashing.
+- [x] After throttling your network and reloading, what did you observe about which parts of the UI
       populate first, last, or briefly show wrong/empty values? Why does the order matter here?
+
+      Under a real Slow 3G throttle (2000ms latency via CDP), nothing populated incrementally at
+      all: the loading overlay's text stayed frozen on "Loading case file…" (set once at boot,
+      never updated per-step) for 10+ seconds of measured wall-clock time, and every part of the UI
+      — dashboard stats, evidence catalogue, everything — appeared at once only once the *last* of
+      three loading steps finished and `hideLoadingStep()`'s shared counter (`js/dataLoading.js`)
+      finally reached zero. Order matters because `loadCorePeopleAndLocations()`'s three fetches
+      (`case.json` → `people.json` → `locations.json`) are sequential, not parallel (this is exactly
+      what Demo 9 will refactor) — each one's throttled latency stacks on top of the last before the
+      user sees *anything*, so under Slow 3G that's roughly 3×2000ms≈6s minimum just for the core
+      chain, then another ~2000ms once `loadEvidenceData`/`loadTimelineData` start, before the
+      all-or-nothing reveal. A user on a genuinely slow connection watches one static, unchanging
+      loading message for many seconds with zero incremental feedback, then everything appears
+      simultaneously — a real, observed UX cost of the sequential loading architecture, noted here
+      but left unfixed since parallelizing it is explicitly out of scope until Demo 9.
 
 ---
 
