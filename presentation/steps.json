@@ -614,6 +614,95 @@
       "demo": 7,
       "view": "dashboard",
       "highlight": "#loadingOverlay"
+    },
+    {
+      "id": "demo8-t1-original-globals-collision-risk",
+      "type": "code",
+      "title": "D8 - T1 — The 18 original top-level `var`s, and 3 collision risks",
+      "narration": "This is the original pre-Demo-1 app.js: 18 bare top-level vars, all sharing one global function scope. Three explained: allEvidence — any function anywhere in the ~1085-line file could reassign it, or a second helper could silently reuse the name for something unrelated and clobber the canonical evidence list with no error. currentPage — generic enough that an independently-written view module could plausibly declare its own local currentPage believing it was private, silently shadowing the router's actual page tracker (contrast with currentPeopleTab, which the code deliberately keeps as its own separate concept rather than reusing currentPage). latestSearchRequestId — in the flat script there was no way to express \"this counter is private to the search-input handler\"; it lived at the same top-level scope as everything else. Demo 1's module split fixes all three differently: allEvidence and currentPage are now properties on one exported `state` object (js/state.js) — a property access can't collide with an unrelated bare name the way two same-named globals could; latestSearchRequestId became a genuinely module-private `let` inside js/views/evidence.js — true file-level privacy the flat script never had at all.",
+      "exercise": 1,
+      "demo": 8,
+      "file": "app.js (original, pre-Demo-1) → js/state.js",
+      "line": 1,
+      "before": "// ---------------------------------------------------------------------\n// GLOBAL STATE\n// ---------------------------------------------------------------------\nvar allEvidence = [];\nvar filteredEvidence = [];\nvar selectedEvidence = null;\nvar bookmarks = [];\nvar currentPage = \"dashboard\";\n\nvar allPeople = [];\nvar allLocations = [];\nvar allTimeline = [];\nvar caseData = {};\n\nvar currentPeopleTab = \"people\";\nvar loadingStepsRemaining = 2;\n\nvar evidenceViewLoading = true;\n\nvar viewRendered = {\n  dashboard: false,\n  evidence: false,\n  people: false,\n  timeline: false,\n  workspace: false\n};\n\nvar notesStore = {};\nvar modalCloseListenerCount = 0;\n\nvar STORAGE_KEY_BOOKMARKS = \"remotion_bookmarks\";\nvar STORAGE_KEY_NOTES = \"remotion_notes\";\nvar STORAGE_KEY_HYPOTHESIS = \"remotion_hypothesis\";",
+      "after": "export const state = {\n  allEvidence: [],\n  filteredEvidence: [],\n  selectedEvidence: null,\n  bookmarks: [],\n  currentPage: \"dashboard\",\n\n  allPeople: [],\n  allLocations: [],\n  allTimeline: [],\n  caseData: {},\n\n  currentPeopleTab: \"people\",\n  loadingStepsRemaining: 2,\n\n  evidenceViewLoading: true,\n\n  viewRendered: {\n    dashboard: false,\n    evidence: false,\n    people: false,\n    timeline: false,\n    workspace: false\n  },\n\n  notesStore: {}\n};\n\nexport const STORAGE_KEY_BOOKMARKS = \"remotion_bookmarks\";\nexport const STORAGE_KEY_NOTES = \"remotion_notes\";\nexport const STORAGE_KEY_HYPOTHESIS = \"remotion_hypothesis\";"
+    },
+    {
+      "id": "demo8-t2-1-var-let-const-sweep",
+      "type": "code",
+      "title": "D8 - T2 (1/2) — Sweeping all 171 `var`s to deliberate `const`/`let`",
+      "narration": "Swept all 10 js/*.js and js/views/*.js files — 171 var declarations total, zero left afterward (js/state.js already had zero, written as const/object-properties from the Demo 1 split itself). Rule applied per declaration, not blanket: let only where the binding is genuinely reassigned after its first assignment — every for-loop counter, accumulator strings built with +=, counters incremented with ++, and a couple of declare-now-assign-later bindings; const everywhere else, which was the large majority, since most of these var declarations held a single DOM lookup, a single computed value, or an array only ever pushed into (mutating an array's contents isn't reassigning the binding, so those stayed const). navigation.js's handleHashChange is a clean example: hash gets reassigned to \"dashboard\" a few lines down, so it needs let; validViews is built once and never reassigned, so it's const even though it's still just as mutable-looking as hash was as a var.",
+      "exercise": 1,
+      "demo": 8,
+      "file": "js/navigation.js",
+      "line": 34,
+      "before": "function handleHashChange() {\n  var hash = window.location.hash.replace(\"#\", \"\");\n  var validViews = [\"dashboard\", \"evidence\", \"people\", \"timeline\", \"workspace\"];\n  if (validViews.indexOf(hash) === -1) {\n    hash = \"dashboard\";\n  }",
+      "after": "export function handleHashChange() {\n  let hash = window.location.hash.replace(\"#\", \"\");\n  const validViews = [\"dashboard\", \"evidence\", \"people\", \"timeline\", \"workspace\"];\n  if (validViews.indexOf(hash) === -1) {\n    hash = \"dashboard\";\n  }"
+    },
+    {
+      "id": "demo8-t2-2-behavior-affecting-find",
+      "type": "code",
+      "title": "D8 - T2 (2/2) — The one flagged behavior-affecting/syntax finding",
+      "narration": "Out of all 171, exactly one couldn't just default to const: js/views/workspace.js's loadHypothesisFromStorage originally had `var draft;` with no initializer, assigned only later inside a try block. `const draft;` with no initializer is a SyntaxError — const requires immediate initialization — confirmed directly with `node --check`, which failed until this was declared `let draft;` instead. Every other reassigned binding across the sweep got let as a deliberate choice, not because const was syntactically impossible — this is the only one where it actually was. Separately, Demo 4's existing let i fix for the nav-button loop closure bug (js/main.js) was left completely untouched by this sweep, and re-verified live afterward: clicking each nav button still logs its own correct data-view, not the last button's.",
+      "exercise": 1,
+      "demo": 8,
+      "file": "js/views/workspace.js",
+      "line": 147,
+      "before": "  var raw = localStorage.getItem(STORAGE_KEY_HYPOTHESIS);\n  if (!raw) return;\n\n  var draft;\n  try {\n    draft = JSON.parse(raw);\n  } catch (err) {",
+      "after": "  const raw = localStorage.getItem(STORAGE_KEY_HYPOTHESIS);\n  if (!raw) return;\n\n  let draft;\n  try {\n    draft = JSON.parse(raw);\n  } catch (err) {"
+    },
+    {
+      "id": "demo8-t3-1-relevance-badge-smell",
+      "type": "code",
+      "title": "D8 - T3 (1/2) — Code smell: relevance badges silently reusing status-badge styling",
+      "narration": "This was the Demo 7 lead, verified real rather than assumed: getRelevanceBadgeClass fell back to \"badge-unreviewed\" — a class that visually and semantically belongs to review-status badges. Every evidence item in data/evidence.json currently has relevance \"Unknown\", so this fallback fired on every single card — confirmed live via Playwright screenshot that the \"UNREVIEWED\" status pill and the \"unknown\" relevance pill rendered as the exact same solid grey badge, side by side, on every card. Two unrelated axes — has this been reviewed? vs. is this relevant? — made visually indistinguishable. Fix: a dedicated .badge-relevance-unclear CSS class, same neutral grey but with a dashed border instead of solid, so it reads as \"unclear/pending\" rather than borrowing status semantics. Verified live: the relevance badge now renders with a visibly dashed border distinct from the solid status pill, and switching an item's relevance to \"Relevant\" in the detail view still correctly switches it to badge-relevant.",
+      "exercise": 1,
+      "demo": 8,
+      "file": "js/lookup.js",
+      "line": 53,
+      "before": "export function getRelevanceBadgeClass(relevance) {\n  var r = (relevance || \"\").toLowerCase();\n  if (r === \"relevant\") return \"badge-relevant\";\n  return \"badge-unreviewed\";\n}",
+      "after": "export function getRelevanceBadgeClass(relevance) {\n  // Relevance and review status are unrelated axes (an item can be\n  // \"unreviewed\" and later turn out \"relevant\", or \"reviewed\" and\n  // \"irrelevant\") — this must not fall back to a status-badge class. See\n  // badge-relevance-unclear in styles.css, added specifically for this.\n  const r = (relevance || \"\").toLowerCase();\n  if (r === \"relevant\") return \"badge-relevant\";\n  return \"badge-relevance-unclear\";\n}\n\n/* styles.css */\n.badge-relevance-unclear {\n  background: #f0f1f4;\n  color: var(--color-text-muted);\n  border-color: var(--color-border);\n  border-style: dashed;\n}"
+    },
+    {
+      "id": "demo8-t3-2-duplicate-listeners-smell",
+      "type": "code",
+      "title": "D8 - T3 (2/2) — Code smell: duplicate event-listener registrations",
+      "narration": "Two instances of the same root problem, both in main.js. First: #filterStatus was wired twice — once via addEventListener like every other filter control, and again via an inline setAttribute(\"onchange\", \"renderEvidenceList()\") string, which existed only so that string could resolve renderEvidenceList off window — meaning every status-filter change re-ran the full catalogue render twice, and the function had to stay exported globally purely to support this one redundant path. Second: handleHashChange was registered as the hashchange listener twice — once inside setupEventListeners, once more at the bottom of the file — a duplication the code's own comments explicitly flagged as \"reproduced from the original\" and deliberately preserved through Demo 1's pure refactor. Neither produced a visible bug, which is exactly the cost: every navigation silently re-ran the entire view-render/nav-highlight logic twice, and for Workspace specifically (which always re-renders per its own comment) rebuilt the bookmarks list, notes list, and hypothesis dropdowns twice per hash change. Fix: removed both redundant registrations and the now-unnecessary window.renderEvidenceList export. Verified live: filterStatus's onchange attribute is now null, the filter still correctly filters (including combined with an active sort), and every nav path still renders exactly once.",
+      "exercise": 1,
+      "demo": 8,
+      "file": "js/main.js",
+      "line": 38,
+      "before": "function setupEventListeners() {\n  window.addEventListener(\"hashchange\", handleHashChange);\n  ...\n  document.getElementById(\"filterStatus\").addEventListener(\"change\", renderEvidenceList);\n  document.getElementById(\"filterStatus\").setAttribute(\"onchange\", \"renderEvidenceList()\");\n  ...\n}\n...\nwindow.renderEvidenceList = renderEvidenceList; // needed by the setAttribute(\"onchange\", ...) below\n...\nwindow.addEventListener(\"DOMContentLoaded\", initApp);\nwindow.addEventListener(\"hashchange\", handleHashChange);",
+      "after": "function setupEventListeners() {\n  window.addEventListener(\"hashchange\", handleHashChange);\n  ...\n  document.getElementById(\"filterStatus\").addEventListener(\"change\", renderEvidenceList);\n  ...\n}\n...\nwindow.addEventListener(\"DOMContentLoaded\", initApp);\n// The hashchange listener lives only in setupEventListeners() above — see\n// navigation.js's handleHashChange comment, which used to document this as\n// a deliberately-preserved duplicate registration (fixed as a Demo 8 code\n// smell: it made every navigation re-run the full view-render/nav-highlight\n// logic twice for no benefit)."
+    },
+    {
+      "id": "demo8-q1-var-let-const-scope-reassignment",
+      "type": "app",
+      "title": "D8 - Q1 — var vs. let vs. const: scope, reassignment, and the Demo 4 example",
+      "narration": "Scope: var is function-scoped (or global at top level) and hoisted to undefined before its declaration line runs, ignoring block boundaries entirely; let/const are block-scoped, confined to the nearest {...}, and sit in a temporal dead zone that throws a ReferenceError if read before their declaration actually executes. Reassignment: var and let can both be reassigned any number of times; const can be assigned only once, at declaration — confirmed live: const x = 1; x = 2; throws TypeError: Assignment to constant variable at runtime, not caught by node --check, which is exactly why every reassignment in the T2 sweep was hand-verified rather than trusted to a syntax check alone. Concrete bug var makes possible and let prevents: this app's own Demo 4 fix, still visible right here in main.js's nav-button loop — with var i, every button's click closure would read the loop's shared, final value after the loop finished, so every button reported the last button's data-view; let gives each iteration its own binding, so each closure captures its own button correctly. Re-verified live this session: clicking each nav button still logs its own correct data-view.",
+      "exercise": 1,
+      "demo": 8,
+      "view": "dashboard",
+      "highlight": ".nav-btn[data-view=\"evidence\"]"
+    },
+    {
+      "id": "demo8-q2-accidental-global-strict-mode",
+      "type": "app",
+      "title": "D8 - Q2 — Accidental globals, and what ES modules' strict mode does instead",
+      "narration": "An accidental global is what happens in non-strict (sloppy-mode) JavaScript when code assigns to a bare, undeclared name inside a function — instead of erroring, the engine silently creates a new property on the global object (window in a browser) and assigns there. That global was never declared on purpose, is invisible to anyone reading just that function's signature, and can silently collide with any other same-named variable anywhere else in the program — exactly the class of risk the original app.js globals carried. ES modules are always strict mode, with no opt-out, so the same mistake behaves completely differently — verified live, not just asserted: loaded a throwaway module (`export function oops() { accidentallyGlobal = 42; }`) via a Blob URL and called it in the running app's page context. Result: ReferenceError: accidentallyGlobal is not defined, thrown immediately at the assignment, with no property ever created on window. The module system doesn't just make the existing globals in this app safer — it turns the exact keyword-forgetting mistake that created those globals in the first place into an immediate, loud crash instead of a silent one.",
+      "exercise": 1,
+      "demo": 8,
+      "view": "dashboard"
+    },
+    {
+      "id": "demo8-q3-works-vs-clean",
+      "type": "app",
+      "title": "D8 - Q3 — \"It works\" vs. \"it's clean\": the #filterStatus double-registration",
+      "narration": "The #filterStatus double-registration from T3 is exactly this case: it worked — every status-filter change did correctly re-filter the evidence list, with no visible bug, for seven demos straight before anyone flagged it. But the messy version had real, non-hypothetical cost. Bug risk: renderEvidenceList had to stay exported to window solely to support the redundant inline-string path — exactly the kind of leftover surface that makes a future rename or removal silently break something invisible and far away. Onboarding/review difficulty: a reviewer reading setupEventListeners sees filterStatus wired once via addEventListener and has no reason to suspect a second, functionally-identical wiring exists two lines later via a string attribute — it was only caught now, in a dedicated code-smell pass, not during any of the seven prior demos' adversarial walkthroughs, because \"the filter still works\" gave no visible signal anything was wrong. Compounding cost: the identical pattern — handleHashChange registered twice — had already independently crept into the same file. That's what \"technically works, not clean\" actually costs over time: the same category of smell recurs because nothing about \"it works\" ever forces anyone to notice or remove it.",
+      "exercise": 1,
+      "demo": 8,
+      "view": "evidence",
+      "highlight": "#filterStatus"
     }
   ]
 }

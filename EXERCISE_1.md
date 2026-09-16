@@ -47,7 +47,7 @@ your fix works.
 | 5 | Bug hunt — full walkthrough & reflection | ☑ |
 | 6 | Use the JavaScript debugger | ☑ |
 | 7 | DevTools tour (Console/Network/Application/Elements) | ☑ |
-| 8 | Clean coding: globals, `var`/`let`/`const`, code smells | ☐ |
+| 8 | Clean coding: globals, `var`/`let`/`const`, code smells | ☑ |
 | 9 | Refactor nested Promises to `async`/`await` | ☐ |
 | 10 | Refactor to arrow functions | ☐ |
 
@@ -599,27 +599,185 @@ flagged inline below, not just here.)*
 
 **Tasks**
 
-- [ ] List every top-level `var` at the top of the original `app.js`. For at least three of them,
+- [x] List every top-level `var` at the top of the original `app.js`. For at least three of them,
       explain what could go wrong if two unrelated pieces of code both tried to use a variable with
       that name — and how your module split from Demo 1 already prevents (or doesn't yet prevent)
       that.
-- [ ] Go through the codebase and replace `var` with `const` or `let` everywhere it's declared,
+
+      All 18, from `git show c31f09b^:app.js` (the pre-Demo-1 file): `allEvidence`,
+      `filteredEvidence`, `selectedEvidence`, `bookmarks`, `currentPage`, `allPeople`,
+      `allLocations`, `allTimeline`, `caseData`, `currentPeopleTab`, `loadingStepsRemaining`,
+      `evidenceViewLoading`, `viewRendered`, `notesStore`, `STORAGE_KEY_BOOKMARKS`,
+      `STORAGE_KEY_NOTES`, `STORAGE_KEY_HYPOTHESIS`, `latestSearchRequestId`.
+
+      Three explained:
+      - **`allEvidence`** — as a bare top-level `var` in a single non-module script, *any* function
+        anywhere in the ~1085-line file could reassign it (`allEvidence = something`), and nothing
+        stops a second, unrelated helper added later from reusing that exact name for something else
+        entirely (its own local list, say) if it forgot `var`/`let` — it would silently clobber the
+        canonical evidence array instead of erroring. The Demo 1 split now fully prevents this:
+        `allEvidence` isn't a bare binding anywhere any more, it's `state.allEvidence`, a property on
+        one exported object (`js/state.js`). A property access can't collide with an unrelated
+        variable the way a bare name can — the only way to "clobber" it now is an explicit
+        `state.allEvidence = x`, which greps for and reads as an obvious, intentional write, not an
+        accidental name collision.
+      - **`currentPage`** — same class of risk, and a name generic enough that a second view module
+        written independently (e.g. a future `people.js` contributor who didn't know the exact
+        existing global name) could plausibly declare its own local `currentPage` believing it was
+        module-private — in the old flat-script world it wouldn't have been; it would have silently
+        shadowed/collided with the router's actual page-tracking variable. Now `state.currentPage` is
+        the only home for this concept, and any module wanting a *different*, private notion of
+        "current tab" (see `currentPeopleTab`, which is exactly that, kept as its own state property
+        rather than reusing `currentPage`) has to name it something else, in its own scope, which the
+        module system enforces rather than merely conventions.
+      - **`latestSearchRequestId`** — this one is *not* on `state` — it stayed as a genuinely
+        module-private `let` inside `js/views/evidence.js` (verified: `grep -rn
+        latestSearchRequestId js/` returns only that one file), because nothing outside
+        `handleSearchInput` needs it. In the original flat script, there was no way to express "this
+        counter is private to the search-input handler" — it lived at the same top-level scope as
+        every other global, so any other part of the ~1085-line file could have read or incremented
+        it (accidentally or not), silently corrupting the stale-response guard. The module split
+        gives real file-level privacy: nothing outside `evidence.js` can even reference
+        `latestSearchRequestId`, let alone collide a same-named variable into it.
+- [x] Go through the codebase and replace `var` with `const` or `let` everywhere it's declared,
       deciding `const` vs. `let` deliberately for each one.
-- [ ] Identify at least two more "code smells" anywhere in the app, beyond the globals above. Fix
+
+      Swept all 10 `js/*.js` / `js/views/*.js` files — 171 `var` declarations total (counted via
+      `grep -c '\bvar\b'` before the sweep: dataLoading.js 3, lookup.js 6, main.js 2, storage.js 4,
+      navigation.js 6, views/timeline.js 30, views/people.js 20, views/evidence.js 58,
+      views/workspace.js 31, views/dashboard.js 11). `js/state.js` already had zero `var`s — it was
+      written as `const`/object-properties from the Demo 1 split itself. Verified zero `var` remains
+      anywhere in `js/` after the sweep (`grep -rn '\bvar\b' js/` returns nothing but one unrelated
+      prose mention of the word "var" in a state.js comment).
+
+      Rule applied per declaration: `let` only where the binding is genuinely reassigned after its
+      first assignment (every `for (var i ...)` loop counter, plus accumulator strings built with
+      `+=`, counters incremented with `++`, and a handful of "declare now, assign later inside
+      try/catch" bindings like `workspace.js`'s hypothesis-draft parse); `const` everywhere else —
+      the large majority, since most of these were `var`s holding a single DOM lookup, a single
+      computed value, or an array only ever `.push()`ed into (mutating an array's contents isn't
+      reassigning the binding, so those stayed `const`).
+
+      **Behavior-affecting find, flagged as required:** `js/views/workspace.js`'s
+      `loadHypothesisFromStorage` originally had `var draft;` with no initializer, assigned only
+      later inside a `try` block (`draft = JSON.parse(raw)`). `const draft;` with no initializer is a
+      `SyntaxError` (`const` requires immediate initialization) — confirmed via `node --check`, which
+      failed until this was declared `let draft;` instead. This is the *only* one of the 171 that
+      couldn't just default to `const`; every other reassigned binding got `let` as a deliberate
+      choice, not because `const` was syntactically impossible. No other `var` had a function-scoping
+      dependency the way Demo 4's nav-button-loop `var i` did (that fix — already `let i` in
+      `main.js` — was left untouched, and re-verified via Playwright that clicking each nav button
+      still logs the correct per-button `data-view`, not the last button's, confirming the closure
+      fix still holds).
+- [x] Identify at least two more "code smells" anywhere in the app, beyond the globals above. Fix
       them, and explain why they were bad and how your fix addresses that.
+
+      **Smell 1 — relevance badges silently reusing status-badge styling (the Demo 7 lead).**
+      Verified real: `getRelevanceBadgeClass` in `js/lookup.js` fell back to `"badge-unreviewed"` —
+      a class that visually and semantically belongs to review-status badges (`getStatusBadgeClass`
+      returns it for "not yet reviewed"). Since every evidence item in `data/evidence.json` currently
+      has `relevance: "Unknown"`/`"unknown"`, this fallback fired on *every single card*, and a
+      screenshot of the Evidence Catalogue (confirmed live) showed the "UNREVIEWED" status pill and
+      the "unknown" relevance pill rendered as the exact same solid grey badge side by side on every
+      card — two unrelated axes (has this been reviewed? vs. is this relevant?) visually
+      indistinguishable, so a "reviewed but relevance-unknown" item and an "unreviewed" item would
+      look confusingly similar at a glance. Fix: added a dedicated `.badge-relevance-unclear` class
+      in `styles.css` (same neutral grey, but with a dashed border instead of solid, so it reads as
+      "unclear/pending" rather than borrowing status semantics) and pointed the fallback at it
+      instead of `badge-unreviewed`. Verified live via Playwright: the "unknown" relevance badge now
+      renders with `class="badge badge-relevance-unclear"` and a visibly dashed border distinct from
+      the solid "UNREVIEWED" status pill; changing an item's relevance to "Relevant" in the detail
+      view still correctly switches it to `badge-relevant`.
+      **Smell 2 — duplicate event-listener registrations.** Found two separate instances of the same
+      root problem: (1) `#filterStatus` was wired *twice* in `main.js` — once via
+      `addEventListener("change", renderEvidenceList)` like every other filter control, and again via
+      `filterStatus.setAttribute("onchange", "renderEvidenceList()")`, an inline-string handler that
+      only existed so it could resolve `renderEvidenceList` off `window` — meaning every status-filter
+      change re-ran the full catalogue re-render twice for no reason, and `renderEvidenceList` had to
+      stay exported to `window` purely to support this one redundant path. (2) `handleHashChange` was
+      registered as the `hashchange` listener *twice* — once inside `setupEventListeners()`, once
+      more at the bottom of `main.js` — a duplication the code's own comments explicitly flagged as
+      "reproduced from the original" and deliberately preserved during Demo 1's pure refactor. Both
+      are a real cost even though neither produced an outwardly visible bug: every navigation
+      silently re-ran the entire view-render/nav-highlight/`state.currentPage` logic twice, and (for
+      Workspace specifically, which "always re-renders" per its own comment) rebuilt the bookmarks
+      list, notes list, and hypothesis dropdowns twice per hash change — wasted work today, and a
+      latent risk for tomorrow if either render path ever gains a non-idempotent side effect (an
+      analytics ping, a counter increment, anything like the `latestSearchRequestId` pattern
+      elsewhere in this same codebase). Fix: removed the `setAttribute("onchange", ...)` duplicate
+      and the redundant top-level `hashchange` listener, keeping exactly one registration for each,
+      and removed `window.renderEvidenceList` (no longer needed once nothing resolves it from a
+      global inline string). Verified live: `document.getElementById("filterStatus").getAttribute
+      ("onchange")` now returns `null`; changing the status filter still correctly filters the list
+      (confirmed both directly and combined with an active sort, which survives the filter change);
+      every nav button, hash link, and the People-view "view evidence" cross-link still navigate
+      correctly with a single render each.
 
 **Questions** (depend on the tasks above)
 
-- [ ] What is the difference between `var`, `let`, and `const` in terms of scope and reassignment?
+- [x] What is the difference between `var`, `let`, and `const` in terms of scope and reassignment?
       Give a concrete example — from this codebase or a hypothetical grounded in a pattern you saw
       — of a bug that `var`'s scoping rules make *possible* and `let` would prevent.
-- [ ] What is an "accidental global," and how does non-strict-mode JavaScript allow it to happen by
+
+      **Scope:** `var` is function-scoped (or global-scoped at top level) — it ignores block
+      boundaries (`if`, `for`, `{}`) entirely and is hoisted to the top of its enclosing function,
+      initialized to `undefined` before the declaration line runs. `let`/`const` are block-scoped —
+      confined to the nearest `{...}` — and hoisted into a "temporal dead zone" that throws a
+      `ReferenceError` if read before the declaration line actually executes, rather than silently
+      yielding `undefined`. **Reassignment:** `var` and `let` can both be reassigned any number of
+      times; `const` can be assigned only once, at declaration (confirmed live above: `const draft;`
+      with no initializer is a `SyntaxError`, and `const x = 1; x = 2;` throws `TypeError: Assignment
+      to constant variable` — the latter is a *runtime* error, not caught by `node --check`, which is
+      exactly why this session re-verified every reassignment by hand rather than trusting a syntax
+      check alone). **Concrete bug `var` makes possible, `let` prevents:** this codebase's own Demo 4
+      fix is the textbook case, still visible in `main.js`'s `setupEventListeners`: a `for` loop over
+      `navButtons` attaches one click listener per button, and each listener's callback reads the
+      loop counter to know which button was clicked. With `var i`, all callbacks close over the
+      *same* function-scoped `i` — by the time any button is actually clicked, the loop has already
+      finished and `i` sits at its final value, so every button's callback reports the *last*
+      button's `data-view`, not its own. `let i` gives every loop iteration its own fresh binding, so
+      each closure captures the `i` from its own iteration. This is preserved, not reintroduced: the
+      Demo 8 sweep left `main.js`'s `let i` exactly as Demo 4 fixed it, and re-verified live that
+      clicking each nav button still logs its own correct `data-view` in the console.
+- [x] What is an "accidental global," and how does non-strict-mode JavaScript allow it to happen by
       simply forgetting a keyword? Now that your code runs as ES modules (which are always strict
       mode), what happens instead if you make that same mistake?
-- [ ] "The code technically works" and "the code is clean" are not the same bar. Give one concrete
+
+      An "accidental global" is what happens in non-strict (sloppy-mode) JavaScript when code
+      assigns to a bare, undeclared name (`total = 5;` with no `var`/`let`/`const`) inside a
+      function: instead of erroring, the engine silently creates a new property on the global object
+      (`window` in a browser) and assigns there — a global that was never declared on purpose, is
+      invisible to anyone reading just that function's signature, and can silently collide with any
+      other same-named variable anywhere else in the program (exactly the class of risk Task 1 above
+      walks through for the original `app.js` globals). ES modules are always strict mode, with no
+      opt-out, so the same mistake behaves completely differently — **verified live, not just
+      asserted**: loaded a throwaway module (`export function oops() { accidentallyGlobal = 42; }`)
+      via a Blob URL and called it in the running app's page context. Result: `ReferenceError:
+      accidentallyGlobal is not defined`, thrown immediately at the assignment, with no property ever
+      created on `window`. So the module system doesn't just make the *existing* globals in this app
+      safer (Task 1) — it also turns the exact keyword-forgetting mistake that created those globals
+      in the first place into an immediate, loud crash instead of a silent one.
+- [x] "The code technically works" and "the code is clean" are not the same bar. Give one concrete
       example from this app of something that worked correctly but was still worth refactoring —
       and explain what real cost the messy version has (bug risk, onboarding time, review
       difficulty...).
+
+      The `#filterStatus` double-registration from Smell 2 above is exactly this case: it worked —
+      every status-filter change did correctly re-filter the evidence list, with no visible bug, for
+      seven demos straight before anyone flagged it. But the messy version had real, non-hypothetical
+      cost: (1) **bug risk** — `renderEvidenceList` had to stay exported to `window` solely to
+      support the redundant inline-string path, which is exactly the kind of leftover surface that
+      makes future refactors risky (rename or remove the function and something invisible far away,
+      an HTML string, breaks); (2) **onboarding/review difficulty** — a reviewer or new contributor
+      reading `setupEventListeners` sees `filterStatus` wired once via `addEventListener` and has no
+      reason to suspect a second, functionally-identical wiring exists two lines later via a string
+      attribute — it was only caught now, in a dedicated code-smell pass, not during any of the seven
+      prior demos' adversarial walkthroughs, because "the filter still works" gave no visible signal
+      that anything was wrong; (3) **wasted work compounding silently** — every render doubled for no
+      behavioral gain, and the *identical* pattern (handleHashChange registered twice) had already
+      independently crept into the same file, which is what "technically works, not clean" actually
+      costs over time: the same category of smell recurs because nothing about "it works" ever forces
+      anyone to notice or remove it.
 
 ---
 
