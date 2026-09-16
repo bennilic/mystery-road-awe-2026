@@ -69,7 +69,10 @@ export function renderTimeline() {
     var eventLocationNames = [];
     for (var el = 0; el < item.locationIds.length; el++) {
       var evtLoc = findLocationById(item.locationIds[el]);
-      eventLocationNames.push(evtLoc || item.locationIds[el]);
+      // findLocationById returns the location object, not a display string —
+      // pushing it directly and joining left join() calling toString() on
+      // it, rendering "[object Object]" instead of the location's name.
+      eventLocationNames.push(evtLoc ? evtLoc.id + " - " + evtLoc.name : item.locationIds[el]);
     }
     if (eventLocationNames.length > 0) {
       html += '<p class="evidence-meta">Location: ' + eventLocationNames.join(", ") + "</p>";
@@ -105,12 +108,37 @@ function certaintyBadgeClass(certainty) {
 // Looks like a generic reusable modal, but in the actual codebase it is
 // only ever invoked from renderTimeline's own link-button handler above —
 // kept module-private rather than exported speculatively (YAGNI).
+
+// Only called from openEvidenceModal below, and only once per page (guarded
+// by the isNewModal check there). A single named function reused across
+// every open, rather than a fresh closure created per openEvidenceModal
+// call, so re-opening the modal for a different event doesn't keep stacking
+// additional listeners on the same persisted #quickViewModal element — each
+// stacked listener re-ran its full body (including a second, third, ...
+// openEvidenceDetail call) on every later click inside the modal.
+function handleModalClick(e) {
+  var modal = document.getElementById("quickViewModal");
+  if (!modal) return;
+
+  if (e.target.classList.contains("modal-close-btn") || e.target.classList.contains("modal-backdrop")) {
+    modal.innerHTML = "";
+  }
+  if (e.target.getAttribute && e.target.getAttribute("data-open-full")) {
+    modal.innerHTML = "";
+    navigateTo("evidence");
+    setTimeout(function () {
+      openEvidenceDetail(e.target.getAttribute("data-open-full"));
+    }, 0);
+  }
+}
+
 function openEvidenceModal(evidenceId) {
   var ev = findEvidenceById(evidenceId);
   if (!ev) return;
 
   var modal = document.getElementById("quickViewModal");
-  if (!modal) {
+  var isNewModal = !modal;
+  if (isNewModal) {
     modal = document.createElement("div");
     modal.id = "quickViewModal";
     document.body.appendChild(modal);
@@ -125,19 +153,10 @@ function openEvidenceModal(evidenceId) {
     '<button type="button" class="btn btn-primary btn-small" data-open-full="' + ev.id + '">Open full evidence</button>' +
     "</div></div>";
 
-  state.modalCloseListenerCount++;
-  console.log("modal opened, active close listeners:", state.modalCloseListenerCount);
-
-  modal.addEventListener("click", function (e) {
-    if (e.target.classList.contains("modal-close-btn") || e.target.classList.contains("modal-backdrop")) {
-      modal.innerHTML = "";
-    }
-    if (e.target.getAttribute && e.target.getAttribute("data-open-full")) {
-      modal.innerHTML = "";
-      navigateTo("evidence");
-      setTimeout(function () {
-        openEvidenceDetail(e.target.getAttribute("data-open-full"));
-      }, 0);
-    }
-  });
+  // The modal element itself is created once and reused (only its innerHTML
+  // is replaced on each open), so the listener only needs to be attached the
+  // first time it's created.
+  if (isNewModal) {
+    modal.addEventListener("click", handleModalClick);
+  }
 }

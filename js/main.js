@@ -80,8 +80,12 @@ function initApp() {
 
   loadAllData().then(function () {
     handleHashChange();
-    var firstNote = loadNoteAsync("E01");
-    console.log("First note preview:", firstNote);
+    // loadNoteAsync returns a Promise, not the note text itself — it must be
+    // resolved before logging, or this logs a pending Promise object on
+    // every load instead of the actual stored note preview.
+    loadNoteAsync("E01").then(function (firstNote) {
+      console.log("First note preview:", firstNote);
+    });
   });
 }
 

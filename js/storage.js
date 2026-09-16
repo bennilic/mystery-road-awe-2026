@@ -32,13 +32,20 @@ export function loadNoteForEvidence(evidenceId) {
 }
 
 export function loadNotesFromStorage() {
-  var raw = localStorage.getItem(STORAGE_KEY_NOTES);
-  if (!raw) {
+  // Mirrors loadBookmarksFromStorage's try/catch above: notes are stored as
+  // hand-editable localStorage JSON, and this runs unconditionally during
+  // initApp before setupEventListeners/loadAllData — an uncaught JSON.parse
+  // SyntaxError here (e.g. after a corrupted/hand-edited value) previously
+  // aborted the entire app boot, leaving it stuck on the loading overlay
+  // with no event listeners ever attached.
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY_NOTES);
+    var parsed = raw ? JSON.parse(raw) : {};
+    state.notesStore = parsed && typeof parsed === "object" ? parsed : {};
+  } catch (err) {
+    console.warn("Could not read stored notes, starting empty", err);
     state.notesStore = {};
-    return;
   }
-
-  state.notesStore = JSON.parse(raw);
 }
 
 export function loadNoteAsync(evidenceId) {

@@ -93,6 +93,13 @@ function loadEvidenceData() {
       // forever instead of showing the (empty) result of the failed load.
       state.evidenceViewLoading = false;
       if (state.currentPage === "evidence") renderEvidenceList();
+    })
+    .finally(function () {
+      // Budgeted in loadAllData's loadingStepsRemaining (now 3, not 2) —
+      // without this the "Loading case file…" overlay could hide as soon as
+      // the other two steps settled, regardless of whether evidence.json had
+      // actually finished loading yet.
+      hideLoadingStep();
     });
 }
 
@@ -117,7 +124,16 @@ function loadTimelineData() {
 
 export default function loadAllData() {
   showLoadingOverlay("Loading case file…");
-  state.loadingStepsRemaining = 2;
+  // Three independent steps hide the overlay: core (people/locations),
+  // evidence, and timeline. This was previously budgeted for 2 — evidence's
+  // own step never called hideLoadingStep() at all — so the overlay could
+  // dismiss once core+timeline settled even if evidence.json was still
+  // in flight. Note: loadEvidenceData()/loadTimelineData() below still run
+  // un-awaited (loadAllData's own returned promise resolves right after
+  // loadCorePeopleAndLocations, not after all three) — that's the Demo 9
+  // .then()-to-async/await scope, left as-is here; this fix only corrects
+  // the loading-step count so the overlay's own timing is right regardless.
+  state.loadingStepsRemaining = 3;
   return loadCorePeopleAndLocations().then(function () {
     loadEvidenceData();
     loadTimelineData();

@@ -1,0 +1,3 @@
+# Local Playwright MCP session artifacts (screenshots, console logs) from
+# interactive testing — not part of the app, regenerated per session.
+.playwright-mcp/

@@ -88,9 +88,20 @@ export function populateHypothesisDropdowns() {
   }
   suspectSelect.value = currentSuspect;
 
+  // Same preserve-then-restore treatment as suspectSelect above: this
+  // rebuild runs on every Workspace render (renderWorkspace() re-renders
+  // unconditionally, e.g. on navigating away and back), and without capturing
+  // the current selection first it silently wiped any in-progress, unsaved
+  // "Selected supporting evidence" picks while every other hypothesis field
+  // (suspect, nature, confidence, explanation, alternative) survived the
+  // same re-render untouched.
+  var currentEvidenceSelection = getSelectedOptions(evidenceSelect);
   evidenceSelect.innerHTML = "";
   for (var i = 0; i < state.allEvidence.length; i++) {
     evidenceSelect.innerHTML += '<option value="' + state.allEvidence[i].id + '">' + state.allEvidence[i].id + " - " + state.allEvidence[i].title + "</option>";
+  }
+  for (var o = 0; o < evidenceSelect.options.length; o++) {
+    evidenceSelect.options[o].selected = currentEvidenceSelection.indexOf(evidenceSelect.options[o].value) !== -1;
   }
 }
 
@@ -136,7 +147,17 @@ function loadHypothesisFromStorage() {
   var raw = localStorage.getItem(STORAGE_KEY_HYPOTHESIS);
   if (!raw) return;
 
-  var draft = JSON.parse(raw);
+  var draft;
+  try {
+    draft = JSON.parse(raw);
+  } catch (err) {
+    // Same class of bug as loadNotesFromStorage in storage.js: an
+    // unguarded JSON.parse on hand-editable localStorage. Here it broke a
+    // single view (every Workspace render threw before touching the form
+    // fields) rather than the whole app, but the fix is the same pattern.
+    console.warn("Could not read stored hypothesis draft, ignoring", err);
+    return;
+  }
 
   document.getElementById("hypSuspect").value = draft.suspectId || "";
   document.getElementById("hypNature").value = draft.nature || "";

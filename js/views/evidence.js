@@ -74,7 +74,40 @@ function getFilteredEvidence() {
   }
 
   state.filteredEvidence = results;
+  applyCurrentSortOrder(results);
   return results;
+}
+
+// Only used by getFilteredEvidence in this same module — private. Re-applies
+// the current #sortEvidence selection to `list` in place. getFilteredEvidence
+// rebuilds state.filteredEvidence from state.allEvidence on every
+// filter/search-triggered render, which was silently discarding whatever
+// order handleSortChange had just applied (the very next render — including
+// the one handleSortChange itself triggers — put the list straight back into
+// unsorted, allEvidence-insertion order). Sorting here, as the last step of
+// every filter rebuild, makes the current sort selection survive filtering
+// instead of being a one-render-only effect.
+function applyCurrentSortOrder(list) {
+  var sortValue = document.getElementById("sortEvidence").value;
+
+  if (sortValue === "title-asc") {
+    list.sort(function (a, b) {
+      return a.title.localeCompare(b.title);
+    });
+  } else if (sortValue === "title-desc") {
+    list.sort(function (a, b) {
+      return b.title.localeCompare(a.title);
+    });
+  } else if (sortValue === "date-asc") {
+    list.sort(function (a, b) {
+      return new Date(a.timestamp) - new Date(b.timestamp);
+    });
+  } else {
+    list.sort(function (a, b) {
+      return new Date(b.timestamp) - new Date(a.timestamp);
+    });
+  }
+  return list;
 }
 
 // Used by dataLoading.js, navigation.js, main.js's filter-change listeners,
@@ -178,27 +211,11 @@ export function applyStoredBookmarkFlags() {
 // Reached only through the inline onchange="handleSortChange()" on
 // #sortEvidence in index.html, so — like closeEvidenceDetail and
 // saveCurrentNote below — it must be exported purely so main.js can attach
-// it to `window`; no other module calls it directly.
+// it to `window`; no other module calls it directly. The actual sort is now
+// applied inside getFilteredEvidence (see applyCurrentSortOrder above) so it
+// survives subsequent filter/search renders too — this just needs to trigger
+// one of those renders.
 export function handleSortChange() {
-  var sortValue = document.getElementById("sortEvidence").value;
-
-  if (sortValue === "title-asc") {
-    state.filteredEvidence.sort(function (a, b) {
-      return a.title.localeCompare(b.title);
-    });
-  } else if (sortValue === "title-desc") {
-    state.filteredEvidence.sort(function (a, b) {
-      return b.title.localeCompare(a.title);
-    });
-  } else if (sortValue === "date-asc") {
-    state.filteredEvidence.sort(function (a, b) {
-      return new Date(a.timestamp) - new Date(b.timestamp);
-    });
-  } else {
-    state.filteredEvidence.sort(function (a, b) {
-      return new Date(b.timestamp) - new Date(a.timestamp);
-    });
-  }
   renderEvidenceList();
 }
 

@@ -41,8 +41,7 @@ export const state = {
     workspace: false
   },
 
-  notesStore: {},
-  modalCloseListenerCount: 0
+  notesStore: {}
 };
 
 // Pure constants (never reassigned anywhere in the original app) — plain
