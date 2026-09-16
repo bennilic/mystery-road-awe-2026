@@ -32,75 +32,85 @@ function populateAllDropdowns() {
   populateHypothesisDropdowns();
 }
 
-function loadCorePeopleAndLocations() {
-  return fetch("data/case.json").then(function (caseRes) {
-    return caseRes.json().then(function (caseJson) {
-      state.caseData = caseJson;
+// Demo 9: was a 6-level-deep nested .then() chain — fetch(case.json) → .then
+// → .json() → .then → fetch(people.json) → .then → .json() → .then →
+// fetch(locations.json) → .then → .json() → .then, each level only starting
+// once the previous one's callback ran. None of case/people/locations
+// actually depend on each other's *data* — they're independent resources —
+// but the chain still forced them to load strictly one after another because
+// that's the only shape a nested `.then()` chain has to offer without extra
+// machinery. Converted to async/await: each `await` below is exactly one
+// rung of that old chain, in the same order, so the three fetches still run
+// sequentially, not in parallel (that stays out of scope until a later
+// exercise). No try/catch here because the original chain had none either —
+// a rejection still propagates out as a rejected Promise, same as before.
+async function loadCorePeopleAndLocations() {
+  const caseRes = await fetch("data/case.json");
+  const caseJson = await caseRes.json();
+  state.caseData = caseJson;
 
-      return fetch("data/people.json").then(function (peopleRes) {
-        return peopleRes.json().then(function (peopleJson) {
-          state.allPeople = peopleJson;
+  const peopleRes = await fetch("data/people.json");
+  const peopleJson = await peopleRes.json();
+  state.allPeople = peopleJson;
 
-          return fetch("data/locations.json").then(function (locationsRes) {
-            return locationsRes.json().then(function (locationsJson) {
-              state.allLocations = locationsJson;
+  const locationsRes = await fetch("data/locations.json");
+  const locationsJson = await locationsRes.json();
+  state.allLocations = locationsJson;
 
-              hideLoadingStep();
-              renderDashboard();
-              populateAllDropdowns();
-            });
-          });
-        });
-      });
-    });
-  });
+  hideLoadingStep();
+  renderDashboard();
+  populateAllDropdowns();
 }
 
-function loadEvidenceData() {
-  fetch("data/evidence.json")
-    .then(function (res) {
-      return res.json();
-    })
-    .then(function (data) {
-      state.allEvidence = data;
-      applyStoredBookmarkFlags();
-      // A copy, not the same array: allEvidence is the canonical, stable
-      // list (order relied on by the Dashboard, Workspace notes list,
-      // hypothesis evidence picker, etc.), while filteredEvidence is a
-      // disposable "current view" of it that the Evidence catalogue filters
-      // and sorts in place (see handleSortChange in views/evidence.js,
-      // which calls state.filteredEvidence.sort(...)). Assigning the same
-      // array reference to both meant sorting the catalogue's view
-      // silently reordered the canonical list too.
-      state.filteredEvidence = state.allEvidence.slice();
-      // The catalogue's own loading placeholder (see renderEvidenceList in
-      // views/evidence.js) is gated on this flag, not on state.allEvidence
-      // being populated. It starts true so the placeholder shows before
-      // this fetch resolves; it must flip false here, once the data this
-      // fetch promised has actually landed in state, or renderEvidenceList
-      // keeps early-returning the placeholder forever, even after the data
-      // it's waiting for has arrived.
-      state.evidenceViewLoading = false;
-      renderDashboard();
-      populateAllDropdowns();
-      if (state.currentPage === "evidence") renderEvidenceList();
-    })
-    .catch(function (err) {
-      console.error("Failed to load evidence.json", err);
-      alert("Evidence could not be loaded. Some views may be incomplete.");
-      // Also clear on failure: the fetch has settled either way, and
-      // leaving this true would strand the catalogue on "Loading evidence…"
-      // forever instead of showing the (empty) result of the failed load.
-      state.evidenceViewLoading = false;
-      if (state.currentPage === "evidence") renderEvidenceList();
-    })
-    .finally(function () {
-      // Budgeted in loadAllData's loadingStepsRemaining (now 3, not 2) —
-      // without this the "Loading case file…" overlay could hide as soon as
-      // the other two steps settled, regardless of whether evidence.json had
-      // actually finished loading yet.
-      hideLoadingStep();
-    });
+// Demo 9: converted from .then()/.catch()/.finally() to async/await with
+// try/catch/finally — same error handling as before, just spelled with
+// try/catch instead of .catch(): log it, tell the user, and still clear
+// evidenceViewLoading so the catalogue doesn't strand on "Loading
+// evidence…" forever. Being `async` also gives this function a real return
+// value (a Promise that settles once the try/catch/finally body has run) —
+// previously it had no `return` at all, so callers had no way to wait for
+// it (see loadAllData below, which now does).
+async function loadEvidenceData() {
+  try {
+    const res = await fetch("data/evidence.json");
+    const data = await res.json();
+    state.allEvidence = data;
+    applyStoredBookmarkFlags();
+    // A copy, not the same array: allEvidence is the canonical, stable
+    // list (order relied on by the Dashboard, Workspace notes list,
+    // hypothesis evidence picker, etc.), while filteredEvidence is a
+    // disposable "current view" of it that the Evidence catalogue filters
+    // and sorts in place (see handleSortChange in views/evidence.js,
+    // which calls state.filteredEvidence.sort(...)). Assigning the same
+    // array reference to both meant sorting the catalogue's view
+    // silently reordered the canonical list too.
+    state.filteredEvidence = state.allEvidence.slice();
+    // The catalogue's own loading placeholder (see renderEvidenceList in
+    // views/evidence.js) is gated on this flag, not on state.allEvidence
+    // being populated. It starts true so the placeholder shows before
+    // this fetch resolves; it must flip false here, once the data this
+    // fetch promised has actually landed in state, or renderEvidenceList
+    // keeps early-returning the placeholder forever, even after the data
+    // it's waiting for has arrived.
+    state.evidenceViewLoading = false;
+    renderDashboard();
+    populateAllDropdowns();
+    if (state.currentPage === "evidence") renderEvidenceList();
+  } catch (err) {
+    console.error("Failed to load evidence.json", err);
+    alert("Evidence could not be loaded. Some views may be incomplete.");
+    // Also clear on failure: the fetch has settled either way, and
+    // leaving this true would strand the catalogue on "Loading evidence…"
+    // forever instead of showing the (empty) result of the failed load.
+    state.evidenceViewLoading = false;
+    if (state.currentPage === "evidence") renderEvidenceList();
+  } finally {
+    // Budgeted in loadAllData's loadingStepsRemaining (3) — without this
+    // the "Loading case file…" overlay could hide as soon as the other two
+    // steps settled, regardless of whether evidence.json had actually
+    // finished loading yet.
+    hideLoadingStep();
+  }
 }
 
 function loadTimelineData() {
@@ -122,20 +132,25 @@ function loadTimelineData() {
     });
 }
 
-export default function loadAllData() {
+// Demo 9: now properly `await`s every step, instead of firing
+// loadEvidenceData()/loadTimelineData() and moving on without waiting for
+// them. Previously loadEvidenceData() was called with no `return`/`await` at
+// all, so this function's own returned Promise resolved right after
+// loadCorePeopleAndLocations — before evidence.json (and sometimes
+// timeline.json) had actually finished loading. That gap was flagged back in
+// Demo 3/5 and explicitly left for this refactor. Fixing it is a natural
+// consequence of converting to async/await properly, not a separate bug fix
+// — an async function that doesn't await its own steps isn't really using
+// async/await. evidence and timeline still start at the same time as before
+// (neither depends on the other's data, and nothing here forces one to
+// finish before the other starts) — Promise.all waits for both without
+// serializing them, which preserves that pre-existing concurrency rather
+// than changing it.
+export default async function loadAllData() {
   showLoadingOverlay("Loading case file…");
   // Three independent steps hide the overlay: core (people/locations),
-  // evidence, and timeline. This was previously budgeted for 2 — evidence's
-  // own step never called hideLoadingStep() at all — so the overlay could
-  // dismiss once core+timeline settled even if evidence.json was still
-  // in flight. Note: loadEvidenceData()/loadTimelineData() below still run
-  // un-awaited (loadAllData's own returned promise resolves right after
-  // loadCorePeopleAndLocations, not after all three) — that's the Demo 9
-  // .then()-to-async/await scope, left as-is here; this fix only corrects
-  // the loading-step count so the overlay's own timing is right regardless.
+  // evidence, and timeline.
   state.loadingStepsRemaining = 3;
-  return loadCorePeopleAndLocations().then(function () {
-    loadEvidenceData();
-    loadTimelineData();
-  });
+  await loadCorePeopleAndLocations();
+  await Promise.all([loadEvidenceData(), loadTimelineData()]);
 }

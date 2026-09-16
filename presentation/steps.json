@@ -703,6 +703,120 @@
       "demo": 8,
       "view": "evidence",
       "highlight": "#filterStatus"
+    },
+    {
+      "id": "demo9-t1-nested-chain-shape",
+      "type": "code",
+      "title": "D9 - T1 — Sketching the 6-level nested `.then()` chain",
+      "narration": "Before touching anything: loadCorePeopleAndLocations() was the deepest nested chain in the app — 6 levels, one fetch+json.then pair each for case.json, people.json, locations.json, each nested strictly inside the previous one's callback. None of these three resources actually depend on each other's data — they're independent files — but the chain's shape forced them to load one after another anyway, because that's the only order a nested .then() chain naturally expresses: people.json's fetch() call is textually and temporally inside case.json's .then(), so it can't start until that callback runs, and locations.json is nested one level deeper still. The final render/overlay-hiding code sits at the innermost level, six callbacks deep, gated on all three having resolved in exactly that order.",
+      "exercise": 1,
+      "demo": 9,
+      "file": "js/dataLoading.js (pre-refactor)",
+      "line": 35,
+      "before": "function loadCorePeopleAndLocations() {\n  return fetch(\"data/case.json\").then(function (caseRes) {\n    return caseRes.json().then(function (caseJson) {\n      state.caseData = caseJson;\n\n      return fetch(\"data/people.json\").then(function (peopleRes) {\n        return peopleRes.json().then(function (peopleJson) {\n          state.allPeople = peopleJson;\n\n          return fetch(\"data/locations.json\").then(function (locationsRes) {\n            return locationsRes.json().then(function (locationsJson) {\n              state.allLocations = locationsJson;\n\n              hideLoadingStep();\n              renderDashboard();\n              populateAllDropdowns();\n            });\n          });\n        });\n      });\n    });\n  });\n}"
+    },
+    {
+      "id": "demo9-t2-core-async-await-conversion",
+      "type": "code",
+      "title": "D9 - T2 — Converting `loadCorePeopleAndLocations` to `async`/`await`",
+      "narration": "Each await below is exactly one rung of the old nested chain, in the same order — case fetched and parsed, then people fetched and parsed, then locations fetched and parsed, then the render/overlay step. The sequential behavior is preserved exactly on purpose: people's fetch still doesn't start until both of case's awaits have resolved, and locations still waits on people — parallelizing this is explicitly out of scope until a later exercise. No try/catch was added either, because the original chain had none — a rejection still just propagates out as a rejected Promise, unchanged. What actually changes is readability: one indent level instead of six, and no more separate callback scopes to track a value's handoff through.",
+      "exercise": 1,
+      "demo": 9,
+      "file": "js/dataLoading.js",
+      "line": 47,
+      "before": "function loadCorePeopleAndLocations() {\n  return fetch(\"data/case.json\").then(function (caseRes) {\n    return caseRes.json().then(function (caseJson) {\n      state.caseData = caseJson;\n\n      return fetch(\"data/people.json\").then(function (peopleRes) {\n        return peopleRes.json().then(function (peopleJson) {\n          state.allPeople = peopleJson;\n\n          return fetch(\"data/locations.json\").then(function (locationsRes) {\n            return locationsRes.json().then(function (locationsJson) {\n              state.allLocations = locationsJson;\n\n              hideLoadingStep();\n              renderDashboard();\n              populateAllDropdowns();\n            });\n          });\n        });\n      });\n    });\n  });\n}",
+      "after": "async function loadCorePeopleAndLocations() {\n  const caseRes = await fetch(\"data/case.json\");\n  const caseJson = await caseRes.json();\n  state.caseData = caseJson;\n\n  const peopleRes = await fetch(\"data/people.json\");\n  const peopleJson = await peopleRes.json();\n  state.allPeople = peopleJson;\n\n  const locationsRes = await fetch(\"data/locations.json\");\n  const locationsJson = await locationsRes.json();\n  state.allLocations = locationsJson;\n\n  hideLoadingStep();\n  renderDashboard();\n  populateAllDropdowns();\n}"
+    },
+    {
+      "id": "demo9-t3-evidence-async-try-catch-finally",
+      "type": "code",
+      "title": "D9 - T3 — Second conversion: `loadEvidenceData`, with `try`/`catch`/`finally`",
+      "narration": "The second required .then()-chain conversion: loadEvidenceData(), which had the app's richest error handling (.catch + .finally). Converted to async/await with try/catch/finally doing exactly what the original did — same console.error, same alert, same evidenceViewLoading reset on failure, same hideLoadingStep() in finally regardless of outcome. One side effect worth calling out: this function previously had no `return` at all in front of its fetch chain, so calling it returned undefined, not a Promise. As an async function it now always returns a real Promise — which is what let loadAllData() below properly await it for the first time, fixing a dangling-promise gap flagged back in Demo 3/5 as a natural consequence of doing the conversion properly, not a separate bug fix.",
+      "exercise": 1,
+      "demo": 9,
+      "file": "js/dataLoading.js",
+      "line": 73,
+      "before": "function loadEvidenceData() {\n  fetch(\"data/evidence.json\")\n    .then(function (res) {\n      return res.json();\n    })\n    .then(function (data) {\n      state.allEvidence = data;\n      applyStoredBookmarkFlags();\n      state.filteredEvidence = state.allEvidence.slice();\n      state.evidenceViewLoading = false;\n      renderDashboard();\n      populateAllDropdowns();\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .catch(function (err) {\n      console.error(\"Failed to load evidence.json\", err);\n      alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n      state.evidenceViewLoading = false;\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .finally(function () {\n      hideLoadingStep();\n    });\n}",
+      "after": "async function loadEvidenceData() {\n  try {\n    const res = await fetch(\"data/evidence.json\");\n    const data = await res.json();\n    state.allEvidence = data;\n    applyStoredBookmarkFlags();\n    state.filteredEvidence = state.allEvidence.slice();\n    state.evidenceViewLoading = false;\n    renderDashboard();\n    populateAllDropdowns();\n    if (state.currentPage === \"evidence\") renderEvidenceList();\n  } catch (err) {\n    console.error(\"Failed to load evidence.json\", err);\n    alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n    state.evidenceViewLoading = false;\n    if (state.currentPage === \"evidence\") renderEvidenceList();\n  } finally {\n    hideLoadingStep();\n  }\n}\n\n// loadAllData now properly awaits every step:\nexport default async function loadAllData() {\n  showLoadingOverlay(\"Loading case file…\");\n  state.loadingStepsRemaining = 3;\n  await loadCorePeopleAndLocations();\n  await Promise.all([loadEvidenceData(), loadTimelineData()]);\n}"
+    },
+    {
+      "id": "demo9-t4-debugger-order-verification",
+      "type": "code",
+      "title": "D9 - T4 — Debugger verification: order of operations unchanged",
+      "narration": "Verified live with a real breakpoint, not console.log — using the same standalone raw-CDP-over-WebSocket approach as Demo 6, specifically to dodge AA-162 (Playwright MCP's browser_run_code_unsafe deadlocks when an awaited action's own CDP reply is blocked behind a synchronous debugger pause it triggered itself). Set a breakpoint at the very first line of the new async loadCorePeopleAndLocations, reloaded the app for a real hit, then stepped over with the Call Stack panel's equivalent open, reading state.caseData/allPeople/allLocations directly off the paused call frame after each step. The table proves strict sequential ordering survived the refactor exactly: allPeople stays at 0 for two full steps after caseData is populated, and allLocations stays at 0 all the way through allPeople being fully set — nothing runs early, nothing runs out of order.",
+      "exercise": 1,
+      "demo": 9,
+      "file": "js/dataLoading.js",
+      "line": 47,
+      "before": "Breakpoint at line 48 (`const caseRes = await fetch(\"data/case.json\");`), the first statement of loadCorePeopleAndLocations().\n\nSync call stack at the pause:\n  loadCorePeopleAndLocations:48 <- loadAllData:154 <- initApp:79\n(already the full chain — an async function runs synchronously up to its first await, and the very first statement IS that await, so nothing has yielded to the event loop yet)\n\nStepping over with state read at each pause (caseData keys / allPeople.length / allLocations.length):\n  pause at line 48 (nothing run yet)........... 0, 0, 0\n  after `state.caseData = caseJson` (line 52)... 9, 0, 0\n  after people fetch started (line 53).......... 9, 0, 0\n  after `state.allPeople = peopleJson` (line 56). 9, 6, 0\n  after Debugger.resume, load finishes.......... 9, 6, 6"
+    },
+    {
+      "id": "demo9-q1-why-nested-then-harder",
+      "type": "code",
+      "title": "D9 - Q1 — Why the nested chain is harder to reason about",
+      "narration": "Two concrete reasons, both visible in the T1/T2 diff. First, indentation tracks nothing meaningful in the nested version — six levels deep by the time you reach the actual render call, purely because that's how many .then()s came before it, not because the logic itself is six layers of complexity. The async/await version stays at one indent level for the whole sequential story. Second, each .then() callback is a brand-new anonymous function with its own closure scope, so following one value (like caseJson) across the chain means tracking which nested scope you're in and whether each level correctly `return`s its inner promise to the next .then(). Miss a return and the chain silently breaks — which is exactly the historical loadEvidenceData bug in this same file (Demo 3/5): a missing return meant its caller had no way to know when — or whether — the fetch had actually finished. await reads like ordinary synchronous assignment, so there's no return-to-pass-it-on convention to forget. Both versions run identically — this is a pure readability difference, not a behavioral one (see Q5).",
+      "exercise": 1,
+      "demo": 9,
+      "file": "js/dataLoading.js",
+      "line": 47,
+      "before": "return fetch(\"data/case.json\").then(function (caseRes) {\n  return caseRes.json().then(function (caseJson) {\n    // caseJson only exists in THIS callback's scope —\n    // forgetting `return` here silently drops the chain\n    state.caseData = caseJson;\n    return fetch(\"data/people.json\").then(...);\n  });\n});",
+      "after": "const caseRes = await fetch(\"data/case.json\");\nconst caseJson = await caseRes.json();\n// caseJson is just a normal local variable here —\n// no separate scope, no return-to-propagate convention\nstate.caseData = caseJson;"
+    },
+    {
+      "id": "demo9-q2-what-await-does",
+      "type": "code",
+      "title": "D9 - Q2 — What `await` actually does to execution",
+      "narration": "await pauses execution of only the async function it's inside, at that exact line, until the awaited Promise settles — but it does NOT block the JS engine's single thread. Execution unwinds back out of the async function to whatever called it, exactly as if the function had reached the end of its synchronous portion; the rest of the program — other event handlers, timers, rendering, unrelated Promises — keeps running normally the whole time. Once the awaited Promise settles, the function's remaining body is scheduled to resume as a microtask. The debugger trace from T4 shows the very start of this directly: at the first await (before it had even settled), the sync call stack still showed loadCorePeopleAndLocations <- loadAllData <- initApp with nothing extra queued — because at that exact instant nothing had suspended yet; the suspend/resume only becomes observable once that first await's Promise actually settles and hands control back to just this function's continuation.",
+      "exercise": 1,
+      "demo": 9,
+      "file": "js/dataLoading.js",
+      "line": 47,
+      "before": "async function loadCorePeopleAndLocations() {\n  const caseRes = await fetch(\"data/case.json\"); // <- execution suspends HERE\n  // everything below only runs once fetch() settles;\n  // meanwhile the rest of the program keeps running\n  const caseJson = await caseRes.json();\n  ..."
+    },
+    {
+      "id": "demo9-q3-async-always-returns-promise",
+      "type": "code",
+      "title": "D9 - Q3 — An `async` function always returns a Promise",
+      "narration": "Proven live in the running app (Playwright browser_evaluate against the real page): imported js/dataLoading.js and called the real refactored loadAllData(). `loadAllData() instanceof Promise` -> true. Calling `.then(v => v)` on it and logging the resolved value gave `undefined` — because loadAllData()'s body has no explicit return statement, so its implicit return value is undefined, but it's still genuinely wrapped in a real Promise object, not handed back directly. To prove the other half unambiguously — that even an explicit `return someValue` for a plain value still gets Promise-wrapped — also ran an isolated snippet in the same page: `async function demoReturnsPlainValue() { return 42; }` -> instanceof Promise -> true, and `.then(v => v)` resolved to 42, not a synchronously-returned 42. You always have to unwrap it.",
+      "exercise": 1,
+      "demo": 9,
+      "file": "js/dataLoading.js",
+      "line": 149,
+      "before": "// Live-captured, real page:\nconst mod = await import('/js/dataLoading.js');\nconst call = mod.default(); // loadAllData()\ncall instanceof Promise;      // -> true\nawait call.then(v => v);      // -> undefined (no explicit return)\n\n// isolated proof of the \"plain value\" half:\nasync function demoReturnsPlainValue() { return 42; }\ndemoReturnsPlainValue() instanceof Promise; // -> true\nawait demoReturnsPlainValue().then(v => v); // -> 42"
+    },
+    {
+      "id": "demo9-q4-async-await-equivalent-of-catch",
+      "type": "code",
+      "title": "D9 - Q4 — The `async`/`await` equivalent of `.catch()`",
+      "narration": "try { await somePromise; } catch (err) { ... } — exactly what got applied to loadEvidenceData() in T3. Verified live what happens if you forget it: defined an async function that awaits a Promise.reject(...), and called it WITHOUT await or a try/catch around the call — the genuine \"forgot the catch\" scenario. Captured a real window unhandledrejection event firing with the actual error's message, and the browser's own console logged a real \"Uncaught (in promise) Error\" with a full stack trace. So the rejection doesn't vanish and doesn't crash the script either — it surfaces as an unhandled Promise rejection, the same class of signal a thrown error in a .then() chain with no .catch() would produce, just reported through the unhandledrejection event / console instead of stopping execution at the await site (the awaiting function has already suspended and control has moved on by the time it fires).",
+      "exercise": 1,
+      "demo": 9,
+      "file": "js/dataLoading.js",
+      "line": 73,
+      "before": "// Live-captured, real page — deliberately no catch:\nasync function willReject() {\n  await Promise.reject(new Error('Q4 deliberate rejection, no catch'));\n}\nwillReject(); // fired without await/try-catch by the caller\n\n// real captured result:\n// window 'unhandledrejection' event fires:\n//   reason -> \"Error: Q4 deliberate rejection, no catch\"\n// browser console logs:\n//   Uncaught (in promise) Error: Q4 deliberate rejection, no catch"
+    },
+    {
+      "id": "demo9-q5-is-async-await-faster",
+      "type": "code",
+      "title": "D9 - Q5 — Is `async`/`await` faster than `.then()`? No.",
+      "narration": "No — and the T4 debugger trace is direct proof: the actual sequence of operations (fetch case, parse case, assign, fetch people, parse people, assign, fetch locations, parse locations, assign, render) is identical, in the identical order, to what the nested .then() chain did. async/await is syntax sugar over the same Promise machinery — the engine still suspends the function at each await and resumes it as a microtask once the underlying Promise settles, the exact mechanism .then() uses underneath. Nothing changes about the number of requests, their relative timing, or total wall-clock time — this refactor is purely about how the same execution is written and read, not how it executes. Actually making it faster would mean changing WHAT gets awaited and WHEN — e.g. Promise.all to run independent fetches concurrently — which stays deliberately out of scope here per the Task 2 instruction to preserve sequential behavior exactly.",
+      "exercise": 1,
+      "demo": 9,
+      "file": "js/dataLoading.js",
+      "line": 47,
+      "before": "Same underlying Promise machinery, same order, same timing — only the syntax differs:\n\n.then() chain:\n  fetch(a).then(resA => resA.json()).then(jsonA => { ... next fetch ... })\n\nasync/await:\n  const resA = await fetch(a);\n  const jsonA = await resA.json();\n  ... next fetch ...\n\nBoth suspend at the same points, resume as microtasks at the same points,\nand hit the network in the same order — confirmed directly by the T4\ndebugger trace above, which shows the exact same operation order as the\npre-refactor chain."
+    },
+    {
+      "id": "demo9-q6-deliberately-break-dropped-await",
+      "type": "code",
+      "title": "D9 - Q6 — Deliberately breaking the refactor by dropping an `await`",
+      "narration": "Temporarily changed `const caseJson = await caseRes.json();` to `const caseJson = caseRes.json();` — dropped the await, function still async — reloaded the real app, and confirmed live: state.caseData held an actual Promise object (Object.prototype.toString -> \"[object Promise]\"), not the parsed case data. Real, visible breakage followed: the Dashboard's case header fell back to its default placeholder \"Case\" instead of \"Project ReMotion – Investigation Portal\", and the status badge showed \"UNKNOWN\" instead of \"OPEN\" — because dashboard.js reads caseData.title/.status off what's actually a pending Promise, and that property access just silently returns undefined, which the render code falls back on. Restored the await immediately after and reconfirmed the fix (title and OPEN both back). This is precisely the same bug category as the Demo 3/5 loadEvidenceData issue in this very file: a Promise read as if it were already the resolved value — there a missing `return` silently discarded a Promise's completion signal, here a missing `await` left a Promise object sitting where real data was expected. Same root mistake, opposite syntax.",
+      "exercise": 1,
+      "demo": 9,
+      "file": "js/dataLoading.js",
+      "line": 47,
+      "before": "const caseRes = await fetch(\"data/case.json\");\nconst caseJson = caseRes.json(); // DELIBERATELY dropped `await` — caseJson is now a Promise\nstate.caseData = caseJson;       // -> Object.prototype.toString.call(state.caseData) === \"[object Promise]\"\n\n// Real, live breakage: Dashboard case title fell back to \"Case\",\n// status badge showed \"UNKNOWN\" instead of \"OPEN\"",
+      "after": "const caseRes = await fetch(\"data/case.json\");\nconst caseJson = await caseRes.json(); // restored\nstate.caseData = caseJson;             // real parsed data again\n\n// Confirmed live: title back to \"Project ReMotion – Investigation Portal\", status \"OPEN\""
     }
   ]
 }
