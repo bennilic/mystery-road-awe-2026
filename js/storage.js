@@ -13,8 +13,8 @@ export function saveBookmarksToStorage() {
 
 export function loadBookmarksFromStorage() {
   try {
-    var raw = localStorage.getItem(STORAGE_KEY_BOOKMARKS);
-    var parsed = raw ? JSON.parse(raw) : [];
+    const raw = localStorage.getItem(STORAGE_KEY_BOOKMARKS);
+    const parsed = raw ? JSON.parse(raw) : [];
     state.bookmarks = Array.isArray(parsed) ? parsed : [];
   } catch (err) {
     console.warn("Could not read stored bookmarks, starting empty", err);
@@ -39,8 +39,8 @@ export function loadNotesFromStorage() {
   // aborted the entire app boot, leaving it stuck on the loading overlay
   // with no event listeners ever attached.
   try {
-    var raw = localStorage.getItem(STORAGE_KEY_NOTES);
-    var parsed = raw ? JSON.parse(raw) : {};
+    const raw = localStorage.getItem(STORAGE_KEY_NOTES);
+    const parsed = raw ? JSON.parse(raw) : {};
     state.notesStore = parsed && typeof parsed === "object" ? parsed : {};
   } catch (err) {
     console.warn("Could not read stored notes, starting empty", err);

@@ -12,8 +12,8 @@ import { populateTimelineDropdowns, renderTimeline } from "./views/timeline.js";
 import { populateHypothesisDropdowns } from "./views/workspace.js";
 
 function showLoadingOverlay(msg) {
-  var overlay = document.getElementById("loadingOverlay");
-  var text = document.getElementById("loadingText");
+  const overlay = document.getElementById("loadingOverlay");
+  const text = document.getElementById("loadingText");
   if (text) text.textContent = msg;
   if (overlay) overlay.classList.remove("hidden");
 }
@@ -21,7 +21,7 @@ function showLoadingOverlay(msg) {
 function hideLoadingStep() {
   state.loadingStepsRemaining--;
   if (state.loadingStepsRemaining <= 0) {
-    var overlay = document.getElementById("loadingOverlay");
+    const overlay = document.getElementById("loadingOverlay");
     if (overlay) overlay.classList.add("hidden");
   }
 }
