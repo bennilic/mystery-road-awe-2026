@@ -44,7 +44,7 @@ your fix works.
 | 2 | Bug hunt — mutation/reference bug | ☑ |
 | 3 | Bug hunt — an asynchronous/Promise-handling bug | ☑ |
 | 4 | Bug hunt — silent (console-only) bug | ☑ |
-| 5 | Bug hunt — full walkthrough & reflection | ☐ |
+| 5 | Bug hunt — full walkthrough & reflection | ☑ |
 | 6 | Use the JavaScript debugger | ☐ |
 | 7 | DevTools tour (Console/Network/Application/Elements) | ☐ |
 | 8 | Clean coding: globals, `var`/`let`/`const`, code smells | ☐ |
@@ -216,19 +216,56 @@ same filter twice. Keep going past Demos 2–4 — this app does not have only t
 
 **Tasks**
 
-- [ ] For every bug you find (beyond the three already covered), write down: reproduction steps,
-      expected vs. actual behavior, root cause, the fix, and how you verified it.
-- [ ] Pick one bug from your full list (any of them, including Demos 2–4) and prepare to show it
+- [x] For every bug you find (beyond the three already covered), write down: reproduction steps,
+      expected vs. actual behavior, root cause, the fix, and how you verified it. See the 7 bugs
+      documented and fixed in commit `010050c` (pre-fix state: `a8a97d7`), each verified live via
+      Playwright before and after the fix — full writeup in the Demo 5 slides and the commit
+      message.
+- [x] Pick one bug from your full list (any of them, including Demos 2–4) and prepare to show it
       live: the broken behavior, then your fix. **Commit the pre-fix state (or note its commit
-      hash) so you can diff broken vs. fixed on demand in class.**
+      hash) so you can diff broken vs. fixed on demand in class.** Chosen: the Evidence catalogue
+      sort bug (`views/evidence.js`) — pre-fix at `a8a97d7`, fixed in `010050c`. Picked because it
+      needs no localStorage setup to demo, is 100% deterministic (not timing-dependent), and the
+      root cause is a single, easy-to-narrate line.
 
 **Questions** (depend on the tasks above)
 
-- [ ] For the bug you chose to present: walk through the exact user actions and system state that
-      trigger it, live, starting from the pre-fix commit.
-- [ ] Across all the bugs you found, did fixing one ever change the symptoms of, reveal, or
+- [x] For the bug you chose to present: walk through the exact user actions and system state that
+      trigger it, live, starting from the pre-fix commit. At `a8a97d7`: load the app, open the
+      Evidence view (`#evidence`), leave every filter at its default ("All ..."), and change the
+      "Sort evidence" dropdown to "Title (A–Z)". Expected: the 18 cards reorder alphabetically by
+      title. Actual: nothing visibly changes — the list stays in original E01, E02, E03… order.
+      Root cause: `handleSortChange()` sorts `state.filteredEvidence` in place, then calls
+      `renderEvidenceList()`, which calls `getFilteredEvidence()` — that function unconditionally
+      *rebuilds* `state.filteredEvidence` from `state.allEvidence` in original order (filtered
+      only) and reassigns it, discarding the sort before a single frame renders it. This isn't a
+      race or an edge case — it fails 100% of the time, on the very first use of the dropdown, and
+      also fails to persist even if applied through code (confirmed directly via
+      `document.getElementById('sortEvidence').value = 'title-desc'; window.handleSortChange();`
+      in the console — the rendered order still matched `allEvidence`'s original order, not
+      title-desc). Fixed at `010050c` by moving the sort into `getFilteredEvidence()` itself (as
+      `applyCurrentSortOrder`), so it's re-applied as the last step of every filter rebuild instead
+      of being immediately overwritten by one.
+- [x] Across all the bugs you found, did fixing one ever change the symptoms of, reveal, or
       accidentally fix another? If so, explain the relationship. If not, how did you confirm your
-      fixes were properly isolated from each other?
+      fixes were properly isolated from each other? No cross-bug interactions among this demo's 7
+      new bugs — each lives in an independent code path (a console log, timeline location
+      formatting, two separate `JSON.parse` call sites, the evidence sort/filter rebuild, the
+      timeline modal's listener, and the workspace multi-select rebuild). Confirmed by re-running
+      every bug's own repro script *after* all 7 fixes were applied together and checking each
+      still passed exactly as it did in isolation — e.g. re-verifying the timeline location fix and
+      the modal-leak fix didn't change each other's output, and that fixing the sort bug didn't
+      touch the `[object Object]` text. The one real relationship I did find was *within* one
+      finding, not across two: the notes-storage crash (`storage.js`) and the hypothesis-storage
+      crash (`workspace.js`) are two separate instances of the identical bug pattern (unguarded
+      `JSON.parse` on hand-editable `localStorage`) rather than one bug causing the other — I didn't
+      double-count them as unrelated findings; I noted the shared root cause and applied the same
+      try/catch fix to both. Separately, I confirmed the `loadingStepsRemaining` budget bug I fixed
+      is *not* the same issue as the pre-existing `loadAllData()`-doesn't-await-evidence ordering
+      gap noted from prior sessions (left for Demo 9) — the budget fix is a simple off-by-one in a
+      step counter, independent of and unaffected by that ordering gap; re-reading `dataLoading.js`
+      after the budget fix confirms `loadAllData()`'s returned promise still resolves right after
+      `loadCorePeopleAndLocations()`, unchanged.
 
 ---
 
