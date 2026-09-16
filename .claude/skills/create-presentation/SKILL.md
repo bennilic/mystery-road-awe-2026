@@ -50,6 +50,12 @@ if missing from `presentation/`. Normally you only touch `steps.json`.
   app. Always demo with this in reach: if the lecturer steers off-script ("open DevTools", "click
   that instead"), hide the overlay rather than fighting the script — see the "keep it live" guidance
   in `.claude/PRESENTATION_PREP.md`.
+- A **"Jump to" dropdown** sits above Back/Next for skipping straight to any Exercise/Demo group
+  instead of stepping through the whole deck (useful once a deck passes a couple dozen steps).
+  Options are built automatically from `steps.json`'s own `(exercise, demo)` pairs at load time —
+  tagging a step correctly is the only "authoring" the dropdown needs, there's nothing else to
+  maintain here. It stays in sync with Back/Next/keyboard navigation (selecting it jumps via the
+  same `render()` path those use; stepping manually updates its displayed selection to match).
 
 ## Steps schema (`presentation/steps.json`)
 

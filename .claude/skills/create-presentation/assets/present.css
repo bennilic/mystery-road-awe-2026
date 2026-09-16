@@ -190,6 +190,34 @@ body {
   white-space: pre-line;
 }
 
+#jumpTo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#jumpTo label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+#jumpSelect {
+  font: inherit;
+  font-size: 13px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: #262a35;
+  color: var(--text);
+  cursor: pointer;
+}
+
+#jumpSelect:hover {
+  border-color: var(--accent);
+}
+
 #controls {
   display: flex;
   gap: 8px;

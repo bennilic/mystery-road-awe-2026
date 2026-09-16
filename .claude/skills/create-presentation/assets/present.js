@@ -17,6 +17,7 @@ const state = {
   renderToken: 0, // bumped on every render() so stale async work from a previous step can detect
                   // it's obsolete and bail out instead of touching the DOM (see showAppStep)
   localRoot: null, // absolute path to this repo on disk, for building vscode:// links — see steps.json
+  jumpGroups: [], // one entry per unique (exercise, demo) pair, for the "Jump to" dropdown — see buildJumpGroups
 };
 
 const el = {
@@ -31,6 +32,7 @@ const el = {
   stepCounter: document.getElementById("stepCounter"),
   stepTitle: document.getElementById("stepTitle"),
   stepBody: document.getElementById("stepBody"),
+  jumpSelect: document.getElementById("jumpSelect"),
   prevBtn: document.getElementById("prevBtn"),
   nextBtn: document.getElementById("nextBtn"),
   hideChromeBtn: document.getElementById("hideChromeBtn"),
@@ -48,6 +50,8 @@ async function init() {
   state.steps = sortStepsByExerciseDemo(Array.isArray(data.steps) ? data.steps : []);
   state.localRoot = typeof data.localRoot === "string" ? data.localRoot.replace(/\/+$/, "") : null;
   if (data.title) document.title = data.title;
+
+  populateJumpSelect();
 
   if (state.steps.length === 0) {
     el.stepTitle.textContent = "No steps yet";
@@ -98,6 +102,61 @@ function currentStep() {
   return state.steps[state.index];
 }
 
+// Groups the (already-sorted) deck by unique (exercise, demo) pairs, one entry per group
+// pointing at that group's first step index, in the same order the deck plays — this feeds the
+// "Jump to" dropdown. Built from steps.json's actual content rather than hardcoded, so newly
+// added exercises/demos show up automatically without a code change. Follows the same
+// exercise/demo defaulting (missing -> 0) as sortStepsByExerciseDemo, so a group here always
+// matches the group a given step sorts into.
+function buildJumpGroups() {
+  const groups = [];
+  const seen = new Set();
+  state.steps.forEach((step, index) => {
+    const exercise = Number.isInteger(step.exercise) ? step.exercise : 0;
+    const demo = Number.isInteger(step.demo) ? step.demo : 0;
+    const key = `${exercise}|${demo}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    groups.push({ key, exercise, demo, index });
+  });
+  return groups;
+}
+
+// Labels follow the create-presentation skill's own demo-number convention: -1 is the
+// per-exercise intro marker, 0 is general app-tour content, everything else is "Demo N".
+function jumpGroupLabel(exercise, demo) {
+  if (demo === -1) return `Exercise ${exercise} — Intro`;
+  if (demo === 0) return `Exercise ${exercise} — App Tour`;
+  return `Exercise ${exercise} — Demo ${demo}`;
+}
+
+function populateJumpSelect() {
+  state.jumpGroups = buildJumpGroups();
+  el.jumpSelect.innerHTML = "";
+  state.jumpGroups.forEach((group) => {
+    const option = document.createElement("option");
+    option.value = group.key;
+    option.textContent = jumpGroupLabel(group.exercise, group.demo);
+    el.jumpSelect.appendChild(option);
+  });
+}
+
+// Keeps the dropdown's displayed selection matching wherever prev/next/keyboard navigation
+// currently is, so it never shows a stale group after manual stepping — matched by (exercise,
+// demo) key, not by index, since a group can span several consecutive steps.
+function syncJumpSelect(step) {
+  const exercise = Number.isInteger(step.exercise) ? step.exercise : 0;
+  const demo = Number.isInteger(step.demo) ? step.demo : 0;
+  el.jumpSelect.value = `${exercise}|${demo}`;
+}
+
+el.jumpSelect.addEventListener("change", () => {
+  const group = state.jumpGroups.find((g) => g.key === el.jumpSelect.value);
+  if (!group) return;
+  state.index = group.index;
+  render();
+});
+
 function render() {
   const step = currentStep();
   if (!step) return;
@@ -114,6 +173,7 @@ function render() {
   el.prevBtn.disabled = state.index === 0;
   el.nextBtn.disabled = state.index === state.steps.length - 1;
   sessionStorage.setItem("presentIndex", String(state.index));
+  syncJumpSelect(step);
 
   state.codeTab = step.after ? "after" : "before";
 
