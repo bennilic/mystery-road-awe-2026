@@ -28,25 +28,26 @@ export function navigateTo(viewName) {
   // handleHashChange() will pick this up via the hashchange listener
 }
 
-// Attached as the hashchange listener (twice — see main.js, which
-// reproduces the original's duplicate registration) and called once
-// directly after the initial data load — needs to be exported.
+// Attached as the hashchange listener (see main.js's setupEventListeners —
+// Demo 8 removed a second, redundant registration that used to exist there
+// too) and called once directly after the initial data load — needs to be
+// exported.
 export function handleHashChange() {
-  var hash = window.location.hash.replace("#", "");
-  var validViews = ["dashboard", "evidence", "people", "timeline", "workspace"];
+  let hash = window.location.hash.replace("#", "");
+  const validViews = ["dashboard", "evidence", "people", "timeline", "workspace"];
   if (validViews.indexOf(hash) === -1) {
     hash = "dashboard";
   }
   state.currentPage = hash;
 
-  var sections = document.querySelectorAll(".view");
-  for (var i = 0; i < sections.length; i++) {
+  const sections = document.querySelectorAll(".view");
+  for (let i = 0; i < sections.length; i++) {
     sections[i].classList.remove("active");
   }
   document.getElementById("view-" + hash).classList.add("active");
 
-  var navButtons = document.querySelectorAll(".nav-btn");
-  for (var n = 0; n < navButtons.length; n++) {
+  const navButtons = document.querySelectorAll(".nav-btn");
+  for (let n = 0; n < navButtons.length; n++) {
     navButtons[n].classList.remove("active");
     if (navButtons[n].getAttribute("data-view") === hash) {
       navButtons[n].classList.add("active");

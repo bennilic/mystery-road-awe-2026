@@ -29,7 +29,6 @@ window.handleSortChange = handleSortChange;
 window.saveHypothesis = saveHypothesis;
 window.closeEvidenceDetail = closeEvidenceDetail;
 window.saveCurrentNote = saveCurrentNote;
-window.renderEvidenceList = renderEvidenceList; // needed by the setAttribute("onchange", ...) below
 
 // ---------------------------------------------------------------------
 // EVENT LISTENER SETUP
@@ -38,10 +37,10 @@ window.renderEvidenceList = renderEvidenceList; // needed by the setAttribute("o
 function setupEventListeners() {
   window.addEventListener("hashchange", handleHashChange);
 
-  var navButtons = document.querySelectorAll(".nav-btn");
+  const navButtons = document.querySelectorAll(".nav-btn");
   for (let i = 0; i < navButtons.length; i++) {
     navButtons[i].addEventListener("click", function () {
-      var targetView = navButtons[i].getAttribute("data-view");
+      const targetView = navButtons[i].getAttribute("data-view");
       console.log("nav clicked:", targetView);
     });
   }
@@ -53,7 +52,6 @@ function setupEventListeners() {
   document.getElementById("filterLocation").addEventListener("change", renderEvidenceList);
 
   document.getElementById("filterStatus").addEventListener("change", renderEvidenceList);
-  document.getElementById("filterStatus").setAttribute("onchange", "renderEvidenceList()");
 
   document.getElementById("filterRelevance").addEventListener("change", renderEvidenceList);
 
@@ -90,4 +88,8 @@ function initApp() {
 }
 
 window.addEventListener("DOMContentLoaded", initApp);
-window.addEventListener("hashchange", handleHashChange);
+// The hashchange listener lives only in setupEventListeners() above — see
+// navigation.js's handleHashChange comment, which used to document this as
+// a deliberately-preserved duplicate registration (fixed as a Demo 8 code
+// smell: it made every navigation re-run the full view-render/nav-highlight
+// logic twice for no benefit).

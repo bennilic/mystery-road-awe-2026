@@ -458,6 +458,17 @@ a:focus-visible {
   border-color: #c3daf9;
 }
 
+/* Relevance fallback ("unknown"/"irrelevant") — deliberately distinct from
+   .badge-unreviewed: relevance and review status are different axes, so an
+   unreviewed-but-relevant item and an unknown-relevance item must not render
+   as the same grey pill. See getRelevanceBadgeClass in js/lookup.js. */
+.badge-relevance-unclear {
+  background: #f0f1f4;
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  border-style: dashed;
+}
+
 .tag-chip {
   display: inline-block;
   background: #eef1f6;
