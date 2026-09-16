@@ -49,7 +49,7 @@ your fix works.
 | 7 | DevTools tour (Console/Network/Application/Elements) | ☑ |
 | 8 | Clean coding: globals, `var`/`let`/`const`, code smells | ☑ |
 | 9 | Refactor nested Promises to `async`/`await` | ☑ |
-| 10 | Refactor to arrow functions | ☐ |
+| 10 | Refactor to arrow functions | ☑ |
 
 A demo only counts as "Ready" once **every** task and question checkbox inside it (below) is
 ticked — the table above is just a fast overview, tick the boxes inside each demo first.
@@ -984,29 +984,158 @@ personally walked through these steps.)*
 
 **Tasks**
 
-- [ ] Choose at least two functions currently written as `function name(...) { ... }` or
+- [x] Choose at least two functions currently written as `function name(...) { ... }` or
       `function(...) { ... }`, and rewrite them as arrow functions — pick ones that are actually
       good candidates.
-- [ ] Convert at least one anonymous `function(e) { ... }` callback passed to `addEventListener`
+
+      Two converted, both module-private pure helpers with no `this`/`arguments`/constructor use:
+      `certaintyBadgeClass(certainty)` in `js/views/timeline.js` (only called from `renderTimeline`
+      in the same file) and `statCardHTML(value, label)` in `js/views/dashboard.js` (only called
+      from `renderDashboard` in the same file) — both converted from `function name(...) {}` to
+      `const name = (...) => {}`. Verified live via Playwright after the change: navigated to
+      `#timeline` and confirmed all 15 rendered timeline events still carry the correct badge class
+      per certainty (`confirmed`→`badge-reviewed`, `contradictory`→`badge-critical`,
+      `reported`→`badge-flagged`, default→`badge-unreviewed` — exact same mapping as before);
+      navigated to `#dashboard` and confirmed all 5 stat cards ("18" Evidence items, "6" People, "6"
+      Locations, "0" Bookmarked, "1" Reviewed) still render with the correct value/label markup.
+- [x] Convert at least one anonymous `function(e) { ... }` callback passed to `addEventListener`
       into an arrow function.
-- [ ] Identify **one** function you deliberately did *not* convert (or would refuse to, if asked),
+
+      Converted the `hypConfidence` slider's `input` listener in `js/main.js`'s
+      `setupEventListeners()`, from `function (e) { document.getElementById("hypConfidenceValue")
+      .textContent = e.target.value; }` to `(e) => { ... }`. Verified live: set the slider's value
+      to `77` and dispatched a real `input` event — `hypConfidenceValue`'s text updated to `"77"`,
+      identical to the pre-conversion behavior.
+- [x] Identify **one** function you deliberately did *not* convert (or would refuse to, if asked),
       and be ready to explain why it would be unsafe or incorrect as an arrow function.
+
+      `handleEvidenceListClick(event)` in `js/views/evidence.js`, registered directly by reference
+      (not wrapped in another callback) as `container.addEventListener("click",
+      handleEvidenceListClick)` — a real event-delegation handler for the evidence card list. A
+      function attached this way is called by the DOM with `this` bound to the element the listener
+      is attached to (`container`), which is the whole contract of the delegated-click pattern this
+      function implements — even though the current body reads `event.target` rather than `this`,
+      converting it to an arrow function would permanently and silently discard that binding: an
+      arrow function ignores whatever `this` the caller supplies and instead captures `this` from
+      the enclosing module scope (`undefined`, since ES modules are always strict mode), regardless
+      of which element the listener is attached to. That's exactly the kind of change that "works"
+      today (nothing currently reads `this`) but quietly forecloses a very standard pattern for
+      anyone maintaining this function later. Left a comment explaining this in place at the
+      function's declaration. Verified the function still works correctly, unconverted: clicking a
+      card's bookmark button toggles `state.bookmarks` via delegation (confirmed `state.bookmarks`
+      going from `["E01"]` to `["E01","E02"]` after clicking E02's bookmark button) without
+      triggering the card's own "open detail" handler (`event.stopPropagation()` still holds), and
+      clicking the card body itself (not the button) still opens that evidence's detail view
+      (confirmed E02's detail rendered: "Robot diagnostic log", full summary/tags/related
+      locations).
 
 **Questions** (depend on the tasks above)
 
-- [ ] What is different about how arrow functions handle `this` compared to regular functions? Why
+- [x] What is different about how arrow functions handle `this` compared to regular functions? Why
       does that make arrow functions risky as object methods, but often preferable as callbacks?
-- [ ] Arrow functions can't be used as constructors (no `new`) and have no `arguments` object of
+
+      A regular function gets its own `this`, determined dynamically by *how it's called*: as
+      `obj.method()` it's `obj`; called as a bare function it's `undefined` in strict mode/module
+      scope; passed to `addEventListener` it's the element the listener is attached to; via
+      `call`/`apply`/`bind` it's whatever's explicitly supplied. An arrow function has no `this` of
+      its own at all — it lexically inherits `this` from whatever scope textually surrounds it at
+      definition time, and that binding can never be overridden afterward by any call style, not
+      even `call`/`apply`/`bind`. This makes arrow functions risky as object methods because
+      `obj.method = () => { this.prop }` doesn't capture `obj` — it captures whatever `this` was in
+      the surrounding scope where the object literal/class body was written (module scope, so
+      `undefined` here), so `this.prop` silently breaks no matter how `obj.method()` is later
+      called. This is exactly the risk behind leaving `handleEvidenceListClick` unconverted above:
+      it's registered as a DOM handler specifically so the browser can bind `this` to the listening
+      element, the "object method" pattern arrow functions break by design. It's preferable for
+      callbacks (like the `hypConfidence` listener I did convert) precisely because most callbacks
+      don't want dynamic, caller-determined `this` at all — they want to keep meaning whatever
+      `this` meant in the code around them (e.g., a class method registering a `setTimeout` callback
+      usually wants the callback to still see the class instance, not `undefined`/the timer).
+      Arrows make "keep the surrounding `this`" the default instead of something you have to
+      preserve by hand via `.bind(this)` or `const self = this`.
+- [x] Arrow functions can't be used as constructors (no `new`) and have no `arguments` object of
       their own. Did either limitation affect which functions you were able to convert? Which one,
       and how?
-- [ ] Function declarations (`function foo() {}`) are hoisted, so you can call them before they
+
+      Neither limitation ruled out any specific candidate — confirmed by grepping the whole `js/`
+      tree for `new <CustomName>(` and for `arguments`: zero hits beyond the built-in `new Date()` /
+      `new Promise()` / `new Error()` calls already in the codebase (which aren't candidates for
+      conversion in the first place — they're calls, not declarations) and zero uses of the
+      `arguments` object anywhere; every function in this app takes named parameters. So the
+      "no good candidates were disqualified by these two rules" outcome is itself the honest answer
+      here — this codebase simply doesn't use either feature, which is also *why* the `this`-binding
+      reason (Task 3 above) was the actual disqualifying factor for `handleEvidenceListClick`, not
+      `arguments` or `new`.
+- [x] Function declarations (`function foo() {}`) are hoisted, so you can call them before they
       appear later in the file; a `const`/`let` arrow function is not. Did this matter anywhere in
       your refactor? Explain why or why not.
-- [ ] Show a concrete before/after of one function you converted. Is there any behavioral difference
+
+      It mattered enough to check carefully, but ended up not blocking either conversion. Both
+      `certaintyBadgeClass` and `statCardHTML` are declared *after*, textually, the function that
+      calls them (`renderTimeline`/`renderDashboard`, both defined earlier in their file) — so at
+      first glance this looks like a hoisting-dependent case. But hoisting only matters for *when a
+      reference is actually evaluated*, not for where a function is textually defined relative to
+      its caller's own declaration: `renderTimeline`'s *body* isn't executed when `renderTimeline`
+      itself is declared, only when something later calls `renderTimeline()` — by which point the
+      whole module's top-level code, including the `const certaintyBadgeClass = ...` line below it,
+      has already run to completion (ES module top-level code executes fully, in order, before any
+      DOM events like the nav-button clicks that eventually invoke `renderTimeline` can fire). So
+      the actual question is "is `certaintyBadgeClass` ever called before its own `const` line has
+      executed?" — and it isn't, for either function. This *would* have mattered if a function were
+      called from another function's own top-level module-scope statements (not from inside a
+      function body) before its declaration line ran — none of my candidates hit that case, but
+      tracing through exactly this distinction is what confirmed it was safe to convert both.
+- [x] Show a concrete before/after of one function you converted. Is there any behavioral difference
       at runtime, or is this purely a readability/style change? Justify your answer.
-- [ ] This codebase mixes function declarations, function expressions, and (after this exercise)
+
+      `js/views/timeline.js`, before:
+      ```js
+      function certaintyBadgeClass(certainty) {
+        if (certainty === "confirmed") return "reviewed";
+        if (certainty === "contradictory") return "critical";
+        if (certainty === "reported") return "flagged";
+        return "unreviewed";
+      }
+      ```
+      After:
+      ```js
+      const certaintyBadgeClass = (certainty) => {
+        if (certainty === "confirmed") return "reviewed";
+        if (certainty === "contradictory") return "critical";
+        if (certainty === "reported") return "flagged";
+        return "unreviewed";
+      };
+      ```
+      No behavioral difference at runtime — verified live: reloaded the app, navigated to `#timeline`,
+      and confirmed all 15 rendered badges map exactly as before the conversion (e.g. the
+      "contradictory" event still renders `badge-critical`, the two "reported" events still render
+      `badge-flagged`). This is purely a readability/binding-form change here specifically *because*
+      none of the three things that would make it behavioral apply to this function: it's never
+      called before its own line runs (Q3), it never used `this`/`arguments`/`new` (Q2), and it's
+      module-private either way, so there's no export-binding difference either. Same inputs, same
+      outputs, same call sites, same scope — only the syntax changed.
+- [x] This codebase mixes function declarations, function expressions, and (after this exercise)
       arrow functions, with no single consistent rule. Propose one rule your team could adopt for
       "when do we use which," and justify it.
+
+      Proposed rule, as a single binary test applied per function: **use a named `function
+      declaration` only if the function is called by something else's `this` binding (registered
+      directly by reference as a DOM/framework event handler, or ever attached as an object method)
+      or genuinely needs to be callable before its own declaration line runs in the same scope —
+      otherwise, use a `const` arrow function.** In this codebase that means: `handleEvidenceListClick`,
+      `handleModalClick`, and the other functions attached directly by reference to `addEventListener`
+      (`renderEvidenceList`, `clearFilters`, `renderTimeline` when passed as `change` handlers) stay
+      as declarations, since they're all real or plausible-future DOM-`this` recipients; everything
+      else — module-private helpers like `certaintyBadgeClass`/`statCardHTML`, and one-off callbacks
+      passed to array methods, `setTimeout`, `addEventListener` wrappers, or `.then()` — becomes an
+      arrow function. Justification: this gives two engineers looking at the same function the same
+      answer without relying on taste ("arrow functions look more modern") — it's a mechanical test
+      a reviewer can apply from the diff alone (does this function appear as a bare reference in an
+      `addEventListener`/similar call, or is it invoked before its own declaration executes?), and it
+      eliminates the genuinely pointless middle category this codebase still has a few of — a bare
+      anonymous `function (e) { ... }` expression assigned as a one-off callback with no `this`/
+      `arguments` need is strictly worse than the arrow-function equivalent once the two disqualifying
+      conditions are ruled out, so that middle category should just disappear over time.
 
 ---
 

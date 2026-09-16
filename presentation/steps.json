@@ -817,6 +817,110 @@
       "line": 47,
       "before": "const caseRes = await fetch(\"data/case.json\");\nconst caseJson = caseRes.json(); // DELIBERATELY dropped `await` — caseJson is now a Promise\nstate.caseData = caseJson;       // -> Object.prototype.toString.call(state.caseData) === \"[object Promise]\"\n\n// Real, live breakage: Dashboard case title fell back to \"Case\",\n// status badge showed \"UNKNOWN\" instead of \"OPEN\"",
       "after": "const caseRes = await fetch(\"data/case.json\");\nconst caseJson = await caseRes.json(); // restored\nstate.caseData = caseJson;             // real parsed data again\n\n// Confirmed live: title back to \"Project ReMotion – Investigation Portal\", status \"OPEN\""
+    },
+    {
+      "id": "demo10-t1-1of2-certainty-badge-arrow",
+      "type": "code",
+      "title": "D10 - T1 (1/2) — `certaintyBadgeClass` to an arrow function",
+      "narration": "First arrow-function conversion: certaintyBadgeClass in timeline.js. It's a pure module-private lookup — no this, no arguments, never used as a constructor — called only from renderTimeline in the same file, so it's a clean candidate. Converted from a function declaration to a const arrow function. Behaviorally identical: verified live after the change by reloading the Timeline view and confirming all 15 rendered events still carry the correct badge class per certainty (confirmed to reviewed, contradictory to critical, reported to flagged, everything else to unreviewed).",
+      "exercise": 1,
+      "demo": 10,
+      "view": "timeline",
+      "highlight": "#timelineContainer",
+      "waitFor": ".timeline-event",
+      "file": "js/views/timeline.js",
+      "line": 99,
+      "before": "// Only called from renderTimeline in this same file — private.\nfunction certaintyBadgeClass(certainty) {\n  if (certainty === \"confirmed\") return \"reviewed\";\n  if (certainty === \"contradictory\") return \"critical\";\n  if (certainty === \"reported\") return \"flagged\";\n  return \"unreviewed\";\n}",
+      "after": "// Only called from renderTimeline in this same file — private. Converted to\n// an arrow function (Demo 10): pure lookup, no `this`/`arguments`, never\n// called before this line runs (only from renderTimeline, itself invoked\n// later at runtime, well after the whole module has finished evaluating),\n// so the lack of hoisting for a `const` binding doesn't matter here.\nconst certaintyBadgeClass = (certainty) => {\n  if (certainty === \"confirmed\") return \"reviewed\";\n  if (certainty === \"contradictory\") return \"critical\";\n  if (certainty === \"reported\") return \"flagged\";\n  return \"unreviewed\";\n};"
+    },
+    {
+      "id": "demo10-t1-2of2-stat-card-arrow",
+      "type": "code",
+      "title": "D10 - T1 (2/2) — `statCardHTML` to an arrow function",
+      "narration": "Second good candidate: statCardHTML in dashboard.js, a pure template-string helper called five times from renderDashboard to build the stat-card row. Same reasoning as certaintyBadgeClass — no this/arguments/constructor use, module-private, only called at runtime after the module has fully evaluated. Verified live: reloaded the Dashboard and confirmed all five stat cards (18 Evidence items, 6 People, 6 Locations, 0 Bookmarked, 1 Reviewed) still render with the same markup and values as before the conversion.",
+      "exercise": 1,
+      "demo": 10,
+      "view": "dashboard",
+      "highlight": ".stat-grid",
+      "file": "js/views/dashboard.js",
+      "line": 71,
+      "before": "// Only ever called from renderDashboard in this same file — module-private.\nfunction statCardHTML(value, label) {\n  return '<div class=\"stat-card\"><div class=\"stat-value\">' + value + '</div><div class=\"stat-label\">' + label + \"</div></div>\";\n}",
+      "after": "// Only ever called from renderDashboard in this same file — module-private.\n// Converted to an arrow function (Demo 10): pure template helper, no\n// `this`/`arguments`, and — like certaintyBadgeClass in timeline.js — only\n// ever called from renderDashboard at runtime, after the module has fully\n// evaluated, so its `const` binding not being hoisted doesn't matter even\n// though it's textually declared after its one call site.\nconst statCardHTML = (value, label) => {\n  return '<div class=\"stat-card\"><div class=\"stat-value\">' + value + '</div><div class=\"stat-label\">' + label + \"</div></div>\";\n};"
+    },
+    {
+      "id": "demo10-t2-hypconfidence-listener-arrow",
+      "type": "code",
+      "title": "D10 - T2 — anonymous `addEventListener` callback to an arrow function",
+      "narration": "The required addEventListener conversion: the hypConfidence range slider's input listener in main.js, previously an anonymous function(e) {...}. It only reads e.target.value and writes it into the confidence-value output — no this, nothing that needs a fresh binding per call. Converted to an arrow function. Verified live: set the slider's value to 77 and dispatched a real input event — hypConfidenceValue's text updated to \"77\", identical to the pre-conversion behavior.",
+      "exercise": 1,
+      "demo": 10,
+      "view": "workspace",
+      "highlight": "#hypConfidence",
+      "file": "js/main.js",
+      "line": 65,
+      "before": "document.getElementById(\"hypConfidence\").addEventListener(\"input\", function (e) {\n  document.getElementById(\"hypConfidenceValue\").textContent = e.target.value;\n});",
+      "after": "  document.getElementById(\"hypConfidence\").addEventListener(\"input\", (e) => {\n    document.getElementById(\"hypConfidenceValue\").textContent = e.target.value;\n  });"
+    },
+    {
+      "id": "demo10-t3-handleEvidenceListClick-not-converted",
+      "type": "code",
+      "title": "D10 - T3 — deliberately NOT converted: `handleEvidenceListClick`",
+      "narration": "The one function I deliberately left as a function declaration: handleEvidenceListClick in evidence.js. It's registered directly by reference — container.addEventListener(\"click\", handleEvidenceListClick), not wrapped in another callback — implementing click-delegation over the evidence card list. A function attached this way is called by the DOM with this bound to the listening element (container), which is the actual contract of the delegated-click pattern here. This version reads event.target rather than this, but converting it to an arrow function would permanently and silently discard that binding, since an arrow function always captures this from its enclosing module scope (undefined, strict mode) instead of whatever the caller supplies — foreclosing a very standard DOM pattern for anyone maintaining this function later. Verified the unconverted function still works correctly: clicking a card's bookmark button toggles state.bookmarks via delegation without triggering the card's own detail-open handler, and clicking the card body itself still opens that evidence's detail view.",
+      "exercise": 1,
+      "demo": 10,
+      "view": "evidence",
+      "highlight": "#evidenceList",
+      "file": "js/views/evidence.js",
+      "line": 170,
+      "before": "// Only attached from within renderEvidenceList in this same file — private.\n// Demo 10: deliberately NOT converted to an arrow function. It's registered\n// directly by reference as a DOM event listener (`container.addEventListener\n// (\"click\", handleEvidenceListClick)` below, not wrapped in another\n// callback), which is exactly the case where a regular `function` is the\n// safer form to keep — the DOM calls it with `this` bound to the element the\n// listener is attached to (`container`), which is the whole point of the\n// delegated-click pattern this function implements. This version reads\n// `event.target` rather than `this`, but converting it to an arrow function\n// would permanently foreclose that binding: an arrow function ignores the\n// caller-supplied `this` entirely and captures whatever `this` is in the\n// enclosing module scope instead (`undefined`, since ES modules are strict\n// mode) regardless of which element the listener is attached to. That's a\n// silent, easy-to-miss behavior change for a function whose entire job is\n// being a DOM event handler.\nfunction handleEvidenceListClick(event) {\n  const target = event.target;\n\n  if (target.dataset && target.dataset.action === \"bookmark\") {\n    event.stopPropagation();\n    handleBookmarkClick(target.dataset.id);\n    return;\n  }\n\n  const card = target.closest(\".evidence-card\");\n  if (card) {\n    openEvidenceDetail(card.getAttribute(\"data-id\"));\n  }\n}"
+    },
+    {
+      "id": "demo10-q1-this-binding-difference",
+      "type": "app",
+      "title": "D10 - Q1 — Arrow `this` vs. regular-function `this`",
+      "narration": "A regular function gets its own this, determined dynamically by how it's called: obj.method() binds it to obj, addEventListener binds it to the listening element, a bare call leaves it undefined in strict mode. An arrow function has no this of its own — it lexically inherits this from whatever scope surrounds it at definition time, and that binding can never be overridden, not even by call/apply/bind. That's exactly why handleEvidenceListClick (T3) has to stay a declaration: it's registered as a DOM handler specifically so the browser can bind this to the listening element, the 'object method' pattern arrow functions break by design. It's preferable for callbacks, like the hypConfidence listener converted in T2, precisely because most callbacks don't want caller-determined this at all — they want to keep meaning whatever this meant in the surrounding code, which arrows give you by default instead of requiring a manual .bind(this).",
+      "exercise": 1,
+      "demo": 10,
+      "view": "evidence",
+      "highlight": "#evidenceList"
+    },
+    {
+      "id": "demo10-q2-constructor-arguments-limitations",
+      "type": "app",
+      "title": "D10 - Q2 — Did the `new`/`arguments` limitations affect any conversion?",
+      "narration": "No — confirmed by grepping the whole js/ tree for `new <CustomName>(` and for `arguments`: zero hits beyond the built-in new Date()/new Promise()/new Error() calls already in the codebase, and zero uses of the arguments object anywhere — every function here takes named parameters. So neither limitation disqualified any candidate; the real disqualifying factor for handleEvidenceListClick was this-binding (Q1/T3), not arguments or new. The honest answer is that this codebase simply doesn't use either feature.",
+      "exercise": 1,
+      "demo": 10
+    },
+    {
+      "id": "demo10-q3-hoisting-mattered",
+      "type": "app",
+      "title": "D10 - Q3 — Did hoisting matter anywhere in this refactor?",
+      "narration": "It mattered enough to check carefully, but didn't block either T1 conversion. Both certaintyBadgeClass and statCardHTML are declared after, textually, the function that calls them (renderTimeline/renderDashboard) — but hoisting only matters for when a reference is actually evaluated, not where a function is textually defined relative to its caller's declaration. renderTimeline's body doesn't run when renderTimeline is declared, only when something later calls renderTimeline() — by which point the whole module's top-level code, including the const line below it, has already finished executing. So the real question is 'is this function ever called before its own const line has run?' — and for both, it isn't. This would matter if a function were called from another function's own top-level module-scope statements before its declaration line ran; neither candidate hit that case.",
+      "exercise": 1,
+      "demo": 10,
+      "view": "timeline",
+      "highlight": "#timelineContainer"
+    },
+    {
+      "id": "demo10-q4-before-after-behavioral-difference",
+      "type": "code",
+      "title": "D10 - Q4 — Before/after: behavioral difference or pure style?",
+      "narration": "Using certaintyBadgeClass as the concrete example (same before/after shown in T1): purely a readability/binding-form change, no runtime difference — verified live by reloading the Timeline view and confirming all 15 rendered badges map exactly as before the conversion. It's purely style here specifically because none of the three things that would make it behavioral apply to this function: it's never called before its own line runs (Q3), it never used this/arguments/new (Q2), and it's module-private either way, so there's no export-binding difference. Same inputs, same outputs, same call sites, same scope — only the syntax changed.",
+      "exercise": 1,
+      "demo": 10,
+      "file": "js/views/timeline.js",
+      "line": 104,
+      "before": "function certaintyBadgeClass(certainty) {\n  if (certainty === \"confirmed\") return \"reviewed\";\n  if (certainty === \"contradictory\") return \"critical\";\n  if (certainty === \"reported\") return \"flagged\";\n  return \"unreviewed\";\n}",
+      "after": "const certaintyBadgeClass = (certainty) => {\n  if (certainty === \"confirmed\") return \"reviewed\";\n  if (certainty === \"contradictory\") return \"critical\";\n  if (certainty === \"reported\") return \"flagged\";\n  return \"unreviewed\";\n};"
+    },
+    {
+      "id": "demo10-q5-team-rule-proposal",
+      "type": "app",
+      "title": "D10 - Q5 — Proposed team rule for declarations vs. expressions vs. arrows",
+      "narration": "Proposed rule, as a single binary test per function: use a named function declaration only if the function is called by something else's this binding (registered directly by reference as a DOM/framework event handler, or ever attached as an object method) or genuinely needs to be callable before its own declaration line runs in the same scope — otherwise, use a const arrow function. In this codebase that keeps handleEvidenceListClick and the other directly-referenced addEventListener targets (renderEvidenceList, clearFilters, renderTimeline as change handlers) as declarations, since they're real or plausible-future DOM-this recipients; everything else — module-private helpers and one-off callbacks — becomes an arrow function. This gives two engineers the same answer without relying on taste, and it's mechanically checkable from a diff: does this function appear as a bare reference in an addEventListener call, or is it invoked before its own declaration executes?",
+      "exercise": 1,
+      "demo": 10
     }
   ]
 }

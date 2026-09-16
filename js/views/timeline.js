@@ -96,13 +96,17 @@ export function renderTimeline() {
   }
 }
 
-// Only called from renderTimeline in this same file — private.
-function certaintyBadgeClass(certainty) {
+// Only called from renderTimeline in this same file — private. Converted to
+// an arrow function (Demo 10): pure lookup, no `this`/`arguments`, never
+// called before this line runs (only from renderTimeline, itself invoked
+// later at runtime, well after the whole module has finished evaluating),
+// so the lack of hoisting for a `const` binding doesn't matter here.
+const certaintyBadgeClass = (certainty) => {
   if (certainty === "confirmed") return "reviewed";
   if (certainty === "contradictory") return "critical";
   if (certainty === "reported") return "flagged";
   return "unreviewed";
-}
+};
 
 // --- Quick-view modal (used from the timeline) -------------------------
 // Looks like a generic reusable modal, but in the actual codebase it is

@@ -69,6 +69,11 @@ export function renderDashboard() {
 }
 
 // Only ever called from renderDashboard in this same file — module-private.
-function statCardHTML(value, label) {
+// Converted to an arrow function (Demo 10): pure template helper, no
+// `this`/`arguments`, and — like certaintyBadgeClass in timeline.js — only
+// ever called from renderDashboard at runtime, after the module has fully
+// evaluated, so its `const` binding not being hoisted doesn't matter even
+// though it's textually declared after its one call site.
+const statCardHTML = (value, label) => {
   return '<div class="stat-card"><div class="stat-value">' + value + '</div><div class="stat-label">' + label + "</div></div>";
-}
+};

@@ -168,6 +168,20 @@ function renderEvidenceCardHTML(ev) {
 }
 
 // Only attached from within renderEvidenceList in this same file — private.
+// Demo 10: deliberately NOT converted to an arrow function. It's registered
+// directly by reference as a DOM event listener (`container.addEventListener
+// ("click", handleEvidenceListClick)` below, not wrapped in another
+// callback), which is exactly the case where a regular `function` is the
+// safer form to keep — the DOM calls it with `this` bound to the element the
+// listener is attached to (`container`), which is the whole point of the
+// delegated-click pattern this function implements. This version reads
+// `event.target` rather than `this`, but converting it to an arrow function
+// would permanently foreclose that binding: an arrow function ignores the
+// caller-supplied `this` entirely and captures whatever `this` is in the
+// enclosing module scope instead (`undefined`, since ES modules are strict
+// mode) regardless of which element the listener is attached to. That's a
+// silent, easy-to-miss behavior change for a function whose entire job is
+// being a DOM event handler.
 function handleEvidenceListClick(event) {
   const target = event.target;
 
