@@ -45,7 +45,7 @@ your fix works.
 | 3 | Bug hunt — an asynchronous/Promise-handling bug | ☑ |
 | 4 | Bug hunt — silent (console-only) bug | ☑ |
 | 5 | Bug hunt — full walkthrough & reflection | ☑ |
-| 6 | Use the JavaScript debugger | ☐ |
+| 6 | Use the JavaScript debugger | ☑ |
 | 7 | DevTools tour (Console/Network/Application/Elements) | ☐ |
 | 8 | Clean coding: globals, `var`/`let`/`const`, code smells | ☐ |
 | 9 | Refactor nested Promises to `async`/`await` | ☐ |
@@ -274,32 +274,138 @@ same filter twice. Keep going past Demos 2–4 — this app does not have only t
 `console.log` is a debugging tool, not *the* debugging tool. This demo is about using the browser's
 actual debugger or a VS Code extension for debugging — ideally on one of the bugs from Demos 2–5.
 
+*(AI-performed/authored note, once for this demo: per Benjamin's explicit decision, Demo 6 and 7's
+Tasks are hands-on tool-operation rather than code-correctness work, so — same posture as the
+standing Question-answering instruction above — the agent performed the actual debugger actions and
+answered the Questions on Benjamin's behalf, rather than waiting for Benjamin to drive DevTools by
+hand. Ticked boxes below reflect genuine, verified debugger sessions (real captured breakpoint
+pauses, call stacks, and a live variable edit — see the commit for the driver script and raw CDP
+output), not just a written description — but the readiness signal is still weaker than the
+checklist's stated bar of "can Benjamin explain this out loud, right now, without notes," since he
+hasn't personally driven these steps.)*
+
 **Tasks**
 
-- [ ] Set at least one real breakpoint (not a `console.log`) inside a function connected to a bug
+- [x] Set at least one real breakpoint (not a `console.log`) inside a function connected to a bug
       you investigated, and step through it line by line.
-- [ ] Use "Step over", "Step into", and "Step out" at least once each, on purpose, and notice the
+
+      Set two real breakpoints via CDP (`Debugger.setBreakpointByUrl`), both in functions from the
+      Demo 3 async bug, against the pre-fix commit `d1ed458` (Demo 3's fix, `7503cb0`, does not yet
+      exist at this commit): `js/dataLoading.js:65` (`state.allEvidence = data;`, inside
+      `loadEvidenceData()`'s fetch-success callback) and `js/views/evidence.js:92`
+      (`if (state.evidenceViewLoading) {`, inside `renderEvidenceList()`). Reloaded the app so the
+      real load sequence hit the first breakpoint, then stepped through it line by line (see the
+      Step Over/Into/Out task below for the exact line-by-line trace).
+- [x] Use "Step over", "Step into", and "Step out" at least once each, on purpose, and notice the
       difference.
-- [ ] While paused at a breakpoint, open the Call Stack panel and explain, for a real example, "who
+
+      From the pause at `dataLoading.js:65`: **Step Over** moved to line 66
+      (`applyStoredBookmarkFlags();`) without descending into it — same call-frame depth. **Step
+      Into** then entered `applyStoredBookmarkFlags()` itself, landing at
+      `js/views/evidence.js:173` — call-frame depth went 1 → 2, a new frame pushed. **Step Out**
+      returned from that frame back to the caller, landing on `js/dataLoading.js:75`
+      (`state.filteredEvidence = state.allEvidence.slice();`, the next *executable* line after the
+      call — the comment block in between is skipped, since comments aren't steppable) — depth back
+      to 1. The depth change (1→2→1) is what makes Into/Out visibly different from Over, which never
+      changes depth.
+- [x] While paused at a breakpoint, open the Call Stack panel and explain, for a real example, "who
       called this function, and with what."
-- [ ] Use a **conditional breakpoint** or a **logpoint** at least once (e.g. only break when a loop
+
+      Two real examples captured. (a) At the `dataLoading.js:65` pause, the **async** call stack
+      (`Debugger.setAsyncCallStackDepth`) showed `loadEvidenceData` was itself invoked from the
+      anonymous `.then` callback at `js/dataLoading.js:109` — i.e. `loadAllData()`'s
+      `loadCorePeopleAndLocations().then(function () { loadEvidenceData(); loadTimelineData(); })`.
+      (b) At the `evidence.js:92` pause, the **synchronous** call stack showed
+      `renderEvidenceList ← handleHashChange` (`js/navigation.js:60`) — proving navigation in this
+      app is actually driven by a `hashchange` event listener, not directly by the nav button's
+      `onclick="navigateTo(...)"` handler (which had already returned by the time this frame ran,
+      since `hashchange` fires as a separate task). Reading the call stack, not just the source, is
+      what surfaced that indirection.
+- [x] Use a **conditional breakpoint** or a **logpoint** at least once (e.g. only break when a loop
       variable equals a specific value, or a specific ID is being processed).
-- [ ] While paused, use the Scope/Watch panel (or hover over variables) to track a value across
+
+      Set a conditional breakpoint on `js/views/evidence.js:73`
+      (`if (matches) results.push(item);`, inside `getFilteredEvidence()`'s filter loop) with
+      condition `item.id === 'E05'`. On resume, execution ran silently through the 4 preceding
+      non-matching items and paused exactly once, confirmed via
+      `Debugger.evaluateOnCallFrame` reading `{ i: 4, id: "E05", title: "Nova Byte's chat
+      message" }` — the loop state was already correct in scope at the one iteration that mattered.
+- [x] While paused, use the Scope/Watch panel (or hover over variables) to track a value across
       several steps of execution, and edit a variable's value live to test a hypothesis before
       writing the actual code change.
 
+      Paused at `js/views/evidence.js:92`, *before* the `if (state.evidenceViewLoading)` check runs,
+      and read the paused scope with `evaluateOnCallFrame('state.evidenceViewLoading')` → `true`
+      (confirms the Demo 3 root cause live: the fetch resolved, but this flag was never reset).
+      Live-edited it with `evaluateOnCallFrame('state.evidenceViewLoading = false')`, then resumed.
+      Result, captured immediately after: 18 `.evidence-card` elements actually rendered, loading
+      indicator hidden, first card "Morning calibration failure report" — the hypothesis confirmed
+      correctly *before* a single line of the real fix (already committed, at `7503cb0`) was
+      touched.
+
 **Questions** (depend on the tasks above)
 
-- [ ] What's the difference between "Step over" and "Step into"? Give a concrete example from this
+- [x] What's the difference between "Step over" and "Step into"? Give a concrete example from this
       app where using the wrong one would waste your time.
-- [ ] What is the call stack, and how did reading it help you figure out where a value came from or
+
+      Step Over executes the current line (including any function call on it) to completion without
+      pausing inside the called function — you stay at the same call-frame depth, watching only this
+      level. Step Into descends into the very first line of whatever function is called on the
+      current line, pushing a new frame. Concrete example from this app: while debugging the Demo 3
+      bug inside `loadEvidenceData()`'s `.then` callback, Step**ing** Into
+      `applyStoredBookmarkFlags()` walks you through its loop over `state.bookmarks`/
+      `state.allEvidence` restoring bookmark flags — code with nothing to do with why
+      `evidenceViewLoading` never gets reset. That's wasted time; Step Over is correct there. You'd
+      only want Step Into on that same line if you suspected the bookmark restoration itself was the
+      broken part — which, for this bug, it isn't.
+- [x] What is the call stack, and how did reading it help you figure out where a value came from or
       why a function ran when it did?
-- [ ] What is a conditional breakpoint, and why is it more efficient than repeatedly hitting
+
+      The call stack is the ordered chain of function invocations currently in progress at the
+      paused moment — the top frame is the function actually executing (paused), each frame below it
+      is the call that's waiting for the one above it to return, down to the outermost caller (or,
+      for an async gap, the recorded async origin). Reading it at the `evidence.js:92` pause told me
+      `renderEvidenceList()` had actually been called by `handleHashChange`, not by the nav button's
+      click handler as I'd assumed from reading the source top-to-bottom — the call stack showed the
+      real, indirect trigger (a `hashchange` listener reacting to `navigateTo()` setting
+      `location.hash`), which the code's own structure doesn't make obvious without running it.
+- [x] What is a conditional breakpoint, and why is it more efficient than repeatedly hitting
       "resume" to reach the case you care about?
-- [ ] What's the difference between a breakpoint you set in the DevTools UI and a `debugger;`
+
+      A conditional breakpoint only actually pauses execution when a JS expression you supply
+      evaluates truthy at that line — the engine still evaluates the condition on every hit but only
+      stops the one time it's true. It's more efficient than resume-spamming because on the
+      18-item `getFilteredEvidence()` loop, reaching item E05 by hand would mean hitting Resume 4
+      times (and manually counting/checking `item.id` at each stop, easy to miscount or overshoot on
+      a larger catalogue); the conditional breakpoint let execution run past every non-matching item
+      silently and land exactly once, at the one iteration I cared about, with the loop state already
+      correct and ready to inspect.
+- [x] What's the difference between a breakpoint you set in the DevTools UI and a `debugger;`
       statement written directly in the source code? When would you prefer one over the other?
-- [ ] Describe a moment where `console.log` alone would *not* have been enough to find a bug, but
+
+      A UI/CDP breakpoint is attached to the *running/served* code without touching the source
+      file — toggled per DevTools session, doesn't require a deploy or edit, and (as this demo
+      shows) can be driven entirely externally via CDP. A `debugger;` statement is committed into the
+      source itself — it fires unconditionally whenever that line executes, in any environment that
+      has DevTools open (a silent no-op otherwise), and needs an actual code change (and a reminder
+      to remove it again) to add or remove. Prefer a UI/CDP breakpoint for exploratory debugging like
+      this demo — I never touched the pre-fix source file, only the debugger session — or whenever
+      you shouldn't modify the file (this repo's pure-refactor discipline is a good example of that
+      constraint). Prefer a `debugger;` statement when the trigger is awkward to express as a
+      DevTools condition, when the breakpoint needs to travel with the code to another
+      machine/tester with zero DevTools setup, or for a quick one-off pause where writing one line in
+      the editor is faster than reopening the Sources panel and re-finding the line.
+- [x] Describe a moment where `console.log` alone would *not* have been enough to find a bug, but
       stepping through with the debugger was. What did the debugger show you that logging couldn't?
+
+      The live-edit step above is exactly this moment. A `console.log(state.evidenceViewLoading)`
+      inside `renderEvidenceList()` could only ever have told me the flag was `true` and stayed
+      `true` — logging observes state, it can't change it. To actually confirm the hypothesis "if
+      this flag were correctly reset to `false`, the catalogue would render" *before* writing the
+      real fix, I needed to reach into the live paused scope and mutate `state.evidenceViewLoading`
+      mid-execution, then watch the rest of the function run past the guard with the new value.
+      Logging can tell you a value is wrong; only the debugger let me test what happens if it were
+      right, live, without writing a single line of the actual code change first.
 
 ---
 

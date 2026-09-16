@@ -430,6 +430,102 @@
       "exercise": 1,
       "demo": 5,
       "view": "dashboard"
+    },
+    {
+      "id": "demo6-t1-real-breakpoints",
+      "type": "app",
+      "title": "D6 - T1 — Real breakpoints in the Demo 3 bug's functions",
+      "narration": "Real debugging tool, not console.log: set two genuine breakpoints via the CDP Debugger domain (Debugger.setBreakpointByUrl), both inside functions from the Demo 3 async bug, against the pre-fix commit d1ed458 (Demo 3's fix, 7503cb0, doesn't exist yet at this commit). Breakpoint A: js/dataLoading.js:65, `state.allEvidence = data;` — inside loadEvidenceData()'s fetch-success callback. Breakpoint B: js/views/evidence.js:92, `if (state.evidenceViewLoading) {` — inside renderEvidenceList(). Reloading the app hit breakpoint A for real (confirmed via the paused event's own hitBreakpoints list), then I stepped through it line by line — see the next slide for the exact trace.",
+      "exercise": 1,
+      "demo": 6,
+      "view": "dashboard"
+    },
+    {
+      "id": "demo6-t2-step-over-into-out",
+      "type": "app",
+      "title": "D6 - T2 — Step Over / Into / Out, and the depth change that shows the difference",
+      "narration": "From the pause at dataLoading.js:65: Step Over moved to line 66 (`applyStoredBookmarkFlags();`) without descending — call-frame depth stayed the same. Step Into then entered applyStoredBookmarkFlags() itself, landing at js/views/evidence.js:173 — depth went 1→2, a new frame pushed. Step Out returned from that frame back to the caller, landing on js/dataLoading.js:75 (`state.filteredEvidence = state.allEvidence.slice();`, the next executable line after the call — the comment block in between is skipped) — depth back to 1. The 1→2→1 depth trace is the concrete, observable difference between the three.",
+      "exercise": 1,
+      "demo": 6,
+      "view": "dashboard"
+    },
+    {
+      "id": "demo6-t3-call-stack",
+      "type": "app",
+      "title": "D6 - T3 — Call Stack: who called this, and with what",
+      "narration": "Two real examples. (a) At the dataLoading.js:65 pause, the async call stack (Debugger.setAsyncCallStackDepth) showed loadEvidenceData was itself called from the anonymous .then callback at js/dataLoading.js:109 — i.e. loadAllData()'s loadCorePeopleAndLocations().then(function () { loadEvidenceData(); loadTimelineData(); }). (b) At the evidence.js:92 pause, the synchronous call stack showed renderEvidenceList ← handleHashChange (js/navigation.js:60) — proving navigation here is driven by a hashchange listener, not directly by the nav button's onclick, since that click handler had already returned by the time this frame ran. Reading the stack, not just the source, is what surfaced that.",
+      "exercise": 1,
+      "demo": 6,
+      "view": "evidence",
+      "highlight": "#evidenceList"
+    },
+    {
+      "id": "demo6-t4-conditional-breakpoint",
+      "type": "app",
+      "title": "D6 - T4 — Conditional breakpoint: only pause for item.id === 'E05'",
+      "narration": "Set a conditional breakpoint on js/views/evidence.js:73 (`if (matches) results.push(item);`, inside getFilteredEvidence()'s filter loop) with condition item.id === 'E05'. On resume, execution ran silently through the 4 preceding non-matching items (E01–E04) and paused exactly once, confirmed via Debugger.evaluateOnCallFrame reading { i: 4, id: \"E05\", title: \"Nova Byte's chat message\" } — the loop state was already correct in scope at the one iteration that mattered, no manual counting through Resume needed.",
+      "exercise": 1,
+      "demo": 6,
+      "view": "evidence",
+      "highlight": "#evidenceList"
+    },
+    {
+      "id": "demo6-t5-live-edit-hypothesis",
+      "type": "app",
+      "title": "D6 - T5 — Live-edit the paused scope to confirm the hypothesis before the fix",
+      "narration": "Paused at js/views/evidence.js:92, before the `if (state.evidenceViewLoading)` check runs, and read the paused scope: evaluateOnCallFrame('state.evidenceViewLoading') → true (the Demo 3 root cause, live: the fetch resolved but this flag was never reset). Live-edited it with evaluateOnCallFrame('state.evidenceViewLoading = false'), then resumed. Captured result: 18 .evidence-card elements actually rendered, loading indicator hidden, first card \"Morning calibration failure report\" — the hypothesis confirmed correctly before a single line of the real fix (already committed, at 7503cb0) was touched.",
+      "exercise": 1,
+      "demo": 6,
+      "view": "evidence",
+      "highlight": "#evidenceLoadingIndicator"
+    },
+    {
+      "id": "demo6-q1-step-over-vs-into",
+      "type": "app",
+      "title": "D6 - Q1 — Step Over vs. Step Into, and where using the wrong one wastes time",
+      "narration": "Step Over executes the current line — including any function call on it — to completion without pausing inside it, staying at the same call-frame depth. Step Into descends into the first line of whatever function is called on the current line, pushing a new frame. Concrete example from this app: while debugging the Demo 3 bug inside loadEvidenceData()'s .then callback, stepping Into applyStoredBookmarkFlags() walks you through its bookmark-restoration loop over state.bookmarks/state.allEvidence — code with nothing to do with why evidenceViewLoading never gets reset. That wastes time; Step Over is correct there. Step Into is only worth it on that line if you suspect the bookmark restoration itself is broken, which for this bug it isn't.",
+      "exercise": 1,
+      "demo": 6,
+      "view": "dashboard"
+    },
+    {
+      "id": "demo6-q2-call-stack-explained",
+      "type": "app",
+      "title": "D6 - Q2 — What the call stack is, and what it revealed here",
+      "narration": "The call stack is the ordered chain of function invocations currently in progress at the paused moment — top frame is the function actually executing (paused), each frame below is the caller waiting for it to return, down to the outermost caller or, across an async gap, the recorded async origin. Reading it at the evidence.js:92 pause told me renderEvidenceList() had actually been called by handleHashChange, not by the nav button's click handler as reading the source top-to-bottom suggested — the real, indirect trigger was a hashchange listener reacting to navigateTo() setting location.hash.",
+      "exercise": 1,
+      "demo": 6,
+      "view": "evidence",
+      "highlight": "#evidenceList"
+    },
+    {
+      "id": "demo6-q3-conditional-breakpoint-efficiency",
+      "type": "app",
+      "title": "D6 - Q3 — Conditional breakpoints vs. repeatedly hitting Resume",
+      "narration": "A conditional breakpoint only actually pauses execution when a JS expression you supply evaluates truthy at that line — the engine still evaluates it on every hit but only stops the one time it's true. More efficient than resume-spamming: reaching item E05 in the 18-item getFilteredEvidence() loop by hand means hitting Resume 4 times and manually checking item.id at each stop — easy to miscount on a bigger catalogue. The conditional breakpoint let execution run past every non-matching item silently and land exactly once, with the loop state already correct and ready to inspect.",
+      "exercise": 1,
+      "demo": 6,
+      "view": "evidence",
+      "highlight": "#evidenceList"
+    },
+    {
+      "id": "demo6-q4-ui-breakpoint-vs-debugger-statement",
+      "type": "app",
+      "title": "D6 - Q4 — DevTools UI breakpoint vs. a `debugger;` statement",
+      "narration": "A UI/CDP breakpoint attaches to the running/served code without touching the source file — toggled per session, no deploy or edit needed, and (as this demo shows) fully scriptable via CDP. A debugger; statement is committed into the source itself — fires unconditionally whenever that line executes, in any environment with DevTools open (silent no-op otherwise), and needs an actual code change — plus remembering to remove it — to add or remove. Prefer UI/CDP for exploratory debugging like this demo, where I never touched the pre-fix source file, or whenever you shouldn't modify the file (this repo's pure-refactor discipline is a real example of that constraint). Prefer debugger; when the trigger is awkward to express as a DevTools condition, or the breakpoint needs to travel with the code with zero setup.",
+      "exercise": 1,
+      "demo": 6,
+      "view": "dashboard"
+    },
+    {
+      "id": "demo6-q5-console-log-vs-debugger",
+      "type": "app",
+      "title": "D6 - Q5 — A moment console.log alone wouldn't have been enough",
+      "narration": "The live-edit step (T5) is exactly this moment. A console.log(state.evidenceViewLoading) inside renderEvidenceList() could only ever have told me the flag was true and stayed true — logging observes state, it can't change it. To actually confirm the hypothesis — if this flag were correctly reset to false, the catalogue would render — before writing the real fix, I needed to reach into the live paused scope and mutate state.evidenceViewLoading mid-execution, then watch the rest of the function run past the guard with the new value. Logging can tell you a value is wrong; only the debugger let me test what happens if it were right, live, before touching the actual code.",
+      "exercise": 1,
+      "demo": 6,
+      "view": "evidence",
+      "highlight": "#evidenceLoadingIndicator"
     }
   ]
 }
