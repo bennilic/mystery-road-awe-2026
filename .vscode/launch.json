@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Debug in Chrome",
+      "url": "http://localhost:8080",
+      "webRoot": "${workspaceFolder}",
+      "userDataDir": "/tmp/remotion-chrome-profile",
+      "preLaunchTask": "Serve",
+      "postDebugTask": "Stop all"
+    },
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "Run in Chrome",
+      "command": "open -n -W -a 'Google Chrome' --args --user-data-dir=/tmp/remotion-chrome-profile --no-first-run http://localhost:8080",
+      "preLaunchTask": "Serve",
+      "postDebugTask": "Stop all"
+    },
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "Present in Chrome",
+      "command": "open -n -W -a 'Google Chrome' --args --user-data-dir=/tmp/remotion-chrome-profile --no-first-run http://localhost:8080/presentation/present.html",
+      "preLaunchTask": "Serve",
+      "postDebugTask": "Stop all"
+    }
+  ]
+}

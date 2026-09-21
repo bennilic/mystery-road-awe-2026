@@ -1,0 +1,43 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Serve",
+      "type": "shell",
+      "command": "python3 -m http.server 8080 --bind 127.0.0.1",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^Serving HTTP",
+          "endsPattern": "^Serving HTTP"
+        }
+      }
+    },
+    {
+      "label": "Stop server",
+      "type": "shell",
+      "command": "pkill -f 'http.server 8080' || true",
+      "problemMatcher": []
+    },
+    {
+      "label": "Stop Chrome",
+      "type": "shell",
+      "command": "pkill -f 'user-data-dir=/tmp/remotion-chrome-profile' || true",
+      "problemMatcher": []
+    },
+    {
+      "label": "Stop all",
+      "dependsOn": ["Stop server", "Stop Chrome"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run in Chrome (no debug)",
+      "dependsOn": "Serve",
+      "type": "shell",
+      "command": "open -a 'Google Chrome' http://localhost:8080",
+      "problemMatcher": []
+    }
+  ]
+}
