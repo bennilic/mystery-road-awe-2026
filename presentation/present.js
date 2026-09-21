@@ -337,7 +337,83 @@ function renderCodeTab(step) {
   el.tabBefore.classList.toggle("active", showingBefore);
   el.tabAfter.classList.toggle("active", !showingBefore);
   const snippet = showingBefore ? step.before : (step.after || step.before);
-  el.codeContent.textContent = snippet || "(no snippet provided for this step)";
+  if (!snippet) {
+    el.codeContent.textContent = "(no snippet provided for this step)";
+    return;
+  }
+  if (isJavaScriptFile(step.file)) {
+    renderHighlightedJavaScript(el.codeContent, snippet);
+  } else {
+    el.codeContent.textContent = snippet;
+  }
+}
+
+// Only JS is highlighted: snippets are ~all JS, and a tiny in-file tokenizer keeps the presenter
+// dependency-free and usable offline (a CDN highlighter would break a talk on bad wifi).
+// Matches "x.js" and "app.js (pre-refactor)" — the file label sometimes carries a suffix.
+function isJavaScriptFile(fileLabel) {
+  return /\.js\b/.test(fileLabel || "");
+}
+
+// Split like VS Code's Dark+ theme: control-flow/module keywords are purple, declaration and
+// operator keywords are blue.
+const JS_CONTROL_KEYWORDS = new Set([
+  "await", "break", "case", "catch", "continue", "default", "do", "else", "export", "finally",
+  "for", "from", "if", "import", "return", "switch", "throw", "try", "while", "yield",
+]);
+const JS_STORAGE_KEYWORDS = new Set([
+  "async", "class", "const", "delete", "extends", "function", "in", "instanceof", "let", "new",
+  "of", "typeof", "var", "void",
+]);
+const JS_LITERALS = new Set(["true", "false", "null", "undefined", "this", "NaN", "Infinity"]);
+
+// Order matters: comments and strings must win over the word/number rules so a keyword inside a
+// string or comment isn't colored. Regex literals aren't tokenized (none in this codebase) — they
+// fall through as plain text rather than risk mis-coloring division.
+const JS_TOKEN_PATTERN = new RegExp(
+  [
+    "(?<comment>\\/\\/[^\\n]*|\\/\\*[\\s\\S]*?\\*\\/)",
+    "(?<string>\"(?:[^\"\\\\\\n]|\\\\.)*\"|'(?:[^'\\\\\\n]|\\\\.)*'|`(?:[^`\\\\]|\\\\.)*`)",
+    "(?<number>\\b\\d+(?:\\.\\d+)?\\b)",
+    "(?<word>[A-Za-z_$][\\w$]*)",
+  ].join("|"),
+  "g"
+);
+
+function classifyJavaScriptWord(word, followingText) {
+  if (JS_CONTROL_KEYWORDS.has(word)) return "tok-control";
+  if (JS_STORAGE_KEYWORDS.has(word) || JS_LITERALS.has(word)) return "tok-storage";
+  if (followingText.startsWith("(")) return "tok-function";
+  if (/^[A-Z][a-z]/.test(word)) return "tok-type";
+  return "tok-variable";
+}
+
+function appendToken(parent, text, className) {
+  if (!className) {
+    parent.append(text);
+    return;
+  }
+  const span = document.createElement("span");
+  span.className = className;
+  span.textContent = text;
+  parent.append(span);
+}
+
+// Builds spans via textContent (never innerHTML), so snippet text can't inject markup.
+function renderHighlightedJavaScript(container, source) {
+  container.textContent = "";
+  let cursor = 0;
+  for (const match of source.matchAll(JS_TOKEN_PATTERN)) {
+    if (match.index > cursor) appendToken(container, source.slice(cursor, match.index), null);
+    const { comment, string, number, word } = match.groups;
+    const tokenEnd = match.index + match[0].length;
+    if (comment) appendToken(container, comment, "tok-comment");
+    else if (string) appendToken(container, string, "tok-string");
+    else if (number) appendToken(container, number, "tok-number");
+    else appendToken(container, word, classifyJavaScriptWord(word, source.slice(tokenEnd)));
+    cursor = tokenEnd;
+  }
+  if (cursor < source.length) appendToken(container, source.slice(cursor), null);
 }
 
 el.tabBefore.addEventListener("click", () => {
