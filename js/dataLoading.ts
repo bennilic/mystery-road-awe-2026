@@ -6,14 +6,14 @@
 // loading sequence. One real "public" thing to offer justifies a default
 // export rather than a named one; everything else stays unexported.
 import { state } from "./state.ts";
-import { renderDashboard } from "./views/dashboard.js";
+import { renderDashboard } from "./views/dashboard.ts";
 import {
   populateEvidenceDropdowns,
   renderEvidenceList,
   applyStoredBookmarkFlags,
-} from "./views/evidence.js";
-import { populateTimelineDropdowns, renderTimeline } from "./views/timeline.js";
-import { populateHypothesisDropdowns } from "./views/workspace.js";
+} from "./views/evidence.ts";
+import { populateTimelineDropdowns, renderTimeline } from "./views/timeline.ts";
+import { populateHypothesisDropdowns } from "./views/workspace.ts";
 import type { CaseInfo, Person, Location, Evidence, TimelineEvent } from "./types.ts";
 
 function showLoadingOverlay(msg: string): void {

@@ -35,17 +35,11 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
+    "resolveJsonModule": true
 
-    // Demo 5-6 incremental phase: the not-yet-converted .js modules still
-    // need to be resolvable (and structurally inferred) so the new .ts
-    // files that import them type-check without falling back to an
-    // implicit `any`. checkJs stays off so unconverted files aren't held
-    // to strict-mode standards they were never written against — that's
-    // Demo 7's job, once every file is .ts and this flag (along with
-    // allowJs) can come back out.
-    "allowJs": true,
-    "checkJs": false
+    // Demo 7: allowJs/checkJs (Demo 5-6's incremental-migration bridge for
+    // the not-yet-converted .js modules) are gone — every file under js/ is
+    // .ts now, so there's nothing left to bridge to.
   },
-  "include": ["js/**/*.ts", "js/**/*.js", "vite.config.ts"]
+  "include": ["js/**/*.ts", "vite.config.ts"]
 }

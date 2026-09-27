@@ -4,17 +4,19 @@
 import { state } from "../state.ts";
 import { evidenceMentionsPerson } from "../lookup.ts";
 import { navigateTo } from "../navigation.ts";
-import { renderEvidenceList } from "./evidence.js";
+import { renderEvidenceList } from "./evidence.ts";
+import { el } from "../dom.ts";
+import type { Person } from "../types.ts";
 
 // Reached only through the inline onclick="switchPeopleTab(...)" buttons in
 // index.html — exported purely for main.js's window wiring, no module calls
 // it directly.
-export function switchPeopleTab(tab) {
+export function switchPeopleTab(tab: "people" | "locations"): void {
   state.currentPeopleTab = tab;
-  const peoplePanel = document.getElementById("peoplePanel");
-  const locationsPanel = document.getElementById("locationsPanel");
-  const peopleTabBtn = document.getElementById("tabPeopleBtn");
-  const locationsTabBtn = document.getElementById("tabLocationsBtn");
+  const peoplePanel = el<HTMLElement>("peoplePanel")!;
+  const locationsPanel = el<HTMLElement>("locationsPanel")!;
+  const peopleTabBtn = el<HTMLElement>("tabPeopleBtn")!;
+  const locationsTabBtn = el<HTMLElement>("tabLocationsBtn")!;
 
   if (tab === "people") {
     peoplePanel.classList.remove("hidden");
@@ -30,20 +32,19 @@ export function switchPeopleTab(tab) {
 }
 
 // Only called from renderPeople in this same file — private.
-function countEvidenceForPerson(person) {
+function countEvidenceForPerson(person: Person): number {
   let count = 0;
-  for (let i = 0; i < state.allEvidence.length; i++) {
-    if (evidenceMentionsPerson(state.allEvidence[i], person)) count++;
+  for (const item of state.allEvidence) {
+    if (evidenceMentionsPerson(item, person)) count++;
   }
   return count;
 }
 
 // Called from navigation.js's handleHashChange — needs to be exported.
-export function renderPeople() {
-  const container = document.getElementById("peoplePanel");
+export function renderPeople(): void {
+  const container = el<HTMLElement>("peoplePanel")!;
   let html = "";
-  for (let i = 0; i < state.allPeople.length; i++) {
-    const person = state.allPeople[i];
+  for (const person of state.allPeople) {
     const count = countEvidenceForPerson(person);
 
     html += '<div class="person-card">';
@@ -59,8 +60,8 @@ export function renderPeople() {
     html += "</div>";
     html += "<p><strong>Speciality:</strong> " + person.speciality + "</p>";
     html += "<ul>";
-    for (let r = 0; r < person.responsibilities.length; r++) {
-      html += "<li>" + person.responsibilities[r] + "</li>";
+    for (const responsibility of person.responsibilities) {
+      html += "<li>" + responsibility + "</li>";
     }
     html += "</ul>";
     html += '<div class="person-statement">&ldquo;' + person.statement + "&rdquo;</div>";
@@ -73,11 +74,11 @@ export function renderPeople() {
   }
   container.innerHTML = html;
 
-  const links = container.querySelectorAll(".evidence-count-link");
-  for (let l = 0; l < links.length; l++) {
-    links[l].addEventListener("click", function (e) {
-      const personId = e.target.getAttribute("data-person-id");
-      document.getElementById("filterPerson").value = personId;
+  const links = container.querySelectorAll<HTMLButtonElement>(".evidence-count-link");
+  for (const link of links) {
+    link.addEventListener("click", function (e) {
+      const personId = (e.target as HTMLElement).getAttribute("data-person-id")!;
+      el<HTMLSelectElement>("filterPerson")!.value = personId;
       navigateTo("evidence");
       setTimeout(function () {
         renderEvidenceList();
@@ -87,17 +88,16 @@ export function renderPeople() {
 }
 
 // Called from navigation.js's handleHashChange — needs to be exported.
-export function renderLocations() {
-  const container = document.getElementById("locationsPanel");
+export function renderLocations(): void {
+  const container = el<HTMLElement>("locationsPanel")!;
   let html = "";
-  for (let i = 0; i < state.allLocations.length; i++) {
-    const loc = state.allLocations[i];
+  for (const loc of state.allLocations) {
     html += '<div class="location-card">';
     html += "<h3>" + loc.id + " &mdash; " + loc.name + "</h3>";
     html += "<p>" + loc.description + "</p>";
     html += "<p><strong>Contains:</strong></p><ul>";
-    for (let c = 0; c < loc.contains.length; c++) {
-      html += "<li>" + loc.contains[c] + "</li>";
+    for (const item of loc.contains) {
+      html += "<li>" + item + "</li>";
     }
     html += "</ul></div>";
   }

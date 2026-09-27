@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 // ENTRY POINT
 // ---------------------------------------------------------------------
-// Loaded via <script type="module" src="js/main.js"> in index.html. This is
+// Loaded via <script type="module" src="js/main.ts"> in index.html. This is
 // the one place in the app that bridges the module world back to the
 // classic global-script world: index.html (and a few HTML strings rendered
 // by the views) still call functions via inline onclick="..."/onchange="..."
@@ -21,56 +21,70 @@ import {
   closeEvidenceDetail,
   saveCurrentNote,
   renderEvidenceList,
-} from "./views/evidence.js";
-import { switchPeopleTab } from "./views/people.js";
-import { renderTimeline } from "./views/timeline.js";
-import { saveHypothesis } from "./views/workspace.js";
+} from "./views/evidence.ts";
+import { switchPeopleTab } from "./views/people.ts";
+import { renderTimeline } from "./views/timeline.ts";
+import { saveHypothesis } from "./views/workspace.ts";
+import { el } from "./dom.ts";
 
 // Functions reached only through inline HTML attributes (onclick="...",
 // onchange="...", or the onchange string set via setAttribute below) must
 // exist as globals — inline handler attributes are evaluated in the global
-// scope, not in this module's scope.
-window.navigateTo = navigateTo;
-window.switchPeopleTab = switchPeopleTab;
-window.handleSortChange = handleSortChange;
-window.saveHypothesis = saveHypothesis;
-window.closeEvidenceDetail = closeEvidenceDetail;
-window.saveCurrentNote = saveCurrentNote;
+// scope, not in this module's scope. `window` isn't declared to have these
+// properties by lib.dom.d.ts, so each assignment goes through the same
+// widened-view cast dom.ts's `el()` uses for element casts, for the same
+// reason: this is deliberately extending a browser global the type system
+// doesn't otherwise know about, not working around a type this file itself
+// got wrong.
+const globalWindow = window as typeof window & {
+  navigateTo: typeof navigateTo;
+  switchPeopleTab: typeof switchPeopleTab;
+  handleSortChange: typeof handleSortChange;
+  saveHypothesis: typeof saveHypothesis;
+  closeEvidenceDetail: typeof closeEvidenceDetail;
+  saveCurrentNote: typeof saveCurrentNote;
+};
+globalWindow.navigateTo = navigateTo;
+globalWindow.switchPeopleTab = switchPeopleTab;
+globalWindow.handleSortChange = handleSortChange;
+globalWindow.saveHypothesis = saveHypothesis;
+globalWindow.closeEvidenceDetail = closeEvidenceDetail;
+globalWindow.saveCurrentNote = saveCurrentNote;
 
 // ---------------------------------------------------------------------
 // EVENT LISTENER SETUP
 // ---------------------------------------------------------------------
 
-function setupEventListeners() {
+function setupEventListeners(): void {
   window.addEventListener("hashchange", handleHashChange);
 
-  const navButtons = document.querySelectorAll(".nav-btn");
-  for (let i = 0; i < navButtons.length; i++) {
-    navButtons[i].addEventListener("click", function () {
-      const targetView = navButtons[i].getAttribute("data-view");
+  const navButtons = document.querySelectorAll<HTMLButtonElement>(".nav-btn");
+  for (const navButton of navButtons) {
+    navButton.addEventListener("click", function () {
+      const targetView = navButton.getAttribute("data-view");
       console.log("nav clicked:", targetView);
     });
   }
 
-  document.getElementById("evidenceSearch").addEventListener("input", handleSearchInput);
+  el<HTMLInputElement>("evidenceSearch")!.addEventListener("input", handleSearchInput);
 
-  document.getElementById("filterType").addEventListener("change", renderEvidenceList);
-  document.getElementById("filterPerson").addEventListener("change", renderEvidenceList);
-  document.getElementById("filterLocation").addEventListener("change", renderEvidenceList);
+  el("filterType")!.addEventListener("change", renderEvidenceList);
+  el("filterPerson")!.addEventListener("change", renderEvidenceList);
+  el("filterLocation")!.addEventListener("change", renderEvidenceList);
 
-  document.getElementById("filterStatus").addEventListener("change", renderEvidenceList);
+  el("filterStatus")!.addEventListener("change", renderEvidenceList);
 
-  document.getElementById("filterRelevance").addEventListener("change", renderEvidenceList);
+  el("filterRelevance")!.addEventListener("change", renderEvidenceList);
 
-  document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
+  el("clearFiltersBtn")!.addEventListener("click", clearFilters);
 
-  document.getElementById("timelineOrder").addEventListener("change", renderTimeline);
-  document.getElementById("timelinePersonFilter").addEventListener("change", renderTimeline);
-  document.getElementById("timelineLocationFilter").addEventListener("change", renderTimeline);
-  document.getElementById("timelineTypeFilter").addEventListener("change", renderTimeline);
+  el("timelineOrder")!.addEventListener("change", renderTimeline);
+  el("timelinePersonFilter")!.addEventListener("change", renderTimeline);
+  el("timelineLocationFilter")!.addEventListener("change", renderTimeline);
+  el("timelineTypeFilter")!.addEventListener("change", renderTimeline);
 
-  document.getElementById("hypConfidence").addEventListener("input", (e) => {
-    document.getElementById("hypConfidenceValue").textContent = e.target.value;
+  el<HTMLInputElement>("hypConfidence")!.addEventListener("input", (e) => {
+    el<HTMLOutputElement>("hypConfidenceValue")!.textContent = (e.target as HTMLInputElement).value;
   });
 }
 
@@ -78,7 +92,7 @@ function setupEventListeners() {
 // INIT
 // ---------------------------------------------------------------------
 
-function initApp() {
+function initApp(): void {
   loadBookmarksFromStorage();
   loadNotesFromStorage();
   setupEventListeners();

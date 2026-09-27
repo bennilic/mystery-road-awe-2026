@@ -3,16 +3,17 @@
 // ---------------------------------------------------------------------
 import { state } from "../state.ts";
 import { formatDate, getStatusBadgeClass } from "../lookup.ts";
+import type { Evidence, TimelineEvent } from "../types.ts";
 
 // Used by dataLoading.js (after each data step) and navigation.js (first
 // render of the dashboard view) — needs to be exported.
-export function renderDashboard() {
+export function renderDashboard(): void {
   const container = document.getElementById("dashboardContent");
   if (!container) return;
 
   let reviewedCount = 0;
-  for (let i = 0; i < state.allEvidence.length; i++) {
-    if ((state.allEvidence[i].status || "").toLowerCase() === "reviewed") reviewedCount++;
+  for (const item of state.allEvidence) {
+    if ((item.status || "").toLowerCase() === "reviewed") reviewedCount++;
   }
 
   const progressPct =
@@ -22,12 +23,12 @@ export function renderDashboard() {
 
   let html = "";
   html += '<div class="case-summary-card">';
-  html += "<h3>" + (state.caseData.title || "Case") + "</h3>";
+  html += "<h3>" + (state.caseData?.title || "Case") + "</h3>";
   html +=
     '<p><span class="badge badge-flagged">' +
-    (state.caseData.status || "unknown").toUpperCase() +
+    (state.caseData?.status || "unknown").toUpperCase() +
     "</span></p>";
-  html += "<p>" + (state.caseData.summary || "") + "</p>";
+  html += "<p>" + (state.caseData?.summary || "") + "</p>";
   html += "</div>";
 
   html += '<div class="stat-grid">';
@@ -50,12 +51,11 @@ export function renderDashboard() {
   html += '<div class="dashboard-columns">';
 
   html += '<div class="dashboard-panel"><h3>Recent evidence</h3>';
-  const recentEvidence = state.allEvidence.slice(-5).reverse();
+  const recentEvidence: Evidence[] = state.allEvidence.slice(-5).reverse();
   if (recentEvidence.length === 0) {
     html += "<p>No evidence loaded yet.</p>";
   }
-  for (let e = 0; e < recentEvidence.length; e++) {
-    const ev = recentEvidence[e];
+  for (const ev of recentEvidence) {
     html +=
       '<div class="mini-list-item"><strong>' +
       ev.id +
@@ -70,12 +70,11 @@ export function renderDashboard() {
   html += "</div>";
 
   html += '<div class="dashboard-panel"><h3>Recent timeline events</h3>';
-  const recentTimeline = state.allTimeline.slice(-5).reverse();
+  const recentTimeline: TimelineEvent[] = state.allTimeline.slice(-5).reverse();
   if (recentTimeline.length === 0) {
     html += "<p>No timeline events loaded yet.</p>";
   }
-  for (let t = 0; t < recentTimeline.length; t++) {
-    const evt = recentTimeline[t];
+  for (const evt of recentTimeline) {
     html +=
       '<div class="mini-list-item"><strong>' +
       formatDate(evt.time) +
@@ -96,7 +95,7 @@ export function renderDashboard() {
 // ever called from renderDashboard at runtime, after the module has fully
 // evaluated, so its `const` binding not being hoisted doesn't matter even
 // though it's textually declared after its one call site.
-const statCardHTML = (value, label) => {
+const statCardHTML = (value: number, label: string): string => {
   return (
     '<div class="stat-card"><div class="stat-value">' +
     value +

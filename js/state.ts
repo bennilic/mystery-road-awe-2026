@@ -4,7 +4,7 @@
 // All the values that used to be top-level `var`s in app.js live here as
 // properties on a single mutable object instead of as separate module-level
 // `let` bindings. Reason: an ES module import binding is read-only in the
-// importing module (`import { allEvidence } from "./state.js"; allEvidence = x`
+// importing module (`import { allEvidence } from "./state.ts"; allEvidence = x`
 // throws "Assignment to constant variable" style errors) — only the module
 // that *declared* a binding may reassign it. Every other view/feature module
 // in this app needs to reassign these values (e.g. evidence.js does
@@ -22,7 +22,7 @@
 // only infer as `never[]`/`{}` (see lookup.ts's and storage.ts's Demo 5
 // workarounds, both removed in this same pass now that the real types
 // exist).
-import type { Evidence, Person, Location, TimelineEvent, CaseInfo } from "./types.js";
+import type { Evidence, Person, Location, TimelineEvent, CaseInfo } from "./types.ts";
 
 export type ViewId = "dashboard" | "evidence" | "people" | "timeline" | "workspace";
 
@@ -36,7 +36,12 @@ interface AppState {
   allPeople: Person[];
   allLocations: Location[];
   allTimeline: TimelineEvent[];
-  caseData: CaseInfo | Record<string, never>;
+  // null, not `CaseInfo | {}`: case.json genuinely hasn't loaded yet
+  // during the brief window before loadCorePeopleAndLocations resolves,
+  // and null makes every consumer (dashboard.ts) say so explicitly via
+  // `state.caseData?.title`, instead of a `{}` that quietly satisfied the
+  // type checker without ever satisfying CaseInfo's actual shape.
+  caseData: CaseInfo | null;
 
   currentPeopleTab: "people" | "locations";
   loadingStepsRemaining: number;
@@ -58,7 +63,7 @@ export const state: AppState = {
   allPeople: [],
   allLocations: [],
   allTimeline: [],
-  caseData: {},
+  caseData: null,
 
   currentPeopleTab: "people",
   loadingStepsRemaining: 2,

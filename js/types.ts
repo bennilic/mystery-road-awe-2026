@@ -63,6 +63,11 @@ export interface Evidence {
   tags: string[];
   status: EvidenceStatus;
   relevance: EvidenceRelevance;
+  // Not present in evidence.json — set by applyStoredBookmarkFlags right
+  // after load (from the separate state.bookmarks id list) and flipped by
+  // evidence.ts's handleBookmarkClick. Optional because it doesn't exist
+  // on a freshly-fetched record until that first pass runs.
+  bookmarked?: boolean;
 }
 
 export type TimelineEventType =
@@ -102,4 +107,18 @@ export interface CaseInfo {
   location: string;
   leadInvestigator: string;
   notes: string;
+}
+
+// Not fetched from public/data/ — this is the shape workspace.ts
+// serializes to/from localStorage (STORAGE_KEY_HYPOTHESIS). `confidence`
+// is a string because it round-trips through an <input type="range">'s
+// .value, which is always a string.
+export interface HypothesisDraft {
+  suspectId: string;
+  nature: string;
+  evidenceIds: EvidenceId[];
+  confidence: string;
+  explanation: string;
+  alternative: string;
+  savedAt: string;
 }

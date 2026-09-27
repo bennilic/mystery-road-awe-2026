@@ -18,59 +18,53 @@ import {
   getRelevanceBadgeClass,
 } from "../lookup.ts";
 import { saveBookmarksToStorage, loadNoteForEvidence, saveNoteForEvidence } from "../storage.ts";
+import { el } from "../dom.ts";
+import type { Evidence, EvidenceStatus, EvidenceRelevance } from "../types.ts";
 
 // ---- Evidence Catalogue -----------------------------------------------
 
 // Called from dataLoading.js's populateAllDropdowns.
-export function populateEvidenceDropdowns() {
-  const typeSelect = document.getElementById("filterType");
-  const personSelect = document.getElementById("filterPerson");
-  const locationSelect = document.getElementById("filterLocation");
+export function populateEvidenceDropdowns(): void {
+  const typeSelect = el<HTMLSelectElement>("filterType");
+  const personSelect = el<HTMLSelectElement>("filterPerson");
+  const locationSelect = el<HTMLSelectElement>("filterLocation");
   if (!typeSelect || !personSelect || !locationSelect) return;
 
-  const types = [];
-  for (let i = 0; i < state.allEvidence.length; i++) {
-    const t = state.allEvidence[i].type.toLowerCase();
+  const types: string[] = [];
+  for (const item of state.allEvidence) {
+    const t = item.type.toLowerCase();
     if (types.indexOf(t) === -1) types.push(t);
   }
   typeSelect.innerHTML = '<option value="">All types</option>';
-  for (let ti = 0; ti < types.length; ti++) {
-    typeSelect.innerHTML += '<option value="' + types[ti] + '">' + types[ti] + "</option>";
+  for (const t of types) {
+    typeSelect.innerHTML += '<option value="' + t + '">' + t + "</option>";
   }
 
   personSelect.innerHTML = '<option value="">All people</option>';
-  for (let p = 0; p < state.allPeople.length; p++) {
-    personSelect.innerHTML +=
-      '<option value="' + state.allPeople[p].id + '">' + state.allPeople[p].name + "</option>";
+  for (const person of state.allPeople) {
+    personSelect.innerHTML += '<option value="' + person.id + '">' + person.name + "</option>";
   }
 
   locationSelect.innerHTML = '<option value="">All locations</option>';
-  for (let l = 0; l < state.allLocations.length; l++) {
+  for (const loc of state.allLocations) {
     locationSelect.innerHTML +=
-      '<option value="' +
-      state.allLocations[l].id +
-      '">' +
-      state.allLocations[l].id +
-      " - " +
-      state.allLocations[l].name +
-      "</option>";
+      '<option value="' + loc.id + '">' + loc.id + " - " + loc.name + "</option>";
   }
 }
 
 // Only used by renderEvidenceList and handleSortChange, both in this same
 // module — module-private.
-function getFilteredEvidence() {
-  const searchBox = document.getElementById("evidenceSearch");
+function getFilteredEvidence(): Evidence[] {
+  const searchBox = el<HTMLInputElement>("evidenceSearch");
   const searchTerm = searchBox ? searchBox.value.toLowerCase().trim() : "";
-  const typeVal = document.getElementById("filterType").value;
-  const personVal = document.getElementById("filterPerson").value;
-  const locationVal = document.getElementById("filterLocation").value;
-  const statusVal = document.getElementById("filterStatus").value;
-  const relevanceVal = document.getElementById("filterRelevance").value;
+  const typeVal = el<HTMLSelectElement>("filterType")!.value;
+  const personVal = el<HTMLSelectElement>("filterPerson")!.value;
+  const locationVal = el<HTMLSelectElement>("filterLocation")!.value;
+  const statusVal = el<HTMLSelectElement>("filterStatus")!.value;
+  const relevanceVal = el<HTMLSelectElement>("filterRelevance")!.value;
 
-  const results = [];
-  for (let i = 0; i < state.allEvidence.length; i++) {
-    const item = state.allEvidence[i];
+  const results: Evidence[] = [];
+  for (const item of state.allEvidence) {
     let matches = true;
 
     if (searchTerm) {
@@ -104,8 +98,8 @@ function getFilteredEvidence() {
 // unsorted, allEvidence-insertion order). Sorting here, as the last step of
 // every filter rebuild, makes the current sort selection survive filtering
 // instead of being a one-render-only effect.
-function applyCurrentSortOrder(list) {
-  const sortValue = document.getElementById("sortEvidence").value;
+function applyCurrentSortOrder(list: Evidence[]): Evidence[] {
+  const sortValue = el<HTMLSelectElement>("sortEvidence")!.value;
 
   if (sortValue === "title-asc") {
     list.sort(function (a, b) {
@@ -117,11 +111,11 @@ function applyCurrentSortOrder(list) {
     });
   } else if (sortValue === "date-asc") {
     list.sort(function (a, b) {
-      return new Date(a.timestamp) - new Date(b.timestamp);
+      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
   } else {
     list.sort(function (a, b) {
-      return new Date(b.timestamp) - new Date(a.timestamp);
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     });
   }
   return list;
@@ -134,11 +128,11 @@ function applyCurrentSortOrder(list) {
 // string, which required exporting this to `window` too, purely so that
 // inline string could resolve it in global scope) — one listener now covers
 // #filterStatus the same way as every other filter control.
-export function renderEvidenceList() {
-  const container = document.getElementById("evidenceList");
+export function renderEvidenceList(): void {
+  const container = el<HTMLDivElement>("evidenceList");
   if (!container) return;
 
-  const loadingIndicator = document.getElementById("evidenceLoadingIndicator");
+  const loadingIndicator = el("evidenceLoadingIndicator");
   if (state.evidenceViewLoading) {
     if (loadingIndicator) loadingIndicator.classList.remove("hidden");
     container.innerHTML = "";
@@ -152,8 +146,8 @@ export function renderEvidenceList() {
   if (results.length === 0) {
     html = "<p>No evidence matches the current filters.</p>";
   }
-  for (let i = 0; i < results.length; i++) {
-    html += renderEvidenceCardHTML(results[i]);
+  for (const ev of results) {
+    html += renderEvidenceCardHTML(ev);
   }
   container.innerHTML = html;
 
@@ -162,7 +156,7 @@ export function renderEvidenceList() {
 }
 
 // Only ever called from renderEvidenceList in this same file — private.
-function renderEvidenceCardHTML(ev) {
+function renderEvidenceCardHTML(ev: Evidence): string {
   const isBookmarked = state.bookmarks.indexOf(ev.id) !== -1;
   let html = '<div class="evidence-card" data-id="' + ev.id + '">';
   html +=
@@ -193,8 +187,8 @@ function renderEvidenceCardHTML(ev) {
   html +=
     '<span class="badge ' + getRelevanceBadgeClass(ev.relevance) + '">' + ev.relevance + "</span>";
   html += "<div>";
-  for (let t = 0; t < ev.tags.length; t++) {
-    html += '<span class="tag-chip">' + ev.tags[t] + "</span>";
+  for (const tag of ev.tags) {
+    html += '<span class="tag-chip">' + tag + "</span>";
   }
   html += "</div>";
   html += "</div>";
@@ -216,23 +210,23 @@ function renderEvidenceCardHTML(ev) {
 // mode) regardless of which element the listener is attached to. That's a
 // silent, easy-to-miss behavior change for a function whose entire job is
 // being a DOM event handler.
-function handleEvidenceListClick(event) {
-  const target = event.target;
+function handleEvidenceListClick(event: Event): void {
+  const target = event.target as HTMLElement;
 
   if (target.dataset && target.dataset.action === "bookmark") {
     event.stopPropagation();
-    handleBookmarkClick(target.dataset.id);
+    handleBookmarkClick(target.dataset.id!);
     return;
   }
 
-  const card = target.closest(".evidence-card");
+  const card = target.closest<HTMLElement>(".evidence-card");
   if (card) {
-    openEvidenceDetail(card.getAttribute("data-id"));
+    openEvidenceDetail(card.getAttribute("data-id")!);
   }
 }
 
 // Only called from handleEvidenceListClick in this same file — private.
-function handleBookmarkClick(evidenceId) {
+function handleBookmarkClick(evidenceId: string): void {
   const ev = findEvidenceById(evidenceId);
   if (!ev) return;
 
@@ -250,9 +244,9 @@ function handleBookmarkClick(evidenceId) {
 }
 
 // Called from dataLoading.js right after evidence.json loads.
-export function applyStoredBookmarkFlags() {
-  for (let i = 0; i < state.allEvidence.length; i++) {
-    state.allEvidence[i].bookmarked = state.bookmarks.indexOf(state.allEvidence[i].id) !== -1;
+export function applyStoredBookmarkFlags(): void {
+  for (const item of state.allEvidence) {
+    item.bookmarked = state.bookmarks.indexOf(item.id) !== -1;
   }
 }
 
@@ -263,23 +257,23 @@ export function applyStoredBookmarkFlags() {
 // applied inside getFilteredEvidence (see applyCurrentSortOrder above) so it
 // survives subsequent filter/search renders too — this just needs to trigger
 // one of those renders.
-export function handleSortChange() {
+export function handleSortChange(): void {
   renderEvidenceList();
 }
 
 // Attached directly via addEventListener in main.js's setupEventListeners.
-export function clearFilters() {
-  document.getElementById("evidenceSearch").value = "";
-  document.getElementById("filterType").value = "";
-  document.getElementById("filterPerson").value = "";
-  document.getElementById("filterLocation").value = "";
-  document.getElementById("filterStatus").value = "";
-  document.getElementById("filterRelevance").value = "";
+export function clearFilters(): void {
+  el<HTMLInputElement>("evidenceSearch")!.value = "";
+  el<HTMLSelectElement>("filterType")!.value = "";
+  el<HTMLSelectElement>("filterPerson")!.value = "";
+  el<HTMLSelectElement>("filterLocation")!.value = "";
+  el<HTMLSelectElement>("filterStatus")!.value = "";
+  el<HTMLSelectElement>("filterRelevance")!.value = "";
   renderEvidenceList();
 }
 
 // Only used by handleSearchInput in this same file — private.
-function simulateAsyncSearch(term) {
+function simulateAsyncSearch(term: string): Promise<string> {
   return new Promise(function (resolve) {
     setTimeout(function () {
       resolve(term);
@@ -291,8 +285,8 @@ function simulateAsyncSearch(term) {
 let latestSearchRequestId = 0;
 
 // Attached directly via addEventListener in main.js's setupEventListeners.
-export function handleSearchInput(event) {
-  const term = event.target.value;
+export function handleSearchInput(event: Event): void {
+  const term = (event.target as HTMLInputElement).value;
   const requestId = ++latestSearchRequestId;
 
   simulateAsyncSearch(term).then(function (_resolvedTerm) {
@@ -309,12 +303,12 @@ export function handleSearchInput(event) {
 
 // Called from this module's own click handler, and from timeline.js's
 // quick-view modal and workspace.js's bookmarks list — needs to be exported.
-export function openEvidenceDetail(evidenceId) {
+export function openEvidenceDetail(evidenceId: string): void {
   const ev = findEvidenceById(evidenceId);
   if (!ev) return;
   state.selectedEvidence = ev;
 
-  const section = document.getElementById("evidenceDetailSection");
+  const section = el<HTMLElement>("evidenceDetailSection")!;
   section.classList.remove("hidden");
 
   renderEvidenceDetail(ev);
@@ -325,8 +319,8 @@ export function openEvidenceDetail(evidenceId) {
 // by renderEvidenceDetail below, so — like handleSortChange above — it's
 // exported purely for main.js to attach to `window`, not for module-to-module
 // calls.
-export function closeEvidenceDetail() {
-  const section = document.getElementById("evidenceDetailSection");
+export function closeEvidenceDetail(): void {
+  const section = el<HTMLElement>("evidenceDetailSection")!;
   section.classList.add("hidden");
   section.innerHTML = "";
   state.selectedEvidence = null;
@@ -334,24 +328,24 @@ export function closeEvidenceDetail() {
 
 // Only called from openEvidenceDetail and its own change handlers in this
 // same file — private.
-function renderEvidenceDetail(ev) {
-  const section = document.getElementById("evidenceDetailSection");
+function renderEvidenceDetail(ev: Evidence): void {
+  const section = el<HTMLElement>("evidenceDetailSection")!;
 
-  const personNames = [];
-  for (let p = 0; p < ev.personIds.length; p++) {
-    const person = findPersonById(ev.personIds[p]);
-    personNames.push(person ? person.name : ev.personIds[p]);
+  const personNames: string[] = [];
+  for (const personId of ev.personIds) {
+    const person = findPersonById(personId);
+    personNames.push(person ? person.name : personId);
   }
 
-  const locationNames = [];
-  for (let l = 0; l < ev.locationIds.length; l++) {
-    const loc = findLocationById(ev.locationIds[l]);
-    locationNames.push(loc ? loc.id + " - " + loc.name : ev.locationIds[l]);
+  const locationNames: string[] = [];
+  for (const locationId of ev.locationIds) {
+    const loc = findLocationById(locationId);
+    locationNames.push(loc ? loc.id + " - " + loc.name : locationId);
   }
 
   let tagsHtml = "";
-  for (let t = 0; t < ev.tags.length; t++) {
-    tagsHtml += '<span class="tag-chip">' + ev.tags[t] + "</span>";
+  for (const tag of ev.tags) {
+    tagsHtml += '<span class="tag-chip">' + tag + "</span>";
   }
 
   const storedNote = loadNoteForEvidence(ev.id);
@@ -417,20 +411,24 @@ function renderEvidenceDetail(ev) {
 
   section.innerHTML = html;
 
-  document.getElementById("detailStatusSelect").addEventListener("change", function (e) {
-    ev.status = e.target.value; // direct mutation of the loaded evidence object
+  el<HTMLSelectElement>("detailStatusSelect")!.addEventListener("change", function (e) {
+    ev.status = (e.target as HTMLSelectElement).value as EvidenceStatus; // direct mutation of the loaded evidence object
     renderEvidenceDetail(ev);
     if (state.viewRendered.evidence) renderEvidenceList();
   });
-  document.getElementById("detailRelevanceSelect").addEventListener("change", function (e) {
-    ev.relevance = e.target.value;
+  el<HTMLSelectElement>("detailRelevanceSelect")!.addEventListener("change", function (e) {
+    ev.relevance = (e.target as HTMLSelectElement).value as EvidenceRelevance;
     renderEvidenceDetail(ev);
     if (state.viewRendered.evidence) renderEvidenceList();
   });
 }
 
 // Only called from renderEvidenceDetail in this same file — private.
-function statusOptionHTML(current, value, label) {
+function statusOptionHTML(
+  current: string | null | undefined,
+  value: string,
+  label: string,
+): string {
   const currentLower = (current || "").toLowerCase();
   const selected = currentLower === value ? " selected" : "";
   return '<option value="' + value + '"' + selected + ">" + label + "</option>";
@@ -438,12 +436,12 @@ function statusOptionHTML(current, value, label) {
 
 // Reached only through the inline onclick="saveCurrentNote()" generated by
 // renderEvidenceDetail above — exported purely for main.js's window wiring.
-export function saveCurrentNote() {
-  const textarea = document.getElementById("evidenceNoteInput");
+export function saveCurrentNote(): void {
+  const textarea = el<HTMLTextAreaElement>("evidenceNoteInput");
   if (!textarea) return;
-  const evidenceId = textarea.getAttribute("data-evidence-id"); // note id is read back off the DOM
+  const evidenceId = textarea.getAttribute("data-evidence-id")!; // note id is read back off the DOM
   const text = textarea.value;
   saveNoteForEvidence(evidenceId, text);
-  const preview = document.getElementById("notePreview");
+  const preview = el("notePreview");
   if (preview) preview.innerHTML = text; // unsafe on purpose, see above
 }

@@ -12,11 +12,11 @@
 // ever going through the router, never each other) is a good candidate for
 // a later cleanup pass, not this one.
 import { state } from "./state.ts";
-import { renderDashboard } from "./views/dashboard.js";
-import { renderEvidenceList } from "./views/evidence.js";
-import { renderPeople, renderLocations } from "./views/people.js";
-import { renderTimeline } from "./views/timeline.js";
-import { renderWorkspace } from "./views/workspace.js";
+import { renderDashboard } from "./views/dashboard.ts";
+import { renderEvidenceList } from "./views/evidence.ts";
+import { renderPeople, renderLocations } from "./views/people.ts";
+import { renderTimeline } from "./views/timeline.ts";
+import { renderWorkspace } from "./views/workspace.ts";
 
 export type ViewName = "dashboard" | "evidence" | "people" | "timeline" | "workspace";
 

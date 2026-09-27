@@ -4,51 +4,50 @@
 import { state } from "../state.ts";
 import { findEvidenceById, findLocationById, formatDate } from "../lookup.ts";
 import { navigateTo } from "../navigation.ts";
-import { openEvidenceDetail } from "./evidence.js";
+import { openEvidenceDetail } from "./evidence.ts";
+import { el } from "../dom.ts";
+import type { TimelineEvent, TimelineCertainty } from "../types.ts";
 
 // Called from dataLoading.js's populateAllDropdowns.
-export function populateTimelineDropdowns() {
-  const personSelect = document.getElementById("timelinePersonFilter");
-  const locationSelect = document.getElementById("timelineLocationFilter");
-  const typeSelect = document.getElementById("timelineTypeFilter");
+export function populateTimelineDropdowns(): void {
+  const personSelect = el<HTMLSelectElement>("timelinePersonFilter");
+  const locationSelect = el<HTMLSelectElement>("timelineLocationFilter");
+  const typeSelect = el<HTMLSelectElement>("timelineTypeFilter");
   if (!personSelect || !locationSelect || !typeSelect) return;
 
   personSelect.innerHTML = '<option value="">All people</option>';
-  for (let p = 0; p < state.allPeople.length; p++) {
-    personSelect.innerHTML +=
-      '<option value="' + state.allPeople[p].id + '">' + state.allPeople[p].name + "</option>";
+  for (const person of state.allPeople) {
+    personSelect.innerHTML += '<option value="' + person.id + '">' + person.name + "</option>";
   }
 
   locationSelect.innerHTML = '<option value="">All locations</option>';
-  for (let l = 0; l < state.allLocations.length; l++) {
-    locationSelect.innerHTML +=
-      '<option value="' + state.allLocations[l].id + '">' + state.allLocations[l].id + "</option>";
+  for (const loc of state.allLocations) {
+    locationSelect.innerHTML += '<option value="' + loc.id + '">' + loc.id + "</option>";
   }
 
-  const types = [];
-  for (let i = 0; i < state.allTimeline.length; i++) {
-    if (types.indexOf(state.allTimeline[i].type) === -1) types.push(state.allTimeline[i].type);
+  const types: string[] = [];
+  for (const evt of state.allTimeline) {
+    if (types.indexOf(evt.type) === -1) types.push(evt.type);
   }
   typeSelect.innerHTML = '<option value="">All event types</option>';
-  for (let t = 0; t < types.length; t++) {
-    typeSelect.innerHTML += '<option value="' + types[t] + '">' + types[t] + "</option>";
+  for (const t of types) {
+    typeSelect.innerHTML += '<option value="' + t + '">' + t + "</option>";
   }
 }
 
 // Called from dataLoading.js, navigation.js, and main.js's toolbar-change
 // listeners — needs to be exported.
-export function renderTimeline() {
-  const container = document.getElementById("timelineContainer");
+export function renderTimeline(): void {
+  const container = el<HTMLElement>("timelineContainer");
   if (!container) return;
 
-  const order = document.getElementById("timelineOrder").value;
-  const personFilter = document.getElementById("timelinePersonFilter").value;
-  const locationFilter = document.getElementById("timelineLocationFilter").value;
-  const typeFilter = document.getElementById("timelineTypeFilter").value;
+  const order = el<HTMLSelectElement>("timelineOrder")!.value;
+  const personFilter = el<HTMLSelectElement>("timelinePersonFilter")!.value;
+  const locationFilter = el<HTMLSelectElement>("timelineLocationFilter")!.value;
+  const typeFilter = el<HTMLSelectElement>("timelineTypeFilter")!.value;
 
-  let events = [];
-  for (let i = 0; i < state.allTimeline.length; i++) {
-    const evt = state.allTimeline[i];
+  let events: TimelineEvent[] = [];
+  for (const evt of state.allTimeline) {
     if (personFilter && evt.personIds.indexOf(personFilter) === -1) continue;
     if (locationFilter && evt.locationIds.indexOf(locationFilter) === -1) continue;
     if (typeFilter && evt.type !== typeFilter) continue;
@@ -56,13 +55,12 @@ export function renderTimeline() {
   }
 
   events = events.slice().sort(function (a, b) {
-    const diff = new Date(a.time) - new Date(b.time);
+    const diff = new Date(a.time).getTime() - new Date(b.time).getTime();
     return order === "desc" ? -diff : diff;
   });
 
   let html = "";
-  for (let e = 0; e < events.length; e++) {
-    const item = events[e];
+  for (const item of events) {
     html += '<div class="timeline-event certainty-' + item.certainty + '">';
     html +=
       '<div class="timeline-time">' +
@@ -75,24 +73,24 @@ export function renderTimeline() {
     html += "<h3>" + item.title + "</h3>";
     html += "<p>" + item.description + "</p>";
 
-    const eventLocationNames = [];
-    for (let el = 0; el < item.locationIds.length; el++) {
-      const evtLoc = findLocationById(item.locationIds[el]);
+    const eventLocationNames: string[] = [];
+    for (const locationId of item.locationIds) {
+      const evtLoc = findLocationById(locationId);
       // findLocationById returns the location object, not a display string —
       // pushing it directly and joining left join() calling toString() on
       // it, rendering "[object Object]" instead of the location's name.
-      eventLocationNames.push(evtLoc ? evtLoc.id + " - " + evtLoc.name : item.locationIds[el]);
+      eventLocationNames.push(evtLoc ? evtLoc.id + " - " + evtLoc.name : locationId);
     }
     if (eventLocationNames.length > 0) {
       html += '<p class="evidence-meta">Location: ' + eventLocationNames.join(", ") + "</p>";
     }
 
-    for (let ev2 = 0; ev2 < item.evidenceIds.length; ev2++) {
+    for (const evidenceId of item.evidenceIds) {
       html +=
         '<button type="button" class="evidence-link-btn" data-evidence-id="' +
-        item.evidenceIds[ev2] +
+        evidenceId +
         '">View ' +
-        item.evidenceIds[ev2] +
+        evidenceId +
         "</button>";
     }
     html += "</div>";
@@ -102,10 +100,10 @@ export function renderTimeline() {
   }
   container.innerHTML = html;
 
-  const linkButtons = container.querySelectorAll(".evidence-link-btn");
-  for (let b = 0; b < linkButtons.length; b++) {
-    linkButtons[b].addEventListener("click", function (e) {
-      openEvidenceModal(e.target.getAttribute("data-evidence-id"));
+  const linkButtons = container.querySelectorAll<HTMLButtonElement>(".evidence-link-btn");
+  for (const button of linkButtons) {
+    button.addEventListener("click", function (e) {
+      openEvidenceModal((e.target as HTMLElement).getAttribute("data-evidence-id")!);
     });
   }
 }
@@ -115,7 +113,7 @@ export function renderTimeline() {
 // called before this line runs (only from renderTimeline, itself invoked
 // later at runtime, well after the whole module has finished evaluating),
 // so the lack of hoisting for a `const` binding doesn't matter here.
-const certaintyBadgeClass = (certainty) => {
+const certaintyBadgeClass = (certainty: TimelineCertainty): string => {
   if (certainty === "confirmed") return "reviewed";
   if (certainty === "contradictory") return "critical";
   if (certainty === "reported") return "flagged";
@@ -134,33 +132,39 @@ const certaintyBadgeClass = (certainty) => {
 // additional listeners on the same persisted #quickViewModal element — each
 // stacked listener re-ran its full body (including a second, third, ...
 // openEvidenceDetail call) on every later click inside the modal.
-function handleModalClick(e) {
-  const modal = document.getElementById("quickViewModal");
+function handleModalClick(e: MouseEvent): void {
+  const modal = el<HTMLElement>("quickViewModal");
   if (!modal) return;
 
-  if (
-    e.target.classList.contains("modal-close-btn") ||
-    e.target.classList.contains("modal-backdrop")
-  ) {
+  const target = e.target as HTMLElement;
+
+  if (target.classList.contains("modal-close-btn") || target.classList.contains("modal-backdrop")) {
     modal.innerHTML = "";
   }
-  if (e.target.getAttribute && e.target.getAttribute("data-open-full")) {
+  const openFullId = target.getAttribute && target.getAttribute("data-open-full");
+  if (openFullId) {
     modal.innerHTML = "";
     navigateTo("evidence");
     setTimeout(function () {
-      openEvidenceDetail(e.target.getAttribute("data-open-full"));
+      openEvidenceDetail(openFullId);
     }, 0);
   }
 }
 
-function openEvidenceModal(evidenceId) {
+function openEvidenceModal(evidenceId: string): void {
   const ev = findEvidenceById(evidenceId);
   if (!ev) return;
 
-  let modal = document.getElementById("quickViewModal");
-  const isNewModal = !modal;
+  const existingModal = el<HTMLElement>("quickViewModal");
+  const isNewModal = !existingModal;
+  // `?? document.createElement(...)` (rather than reassigning a `let`
+  // inside the isNewModal branch) keeps `modal` a single, non-null
+  // `HTMLElement` binding throughout — TS can't otherwise tell that
+  // isNewModal being false implies the earlier lookup was non-null, so a
+  // reassign-in-branch version would leave every use below needing its
+  // own null check despite that invariant always holding at runtime.
+  const modal = existingModal ?? document.createElement("div");
   if (isNewModal) {
-    modal = document.createElement("div");
     modal.id = "quickViewModal";
     document.body.appendChild(modal);
   }
