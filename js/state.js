@@ -38,10 +38,10 @@ export const state = {
     evidence: false,
     people: false,
     timeline: false,
-    workspace: false
+    workspace: false,
   },
 
-  notesStore: {}
+  notesStore: {},
 };
 
 // Pure constants (never reassigned anywhere in the original app) — plain

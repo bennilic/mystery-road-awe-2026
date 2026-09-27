@@ -14,7 +14,14 @@
 import { loadBookmarksFromStorage, loadNotesFromStorage, loadNoteAsync } from "./storage.js";
 import { navigateTo, handleHashChange } from "./navigation.js";
 import loadAllData from "./dataLoading.js";
-import { clearFilters, handleSearchInput, handleSortChange, closeEvidenceDetail, saveCurrentNote, renderEvidenceList } from "./views/evidence.js";
+import {
+  clearFilters,
+  handleSearchInput,
+  handleSortChange,
+  closeEvidenceDetail,
+  saveCurrentNote,
+  renderEvidenceList,
+} from "./views/evidence.js";
 import { switchPeopleTab } from "./views/people.js";
 import { renderTimeline } from "./views/timeline.js";
 import { saveHypothesis } from "./views/workspace.js";

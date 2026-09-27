@@ -1,0 +1,16 @@
+# Scope Prettier to the actual app source (index.html, styles.css, js/**,
+# and the build/lint config files themselves). Everything else here is
+# either vendored/stable tooling this exercise doesn't own (the
+# create-presentation skill engine under .claude/ and presentation/'s
+# present.* files), generated data/build output, or docs/config we don't
+# want reformatted as a side effect of "format the app".
+dist/
+node_modules/
+.claude/
+.vscode/
+presentation/present.css
+presentation/present.html
+presentation/present.js
+presentation/steps.json
+public/data/
+*.md

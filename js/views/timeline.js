@@ -15,12 +15,14 @@ export function populateTimelineDropdowns() {
 
   personSelect.innerHTML = '<option value="">All people</option>';
   for (let p = 0; p < state.allPeople.length; p++) {
-    personSelect.innerHTML += '<option value="' + state.allPeople[p].id + '">' + state.allPeople[p].name + "</option>";
+    personSelect.innerHTML +=
+      '<option value="' + state.allPeople[p].id + '">' + state.allPeople[p].name + "</option>";
   }
 
   locationSelect.innerHTML = '<option value="">All locations</option>';
   for (let l = 0; l < state.allLocations.length; l++) {
-    locationSelect.innerHTML += '<option value="' + state.allLocations[l].id + '">' + state.allLocations[l].id + "</option>";
+    locationSelect.innerHTML +=
+      '<option value="' + state.allLocations[l].id + '">' + state.allLocations[l].id + "</option>";
   }
 
   const types = [];
@@ -62,7 +64,14 @@ export function renderTimeline() {
   for (let e = 0; e < events.length; e++) {
     const item = events[e];
     html += '<div class="timeline-event certainty-' + item.certainty + '">';
-    html += '<div class="timeline-time">' + formatDate(item.time) + '&nbsp;&middot;&nbsp;<span class="badge badge-' + certaintyBadgeClass(item.certainty) + '">' + item.certainty + "</span></div>";
+    html +=
+      '<div class="timeline-time">' +
+      formatDate(item.time) +
+      '&nbsp;&middot;&nbsp;<span class="badge badge-' +
+      certaintyBadgeClass(item.certainty) +
+      '">' +
+      item.certainty +
+      "</span></div>";
     html += "<h3>" + item.title + "</h3>";
     html += "<p>" + item.description + "</p>";
 
@@ -79,7 +88,12 @@ export function renderTimeline() {
     }
 
     for (let ev2 = 0; ev2 < item.evidenceIds.length; ev2++) {
-      html += '<button type="button" class="evidence-link-btn" data-evidence-id="' + item.evidenceIds[ev2] + '">View ' + item.evidenceIds[ev2] + "</button>";
+      html +=
+        '<button type="button" class="evidence-link-btn" data-evidence-id="' +
+        item.evidenceIds[ev2] +
+        '">View ' +
+        item.evidenceIds[ev2] +
+        "</button>";
     }
     html += "</div>";
   }
@@ -124,7 +138,10 @@ function handleModalClick(e) {
   const modal = document.getElementById("quickViewModal");
   if (!modal) return;
 
-  if (e.target.classList.contains("modal-close-btn") || e.target.classList.contains("modal-backdrop")) {
+  if (
+    e.target.classList.contains("modal-close-btn") ||
+    e.target.classList.contains("modal-backdrop")
+  ) {
     modal.innerHTML = "";
   }
   if (e.target.getAttribute && e.target.getAttribute("data-open-full")) {
@@ -151,10 +168,22 @@ function openEvidenceModal(evidenceId) {
   modal.innerHTML =
     '<div class="modal-backdrop"><div class="modal-box">' +
     '<button type="button" class="modal-close-btn" aria-label="Close">&times;</button>' +
-    "<h3>" + ev.title + "</h3>" +
-    '<p class="evidence-meta">' + ev.id + " &middot; " + ev.type + " &middot; " + formatDate(ev.timestamp) + "</p>" +
-    "<p>" + ev.summary + "</p>" +
-    '<button type="button" class="btn btn-primary btn-small" data-open-full="' + ev.id + '">Open full evidence</button>' +
+    "<h3>" +
+    ev.title +
+    "</h3>" +
+    '<p class="evidence-meta">' +
+    ev.id +
+    " &middot; " +
+    ev.type +
+    " &middot; " +
+    formatDate(ev.timestamp) +
+    "</p>" +
+    "<p>" +
+    ev.summary +
+    "</p>" +
+    '<button type="button" class="btn btn-primary btn-small" data-open-full="' +
+    ev.id +
+    '">Open full evidence</button>' +
     "</div></div>";
 
   // The modal element itself is created once and reused (only its innerHTML

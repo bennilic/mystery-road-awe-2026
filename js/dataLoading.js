@@ -7,7 +7,11 @@
 // export rather than a named one; everything else stays unexported.
 import { state } from "./state.js";
 import { renderDashboard } from "./views/dashboard.js";
-import { populateEvidenceDropdowns, renderEvidenceList, applyStoredBookmarkFlags } from "./views/evidence.js";
+import {
+  populateEvidenceDropdowns,
+  renderEvidenceList,
+  applyStoredBookmarkFlags,
+} from "./views/evidence.js";
 import { populateTimelineDropdowns, renderTimeline } from "./views/timeline.js";
 import { populateHypothesisDropdowns } from "./views/workspace.js";
 
