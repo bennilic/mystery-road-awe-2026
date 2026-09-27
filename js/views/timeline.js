@@ -2,8 +2,8 @@
 // TIMELINE VIEW (+ its quick-view evidence modal)
 // ---------------------------------------------------------------------
 import { state } from "../state.js";
-import { findEvidenceById, findLocationById, formatDate } from "../lookup.js";
-import { navigateTo } from "../navigation.js";
+import { findEvidenceById, findLocationById, formatDate } from "../lookup.ts";
+import { navigateTo } from "../navigation.ts";
 import { openEvidenceDetail } from "./evidence.js";
 
 // Called from dataLoading.js's populateAllDropdowns.

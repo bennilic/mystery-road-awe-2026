@@ -2,7 +2,7 @@
 // DASHBOARD VIEW
 // ---------------------------------------------------------------------
 import { state } from "../state.js";
-import { formatDate, getStatusBadgeClass } from "../lookup.js";
+import { formatDate, getStatusBadgeClass } from "../lookup.ts";
 
 // Used by dataLoading.js (after each data step) and navigation.js (first
 // render of the dashboard view) — needs to be exported.

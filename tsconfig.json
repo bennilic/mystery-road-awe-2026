@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": false,
+
+    // Vite/esbuild does the actual transpiling per-file; tsc here only
+    // type-checks (wired into `npm run build` — see package.json). noEmit
+    // means tsc never writes .js output that could shadow/conflict with
+    // what Vite produces.
+    "noEmit": true,
+    "isolatedModules": true,
+
+    // Full strict mode, deliberately: this migration's whole point is
+    // catching the class of bug Exercise 1 found by hand (undefined
+    // property access, implicit any leaking through fetch()/JSON,
+    // mismatched function signatures). Turning strict on piecemeal would
+    // leave exactly those gaps uncovered.
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+
+    // Demo 5-6 incremental phase: the not-yet-converted .js modules still
+    // need to be resolvable (and structurally inferred) so the new .ts
+    // files that import them type-check without falling back to an
+    // implicit `any`. checkJs stays off so unconverted files aren't held
+    // to strict-mode standards they were never written against — that's
+    // Demo 7's job, once every file is .ts and this flag (along with
+    // allowJs) can come back out.
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["js/**/*.ts", "js/**/*.js", "vite.config.ts"]
+}

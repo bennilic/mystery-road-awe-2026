@@ -2,7 +2,7 @@
 // WORKSPACE VIEW (bookmarks list, notes list, hypothesis form)
 // ---------------------------------------------------------------------
 import { state, STORAGE_KEY_HYPOTHESIS } from "../state.js";
-import { navigateTo } from "../navigation.js";
+import { navigateTo } from "../navigation.ts";
 import { openEvidenceDetail } from "./evidence.js";
 
 // Called from navigation.js's handleHashChange — needs to be exported.

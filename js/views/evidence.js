@@ -16,8 +16,8 @@ import {
   formatDate,
   getStatusBadgeClass,
   getRelevanceBadgeClass,
-} from "../lookup.js";
-import { saveBookmarksToStorage, loadNoteForEvidence, saveNoteForEvidence } from "../storage.js";
+} from "../lookup.ts";
+import { saveBookmarksToStorage, loadNoteForEvidence, saveNoteForEvidence } from "../storage.ts";
 
 // ---- Evidence Catalogue -----------------------------------------------
 

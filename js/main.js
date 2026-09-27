@@ -11,8 +11,8 @@
 // `window.foo = foo` across each view module) keeps the "this is where
 // module-land meets legacy inline-handler-land" boundary in one obvious
 // place.
-import { loadBookmarksFromStorage, loadNotesFromStorage, loadNoteAsync } from "./storage.js";
-import { navigateTo, handleHashChange } from "./navigation.js";
+import { loadBookmarksFromStorage, loadNotesFromStorage, loadNoteAsync } from "./storage.ts";
+import { navigateTo, handleHashChange } from "./navigation.ts";
 import loadAllData from "./dataLoading.js";
 import {
   clearFilters,

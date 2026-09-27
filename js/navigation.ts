@@ -18,39 +18,48 @@ import { renderPeople, renderLocations } from "./views/people.js";
 import { renderTimeline } from "./views/timeline.js";
 import { renderWorkspace } from "./views/workspace.js";
 
+export type ViewName = "dashboard" | "evidence" | "people" | "timeline" | "workspace";
+
+const VALID_VIEWS: ViewName[] = ["dashboard", "evidence", "people", "timeline", "workspace"];
+
 // Reached only through the inline onclick="navigateTo(...)" buttons in
 // index.html (and the same string generated dynamically in a few rendered
 // views) — exported so main.js can attach it to `window`. It is also
 // imported directly (module-to-module) by people.js, timeline.js and
 // workspace.js, so it needs the export either way.
-export function navigateTo(viewName) {
+export function navigateTo(viewName: ViewName): void {
   window.location.hash = viewName;
   // handleHashChange() will pick this up via the hashchange listener
+}
+
+function isViewName(value: string): value is ViewName {
+  return (VALID_VIEWS as string[]).includes(value);
 }
 
 // Attached as the hashchange listener (see main.js's setupEventListeners —
 // Demo 8 removed a second, redundant registration that used to exist there
 // too) and called once directly after the initial data load — needs to be
 // exported.
-export function handleHashChange() {
-  let hash = window.location.hash.replace("#", "");
-  const validViews = ["dashboard", "evidence", "people", "timeline", "workspace"];
-  if (validViews.indexOf(hash) === -1) {
-    hash = "dashboard";
-  }
+export function handleHashChange(): void {
+  const rawHash = window.location.hash.replace("#", "");
+  const hash: ViewName = isViewName(rawHash) ? rawHash : "dashboard";
   state.currentPage = hash;
 
+  // for-of instead of an index-based for: under noUncheckedIndexedAccess,
+  // `sections[i]`/`navButtons[n]` would type as `Element | undefined` and
+  // need a null check on every access — a for-of avoids that entirely by
+  // binding each element directly, with identical runtime behavior.
   const sections = document.querySelectorAll(".view");
-  for (let i = 0; i < sections.length; i++) {
-    sections[i].classList.remove("active");
+  for (const section of sections) {
+    section.classList.remove("active");
   }
-  document.getElementById("view-" + hash).classList.add("active");
+  document.getElementById("view-" + hash)?.classList.add("active");
 
   const navButtons = document.querySelectorAll(".nav-btn");
-  for (let n = 0; n < navButtons.length; n++) {
-    navButtons[n].classList.remove("active");
-    if (navButtons[n].getAttribute("data-view") === hash) {
-      navButtons[n].classList.add("active");
+  for (const navButton of navButtons) {
+    navButton.classList.remove("active");
+    if (navButton.getAttribute("data-view") === hash) {
+      navButton.classList.add("active");
     }
   }
 

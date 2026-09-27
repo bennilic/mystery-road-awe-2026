@@ -2,8 +2,8 @@
 // PEOPLE & LOCATIONS VIEW
 // ---------------------------------------------------------------------
 import { state } from "../state.js";
-import { evidenceMentionsPerson } from "../lookup.js";
-import { navigateTo } from "../navigation.js";
+import { evidenceMentionsPerson } from "../lookup.ts";
+import { navigateTo } from "../navigation.ts";
 import { renderEvidenceList } from "./evidence.js";
 
 // Reached only through the inline onclick="switchPeopleTab(...)" buttons in
