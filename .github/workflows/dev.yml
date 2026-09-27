@@ -1,0 +1,32 @@
+name: Dev checks
+
+# push covers commits landing directly on main (this repo has no branch
+# protection / required-review workflow — see EXERCISE_2.md); pull_request
+# covers any PR opened against it, so a check still runs even if someone
+# proposes changes from a fork or a feature branch instead of pushing
+# straight to main.
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
