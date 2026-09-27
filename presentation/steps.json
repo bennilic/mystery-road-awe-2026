@@ -804,7 +804,7 @@
       "demo": 9,
       "file": "js/dataLoading.js",
       "line": 47,
-      "before": "Same underlying Promise machinery, same order, same timing — only the syntax differs:\n\n.then() chain:\n  fetch(a).then(resA => resA.json()).then(jsonA => { ... next fetch ... })\n\nasync/await:\n  const resA = await fetch(a);\n  const jsonA = await resA.json();\n  ... next fetch ...\n\nBoth suspend at the same points, resume as microtasks at the same points,\nand hit the network in the same order — confirmed directly by the T4\ndebugger trace above, which shows the exact same operation order as the\npre-refactor chain."
+      "before": "// Same underlying Promise machinery, same order, same timing — only the syntax differs.\n\n// .then() chain:\nfetch(a).then(resA => resA.json()).then(jsonA => { /* ... next fetch ... */ });\n\n// async/await:\nconst resA = await fetch(a);\nconst jsonA = await resA.json();\n// ... next fetch ...\n\n// Both suspend at the same points, resume as microtasks at the same points,\n// and hit the network in the same order — confirmed directly by the T4\n// debugger trace above, which shows the exact same operation order as the\n// pre-refactor chain."
     },
     {
       "id": "demo9-q6-deliberately-break-dropped-await",
@@ -920,6 +920,575 @@
       "title": "D10 - Q5 — Proposed team rule for declarations vs. expressions vs. arrows",
       "narration": "Proposed rule, as a single binary test per function: use a named function declaration only if the function is called by something else's this binding (registered directly by reference as a DOM/framework event handler, or ever attached as an object method) or genuinely needs to be callable before its own declaration line runs in the same scope — otherwise, use a const arrow function. In this codebase that keeps handleEvidenceListClick and the other directly-referenced addEventListener targets (renderEvidenceList, clearFilters, renderTimeline as change handlers) as declarations, since they're real or plausible-future DOM-this recipients; everything else — module-private helpers and one-off callbacks — becomes an arrow function. This gives two engineers the same answer without relying on taste, and it's mechanically checkable from a diff: does this function appear as a bare reference in an addEventListener call, or is it invoked before its own declaration executes?",
       "exercise": 1,
+      "demo": 10
+    },
+    {
+      "id": "exercise-2-intro",
+      "type": "app",
+      "title": "Exercise 2 — Build Tooling, TypeScript & CI/CD",
+      "narration": "Section marker: everything from here on is Exercise 2 — moving Project ReMotion from a plain <script> tag to npm + Vite + TypeScript, with GitHub Actions running lint/format and deploying to GitHub Pages on every push to main.",
+      "exercise": 2,
+      "demo": -1
+    },
+    {
+      "id": "d1-t1-package-manager-choice",
+      "type": "code",
+      "title": "D1 - T1 — Chose npm over pnpm",
+      "narration": "npm ships with Node itself, so no extra global install is needed on a single-laptop coursework repo — pnpm's real advantage (a shared content-addressable store across many projects, saving disk/install time) doesn't pay off here since this is the only project using this toolchain on this machine. Recorded as package.json's own devDependencies plus package-lock.json.",
+      "exercise": 2,
+      "demo": 1,
+      "file": "package.json",
+      "line": 1,
+      "after": "{\n  \"name\": \"mystery-road-awe-2026\",\n  \"type\": \"module\",\n  ...\n  \"devDependencies\": {\n    \"vite\": \"^8.3.1\"\n  }\n}"
+    },
+    {
+      "id": "d1-t2-package-json-init",
+      "type": "code",
+      "title": "D1 - T2 — package.json initialized with real metadata",
+      "narration": "npm init -y scaffolded it, then filled in description, type: module, author, license and repo links by hand — npm's auto-guess left generic placeholders (author: \"\", license: \"ISC\") that wouldn't mean anything for this repo.",
+      "exercise": 2,
+      "demo": 1,
+      "file": "package.json",
+      "line": 1
+    },
+    {
+      "id": "d1-t3-gitignore",
+      "type": "code",
+      "title": "D1 - T3 — .gitignore covers node_modules/, dist/, *.tsbuildinfo",
+      "narration": "node_modules/ is fully reinstallable from package-lock.json so it never belongs in git; dist/ (Demo 3) and *.tsbuildinfo (Demo 5) are build output added ahead of time so later demos don't need a second .gitignore commit.",
+      "exercise": 2,
+      "demo": 1,
+      "file": ".gitignore",
+      "line": 1
+    },
+    {
+      "id": "d1-t4-lockfile",
+      "type": "code",
+      "title": "D1 - T4 — Vite installed, package-lock.json committed",
+      "narration": "npm install --save-dev vite added the first real dependency and generated package-lock.json, committed alongside package.json in the same commit (0d69109) so CI and any other machine resolve the exact same dependency tree, not just a compatible one.",
+      "exercise": 2,
+      "demo": 1,
+      "file": "package-lock.json",
+      "line": 1
+    },
+    {
+      "id": "d1-q1-package-manager-problem",
+      "type": "app",
+      "title": "D1 - Q1 — What a package manager solves that manual download doesn't",
+      "narration": "Manually downloading a library means manually tracking its own dependencies (and their versions), re-doing that by hand every time a version changes, and having no single source of truth for what's actually installed. npm resolves the full dependency graph (Vite alone pulls in ~15 packages transitively), dedupes shared sub-dependencies, and records the exact resolved tree in package-lock.json — none of which \"put it in a folder yourself\" gives you.",
+      "exercise": 2,
+      "demo": 1
+    },
+    {
+      "id": "d1-q2-deps-vs-devdeps",
+      "type": "app",
+      "title": "D1 - Q2 — dependencies vs devDependencies",
+      "narration": "dependencies ship inside the built app the user's browser actually runs; devDependencies are only needed while building/testing/linting on a developer's or CI machine. Vite, ESLint, Prettier and TypeScript are all devDependencies here — none of their code ends up in dist/, they only transform/check the source before it gets there. This app currently has zero runtime dependencies (no framework), so the dependencies field stays empty.",
+      "exercise": 2,
+      "demo": 1
+    },
+    {
+      "id": "d1-q3-lockfile-purpose",
+      "type": "app",
+      "title": "D1 - Q3 — What a lockfile is for",
+      "narration": "A lockfile pins the exact resolved version (and sub-dependency versions) of everything installed, not just the semver ranges in package.json. Without it committed, a teammate (or CI) running npm install later could resolve a newer transitive version that behaves differently — works on my machine, breaks in CI is exactly the failure mode a missing lockfile invites.",
+      "exercise": 2,
+      "demo": 1
+    },
+    {
+      "id": "d1-q4-npm-vs-pnpm-tradeoff",
+      "type": "app",
+      "title": "D1 - Q4 — What npm gives up vs pnpm on a larger project",
+      "narration": "pnpm keeps one global content-addressable store on disk and hard-links packages into each project's node_modules, so ten projects using the same Vite version store it once, not ten times, and installs are faster since most packages are already on disk. npm duplicates full copies per project. On a single small repo like this one the difference is negligible; on a machine running many Node projects (like this one, per Developer/CLAUDE.md's project list) it would add up — a legitimate reason to reconsider pnpm later, just not the deciding factor here.",
+      "exercise": 2,
+      "demo": 1
+    },
+    {
+      "id": "d2-t1-vite-config",
+      "type": "code",
+      "title": "D2 - T1 — Vite installed and configured",
+      "narration": "data/ and assets/ moved into public/ (Vite only copies public/ contents verbatim into dist/ on build — see Demo 3); index.html and js/ needed no restructuring since Exercise 1's ES-module split already put them where Vite expects. vite.config.js sets base: \"./\" for the GitHub Pages subpath deploy in Demo 9.",
+      "exercise": 2,
+      "demo": 2,
+      "file": "vite.config.js",
+      "line": 1,
+      "after": "export default defineConfig({\n  base: \"./\",\n});"
+    },
+    {
+      "id": "d2-t2-dev-server-verified",
+      "type": "app",
+      "title": "D2 - T2 — Dev server verified functionally identical",
+      "narration": "Not just \"it loads\": curled every static path (/, /js/main.js, /data/case.json, /assets/logo/logo.svg) for 200s, then drove the real app through a browser across all 5 views — 18 evidence cards, 6 people cards with images actually loading, 15 timeline events, the workspace hypothesis form's populated selects — identical counts to the pre-Vite static-server version.",
+      "exercise": 2,
+      "demo": 2
+    },
+    {
+      "id": "d2-t3-hmr-triggered",
+      "type": "code",
+      "title": "D2 - T3 — Real HMR observed",
+      "narration": "Edited .app-header's background color in styles.css while the app was mid-session on #workspace. Vite's log showed \"hmr update /styles.css\"; the new color applied instantly, and a JS marker set on window plus the URL hash both survived — proof it was a hot style swap, not a full page reload. Reverted immediately after (net diff on styles.css: zero).",
+      "exercise": 2,
+      "demo": 2,
+      "file": "styles.css",
+      "line": 47,
+      "before": "background: linear-gradient(135deg, var(--color-header), var(--color-header-2));",
+      "after": "background: #d1495b; /* HMR test — reverted right after */"
+    },
+    {
+      "id": "d2-q1-vite-vs-static-server",
+      "type": "app",
+      "title": "D2 - Q1 — Vite dev server vs a plain static file server",
+      "narration": "A plain static server (python -m http.server, Exercise 1) just serves files byte-for-byte off disk. Vite's dev server additionally transforms each file on the fly per-request (TypeScript stripped, later demos), serves an injected client script that opens a WebSocket back to the server for live updates, and knows the module graph well enough to only re-send what actually changed — none of which a bytes-off-disk server can do.",
+      "exercise": 2,
+      "demo": 2
+    },
+    {
+      "id": "d2-q2-hmr-explained",
+      "type": "app",
+      "title": "D2 - Q2 — What HMR is and what was (and wasn't) observed",
+      "narration": "Hot Module Replacement swaps a changed module's code into the already-running page over the existing WebSocket, without reloading the page. Observed: the new CSS applied live. Not observed (deliberately, since it didn't happen): the page did NOT reload — confirmed because a window-scoped JS variable I set beforehand was still there afterward, and the URL hash stayed on #workspace instead of resetting to #dashboard the way a full reload would.",
+      "exercise": 2,
+      "demo": 2
+    },
+    {
+      "id": "d2-q3-modules-integrate-naturally",
+      "type": "app",
+      "title": "D2 - Q3 — Why ES modules integrate naturally with Vite",
+      "narration": "Vite's dev server IS an ES-module server at its core — it serves each imported file as its own module and resolves import/export statements natively in the browser, which only works if the source is already written as real import/export in the first place. The pre-Exercise-1 single <script> version had no module graph for Vite to serve at all; it would have needed bundling just to run under Vite's dev server, defeating the point of an unbundled dev server.",
+      "exercise": 2,
+      "demo": 2
+    },
+    {
+      "id": "d3-t1-production-build",
+      "type": "code",
+      "title": "D3 - T1 — vite build inspected",
+      "narration": "npm run build produced dist/index.html, dist/assets/index-*.{js,css} (hashed, minified, bundled from all 16 source modules into one file each), and dist/data/*.json + dist/assets/** copied verbatim from public/ — confirming public/ was the right place for Demo 2's file move.",
+      "exercise": 2,
+      "demo": 3,
+      "file": "vite.config.js",
+      "line": 1
+    },
+    {
+      "id": "d3-t2-preview-verified",
+      "type": "app",
+      "title": "D3 - T2 — vite preview served the actual built output",
+      "narration": "Ran npm run preview (not the dev server) on port 4173 and drove the built app through all 5 views with the same checks as Demo 2's dev-server pass — 18/6/15/18 counts across evidence/people/timeline/workspace, identical to every other verification in this exercise.",
+      "exercise": 2,
+      "demo": 3
+    },
+    {
+      "id": "d3-t3-dev-vs-build-diff",
+      "type": "code",
+      "title": "D3 - T3 — Dev source vs. built output compared",
+      "narration": "js/main.js in dev: 95 lines, one file, no minification. The production bundle: all 16 modules concatenated into one ~24KB file with zero newlines (single line), shortened via esbuild's minifier, plus Vite's own modulepreload polyfill prepended — a concrete, measured before/after, not an assumption.",
+      "exercise": 2,
+      "demo": 3,
+      "file": "dist/assets/index-*.js",
+      "line": 1,
+      "after": "(function(){let e=document.createElement(`link`).relList;...  // one line, ~24KB, all 16 modules bundled"
+    },
+    {
+      "id": "d3-q1-transformations-observed",
+      "type": "app",
+      "title": "D3 - Q1 — Three transformations actually observed",
+      "narration": "1) Bundling — 16 separate ES modules became one JS file. 2) Minification — whitespace/newlines stripped, the whole bundle collapsed to a single line. 3) Hashed filenames — index-Dw0W39qB.js instead of main.js, a new hash every time the content changes (confirmed: the hash changed across three separate builds in this session as the source changed).",
+      "exercise": 2,
+      "demo": 3
+    },
+    {
+      "id": "d3-q2-content-hash-purpose",
+      "type": "app",
+      "title": "D3 - Q2 — Why production filenames get a content hash",
+      "narration": "It lets a CDN/browser cache these files essentially forever (immutable, max-age far in the future) while still guaranteeing a user always gets the latest version after a deploy: the filename itself changes when the content does, so there's never a stale-cache-vs-fresh-deploy conflict to invalidate by hand.",
+      "exercise": 2,
+      "demo": 3
+    },
+    {
+      "id": "d3-q3-never-deploy-dev-server",
+      "type": "app",
+      "title": "D3 - Q3 — Why the dev server itself should never go to real users",
+      "narration": "It ships every module unbundled and unminified (far more HTTP requests, much larger total payload), it has zero built-in cache-busting story, and it runs a WebSocket-based dev-only protocol (the HMR client from Demo 2) with no production hardening — it's optimized entirely for edit-save-see-the-change speed, not for serving real traffic.",
+      "exercise": 2,
+      "demo": 3
+    },
+    {
+      "id": "d4-t1-eslint-prettier-setup",
+      "type": "code",
+      "title": "D4 - T1 — ESLint (flat config) + Prettier installed",
+      "narration": "eslint.config.js uses @eslint/js's recommended rules plus eslint-config-prettier last in the array so Prettier's own formatting opinions always win over ESLint's stylistic ones. Scoped away from the vendored create-presentation skill engine and generated dist/ — those aren't the app being migrated.",
+      "exercise": 2,
+      "demo": 4,
+      "file": "eslint.config.js",
+      "line": 1
+    },
+    {
+      "id": "d4-t2-lint-format-scripts",
+      "type": "code",
+      "title": "D4 - T2 — lint / lint:fix / format / format:check scripts",
+      "narration": "All four do something real: lint runs eslint . (0 errors after fixes below), lint:fix adds --fix, format runs prettier --write . scoped to app source, format:check runs prettier --check for CI (wired into Demo 8's workflow).",
+      "exercise": 2,
+      "demo": 4,
+      "file": "package.json",
+      "line": 17
+    },
+    {
+      "id": "d4-t3-real-findings",
+      "type": "code",
+      "title": "D4 - T3 — lint and format each caught a real issue",
+      "narration": "lint (no staged bug needed): a genuine no-unused-vars in evidence.js's handleSearchInput — the resolved value of simulateAsyncSearch() was never used. Not autofixable; fixed by hand (renamed to _resolvedTerm with a comment). format: 11 real files were out of Prettier style (this codebase predates any formatter) — npm run format rewrote them for real, confirmed with a concrete before/after on lookup.js's formatDate() line-wrapping.",
+      "exercise": 2,
+      "demo": 4,
+      "file": "js/views/evidence.js",
+      "line": 298,
+      "before": "simulateAsyncSearch(term).then(function (resolvedTerm) {",
+      "after": "simulateAsyncSearch(term).then(function (_resolvedTerm) {\n  // resolved value intentionally unused — renderEvidenceList() re-reads the live input"
+    },
+    {
+      "id": "d4-q1-linter-vs-formatter",
+      "type": "app",
+      "title": "D4 - Q1 — Linter checks vs formatter checks",
+      "narration": "A linter checks code correctness/patterns (unused variables, ==  vs ===, var vs let/const) — things that can hide real bugs. A formatter only checks/fixes whitespace, quote style, line wrapping — purely cosmetic, never behavior-affecting. Concrete finding from each: ESLint caught the real unused resolvedTerm bug above; Prettier rewrapped a long boolean expression across lines in lookup.js's formatDate with no behavior change at all.",
+      "exercise": 2,
+      "demo": 4
+    },
+    {
+      "id": "d4-q2-lint-vs-lintfix-separate",
+      "type": "app",
+      "title": "D4 - Q2 — Why lint and lint:fix are separate scripts",
+      "narration": "Auto-fixing every finding is only safe for purely mechanical issues (spacing, quote style); a real bug like the unused resolvedTerm needs a human to decide what the right fix actually is — ESLint can't know whether an unused value should be deleted, renamed, or is a sign of a missing line of logic. CI (Demo 8) deliberately runs the non-fixing lint, so a finding fails the build loudly instead of being silently auto-corrected in a place no one will ever review the diff.",
+      "exercise": 2,
+      "demo": 4
+    },
+    {
+      "id": "d4-q3-npm-run-lint-mechanics",
+      "type": "app",
+      "title": "D4 - Q3 — What npm run lint does under the hood",
+      "narration": "npm looks up \"lint\" in package.json's scripts, then resolves the bare `eslint` command by checking node_modules/.bin/ first (where npm installs a symlink for every installed package's CLI) before falling back to the system PATH. Since eslint is a devDependency here, node_modules/.bin/eslint always exists after npm install — it would work the same on any machine that ran npm install, and would silently use a different (or missing) global eslint if it weren't a project dependency at all.",
+      "exercise": 2,
+      "demo": 4
+    },
+    {
+      "id": "d5-t1-tsconfig-strict",
+      "type": "code",
+      "title": "D5 - T1 — tsconfig.json, strict mode deliberately chosen",
+      "narration": "Full strict plus noUnusedLocals/noUnusedParameters/noImplicitReturns/noFallthroughCasesInSwitch/noUncheckedIndexedAccess — the whole point of this migration is catching the class of bug Exercise 1 found by hand (undefined access, implicit any from JSON), so turning strict on piecemeal would leave exactly those gaps uncovered. Downgraded TypeScript from 7.x to 6.0.3 for typescript-eslint compatibility (its peer range caps at <6.1.0).",
+      "exercise": 2,
+      "demo": 5,
+      "file": "tsconfig.json",
+      "line": 21,
+      "after": "\"strict\": true,\n\"noUnusedLocals\": true,\n\"noUnusedParameters\": true,\n\"noImplicitReturns\": true,\n\"noFallthroughCasesInSwitch\": true,\n\"noUncheckedIndexedAccess\": true,"
+    },
+    {
+      "id": "d5-t2-first-conversions",
+      "type": "code",
+      "title": "D5 - T2 — lookup.ts, storage.ts, navigation.ts converted, zero any",
+      "narration": "The three smallest/most clearly-utility modules — formatting/lookup helpers, localStorage read/write, hash routing. Where a function touched state.js's still-untyped exports, committed to the narrowest real shape needed (an Identifiable{id:string} for the finder functions) rather than accepting the any that would otherwise leak in.",
+      "exercise": 2,
+      "demo": 5,
+      "file": "js/lookup.ts",
+      "line": 19,
+      "after": "interface Identifiable {\n  id: string;\n}\n\nfunction findById<T extends Identifiable>(list: T[], id: string): T | null {\n  for (const item of list) {\n    if (item.id === id) return item;\n  }\n  return null;\n}"
+    },
+    {
+      "id": "d5-t3-build-gate-proven",
+      "type": "code",
+      "title": "D5 - T3 — tsc wired into build, proven to actually block",
+      "narration": "package.json's build script became \"npm run typecheck && vite build\". Verified for real: broke formatDate()'s return type on purpose, confirmed npm run build failed at the typecheck step before vite build ever ran, then reverted and confirmed it passes again.",
+      "exercise": 2,
+      "demo": 5,
+      "file": "package.json",
+      "line": 19,
+      "after": "\"typecheck\": \"tsc --noEmit\",\n\"build\": \"npm run typecheck && vite build\","
+    },
+    {
+      "id": "d5-q1-strict-mode-checks",
+      "type": "app",
+      "title": "D5 - Q1 — What strict actually turns on",
+      "narration": "strict bundles several independent checks — strictNullChecks (null/undefined must be handled explicitly, not silently assignable to everything) and noImplicitAny (every value needs an inferable or declared type, not a silent any) are the two that mattered most here. Kept both on: they're exactly what would have caught Exercise 1's undefined-access and implicit-any bugs at compile time instead of runtime.",
+      "exercise": 2,
+      "demo": 5
+    },
+    {
+      "id": "d5-q2-compile-time-vs-runtime-bugs",
+      "type": "app",
+      "title": "D5 - Q2 — Compile-time errors vs Exercise 1's runtime bugs",
+      "narration": "A compile-time type error is caught before the code ever runs, by static analysis of the declared shapes; Exercise 1's bugs (a stale var closure, a dropped await, a shared array reference) were all caught by actually running the code and observing wrong behavior. TypeScript alone would NOT have caught most of them — a stale closure and a shared array reference are both perfectly type-correct, wrong only in runtime timing/aliasing, which types don't model. It likely would have caught the dropped-await bug, since an un-awaited async call used where a value was expected produces a Promise<T> vs T mismatch.",
+      "exercise": 2,
+      "demo": 5
+    },
+    {
+      "id": "d5-q3-why-avoid-any",
+      "type": "app",
+      "title": "D5 - Q3 — What any does, and why avoid it even though it's faster",
+      "narration": "any opts a value out of type checking entirely — every property access, call, and assignment on it is accepted with zero verification, and that unchecked-ness silently spreads to anything the any value touches. Reaching for it would have been faster in the moment, but it would have made this exact TS setup unable to catch the bugs it exists to catch — an any-typed state.js export flowing into lookup.ts would make every one of its consumers unchecked too.",
+      "exercise": 2,
+      "demo": 5
+    },
+    {
+      "id": "d6-t1-domain-types-defined",
+      "type": "code",
+      "title": "D6 - T1 — Person/Location/Evidence/TimelineEvent/CaseInfo typed",
+      "narration": "Verified against every record in public/data/*.json via a one-off Python pass, not just the first item. Evidence.status/.relevance are closed literal unions (the app branches on them); Evidence.type stays a plain string since nothing branches on it and the real data already has a case-varying outlier (\"Test-Report\" vs \"test-report\").",
+      "exercise": 2,
+      "demo": 6,
+      "file": "js/types.ts",
+      "line": 54,
+      "after": "export type EvidenceStatus = \"unreviewed\" | \"reviewed\" | \"flagged\";\nexport type EvidenceRelevance = \"unknown\" | \"relevant\" | \"irrelevant\";"
+    },
+    {
+      "id": "d6-t2-dataloading-typed",
+      "type": "code",
+      "title": "D6 - T2 — dataLoading.ts casts every fetch boundary",
+      "narration": "state.ts declares every collection with its real type; dataLoading.ts casts each fetch()/.json() result `as <Type>` right at the network boundary, replacing the Identifiable/BookmarkId/NotesStore stand-ins Demo 5 needed while state.js was still untyped.",
+      "exercise": 2,
+      "demo": 6,
+      "file": "js/dataLoading.ts",
+      "line": 63,
+      "after": "const peopleRes = await fetch(\"data/people.json\");\nstate.allPeople = (await peopleRes.json()) as Person[];"
+    },
+    {
+      "id": "d6-t3-ambiguous-field",
+      "type": "code",
+      "title": "D6 - T3 — personIds' id-vs-name ambiguity, resolved by normalizing",
+      "narration": "public/data/evidence.json's personIds is meant to hold Person ids, but E04 actually holds \"Nova Byte\" — a display name — instead of \"nova-byte\" (found by cross-checking every personIds entry against people.json's real ids). Typing personIds as PersonId[] forced a real choice: keep the type loose enough to admit id-or-name, or normalize once at the load boundary. Chose to normalize — dataLoading.ts's normalizePersonIds runs right after both evidence and people load — so evidenceMentionsPerson no longer needs to know Person has a name field at all.",
+      "exercise": 2,
+      "demo": 6,
+      "file": "js/dataLoading.ts",
+      "line": 79,
+      "after": "function normalizePersonIds(evidence: Evidence[], people: Person[]): void {\n  const nameToId = new Map(people.map((p) => [p.name, p.id]));\n  for (const item of evidence) {\n    item.personIds = item.personIds.map((ref) => nameToId.get(ref) ?? ref);\n  }\n}"
+    },
+    {
+      "id": "d6-q1-ambiguous-field-walkthrough",
+      "type": "app",
+      "title": "D6 - Q1 — How the JS version got away without deciding",
+      "narration": "Plain JS never declares what personIds \"is\" anywhere — it's just an array of strings, and .indexOf() doesn't care whether the string is an id or a name. The original code even had a defensive dual-match (check both person.id and person.name) baked into evidenceMentionsPerson, quietly working around the inconsistency instead of fixing it. Typing personIds as PersonId[] made that ambiguity visible and forced an explicit decision — normalize at load time — instead of leaving the workaround in place forever.",
+      "exercise": 2,
+      "demo": 6
+    },
+    {
+      "id": "d6-q2-types-cant-catch-runtime-data",
+      "type": "app",
+      "title": "D6 - Q2 — What static types can't catch: bad JSON content",
+      "narration": "Yes — evidence.json has one record with \"Reviewed\" (capitalized) instead of \"reviewed\" and one \"Unknown\" instead of \"unknown\", values the EvidenceStatus/EvidenceRelevance unions say can't happen. The `as Evidence[]` cast in dataLoading.ts doesn't validate anything at runtime, so both sail straight through unnoticed — only getStatusBadgeClass/getRelevanceBadgeClass's pre-existing .toLowerCase() (from Exercise 1) is what actually prevents this from breaking visibly. Catching this for real needs runtime validation (e.g. a schema check on the parsed JSON, like zod), which is outside what static types alone do.",
+      "exercise": 2,
+      "demo": 6
+    },
+    {
+      "id": "d6-q3-interface-vs-type",
+      "type": "app",
+      "title": "D6 - Q3 — interface vs type alias for the domain models",
+      "narration": "Used interface for the four object-shaped domain entities (Person, Location, Evidence, TimelineEvent, CaseInfo) and type for everything else (the union/literal types like EvidenceStatus, and the PersonId/LocationId string aliases). For these specific closed, never-intersected shapes it doesn't materially matter — interface just reads as the more conventional choice for \"this is a named domain entity,\" and type is the only option anyway for a union like EvidenceStatus, which can't be expressed as an interface at all.",
+      "exercise": 2,
+      "demo": 6
+    },
+    {
+      "id": "d7-t1-full-migration",
+      "type": "code",
+      "title": "D7 - T1 — Every remaining .js converted, zero TS errors",
+      "narration": "main.ts and all five view modules converted; tsconfig's allowJs/checkJs bridge removed since there's nothing left to bridge to. Compiles clean under the same strict settings from Demo 5. Added js/dom.ts's el<T>(id) helper — one small wrapper instead of scattering `as HTMLSelectElement` casts across five files, which stopped being premature by the third file needing the same pattern (rule of three).",
+      "exercise": 2,
+      "demo": 7,
+      "file": "js/dom.ts",
+      "line": 1,
+      "after": "export function el<T extends HTMLElement = HTMLElement>(id: string): T | null {\n  return document.getElementById(id) as T | null;\n}"
+    },
+    {
+      "id": "d7-t2-three-real-spots",
+      "type": "code",
+      "title": "D7 - T2 — Three real compiler-forced decisions",
+      "narration": "1) state.ts's caseData modeled as CaseInfo | null (not CaseInfo | {}) since case.json genuinely hasn't loaded yet during init — confirmed load-bearing by reverting one `?.` and getting a real TS18047 error. 2) Evidence needed a bookmarked?:boolean field it never had — not in JSON at all, only set at runtime; missing it was a real compile error, not a nit. 3) timeline.ts's reused `let modal` across an if-branch stayed \"possibly null\" to TS even though it never is at runtime — rewritten as one `existingModal ?? document.createElement(...)` binding, clearer code too.",
+      "exercise": 2,
+      "demo": 7,
+      "file": "js/views/timeline.ts",
+      "line": 157,
+      "before": "let modal = el<HTMLElement>(\"quickViewModal\");\nconst isNewModal = !modal;\nif (isNewModal) {\n  modal = document.createElement(\"div\");",
+      "after": "const existingModal = el<HTMLElement>(\"quickViewModal\");\nconst isNewModal = !existingModal;\nconst modal = existingModal ?? document.createElement(\"div\");"
+    },
+    {
+      "id": "d7-t3-behavior-identical",
+      "type": "app",
+      "title": "D7 - T3 — Behavior confirmed identical, not assumed",
+      "narration": "Full Playwright pass against both the dev server and a fresh production build: evidence card open/close, status/relevance selects mutating the loaded record, note save + preview, bookmark toggle propagating to the Workspace list, hypothesis form save-and-reload round-trip through localStorage, timeline quick-view modal, people/locations tab switch — every count and behavior matches every prior demo's baseline.",
+      "exercise": 2,
+      "demo": 7
+    },
+    {
+      "id": "d7-q1-real-type-error-shown",
+      "type": "app",
+      "title": "D7 - Q1 — A type error that took real thought",
+      "narration": "timeline.ts's openEvidenceModal (see T2 above): the compiler wasn't wrong that `modal` was \"possibly null\" after the if-branch reassignment — it genuinely couldn't prove the invariant that isNewModal-false implies non-null, because that invariant lives in two separate variables' correlated history, not in either one's type. Plain JS/manual review had already \"verified\" this code worked (it does) without ever noticing the implicit coupling; TS forced making that coupling structural instead of implicit.",
+      "exercise": 2,
+      "demo": 7
+    },
+    {
+      "id": "d7-q2-any-during-migration",
+      "type": "app",
+      "title": "D7 - Q2 — When any is the right call during a migration",
+      "narration": "Never reached for it in this migration — every real gap (untyped upstream data, DOM element casts, JSON parse results) had a narrower honest answer available (unknown + a cast, a local minimal interface, a generic helper). The line: any is defensible only as a last-resort escape hatch for something genuinely un-typeable in the time available, always with a comment explaining why and ideally a tracking note to revisit it — not a default reach whenever a real type would take a few extra minutes to think through.",
+      "exercise": 2,
+      "demo": 7
+    },
+    {
+      "id": "d7-q3-genuine-bug-found",
+      "type": "app",
+      "title": "D7 - Q3 — Did the migration reveal a genuine bug?",
+      "narration": "The clearest case is the personIds id-vs-name inconsistency (Demo 6): the pre-migration JS worked around it silently with a dual id-or-name match instead of ever surfacing it as a data problem. That's a genuine, previously-unnoticed data-quality issue, not noise — it was invisible in JS precisely because nothing forced the code to commit to what personIds actually contains. The three Demo 7 spots (T2 above) are closer to \"noise\" in the sense that none of them changed behavior — they made already-correct assumptions explicit rather than catching an actual bug.",
+      "exercise": 2,
+      "demo": 7
+    },
+    {
+      "id": "d8-t1-dev-workflow-written",
+      "type": "code",
+      "title": "D8 - T1 — .github/workflows/dev.yml",
+      "narration": "Triggers on push and pull_request, checks out, sets up Node 24 with actions/setup-node's built-in npm cache (keyed off package-lock.json), npm ci, then npm run lint and npm run format:check.",
+      "exercise": 2,
+      "demo": 8,
+      "file": ".github/workflows/dev.yml",
+      "line": 1
+    },
+    {
+      "id": "d8-t2-real-failure-shown",
+      "type": "app",
+      "title": "D8 - T2 — Pushed a real lint break, watched it fail",
+      "narration": "Commit b2bad25 added a genuinely unused local variable to lookup.ts. Confirmed via the public Actions API: run 36332660056 completed with conclusion \"failure\" — not assumed from reading the YAML, actually observed on GitHub.",
+      "exercise": 2,
+      "demo": 8
+    },
+    {
+      "id": "d8-t3-fixed-and-passing",
+      "type": "app",
+      "title": "D8 - T3 — Reverted, watched it pass again",
+      "narration": "Commit ac85ca9 removed the unused variable; run 36332697148 completed with conclusion \"success\" — a real fail-then-pass pair on the same workflow, both confirmed via the Actions API rather than eyeballed once and assumed stable.",
+      "exercise": 2,
+      "demo": 8
+    },
+    {
+      "id": "d8-q1-workflow-job-step",
+      "type": "app",
+      "title": "D8 - Q1 — Workflow, job, and step in dev.yml",
+      "narration": "The workflow is the whole dev.yml file (name: \"Dev checks\"). It has one job, lint-and-format, which runs on ubuntu-latest. That job has six steps, e.g. \"Set up Node.js\" (actions/setup-node@v4) and \"Lint\" (run: npm run lint) — a step is one action or shell command inside a job.",
+      "exercise": 2,
+      "demo": 8
+    },
+    {
+      "id": "d8-q2-why-ci-lint-too",
+      "type": "app",
+      "title": "D8 - Q2 — Why run lint in CI if it already runs locally",
+      "narration": "Because \"could run locally\" isn't \"did run locally\" — nothing stops a commit from being pushed without anyone having run npm run lint first, especially under time pressure. CI is the one place every single push is checked the same way regardless of what any individual developer remembered to do, which is exactly what caught this exercise's real b2bad25 lint break.",
+      "exercise": 2,
+      "demo": 8
+    },
+    {
+      "id": "d8-q3-dependency-caching",
+      "type": "app",
+      "title": "D8 - Q3 — What dependency caching does here",
+      "narration": "actions/setup-node's cache: \"npm\" caches ~/.npm keyed on a hash of package-lock.json, so a run with an unchanged lockfile restores the download cache instead of re-fetching every package from the registry. Removing it wouldn't break correctness (npm ci still installs the exact locked versions either way) — it would just make every single run slower, re-downloading the same ~15 packages from scratch every time.",
+      "exercise": 2,
+      "demo": 8
+    },
+    {
+      "id": "d9-t1-deploy-workflow-written",
+      "type": "code",
+      "title": "D9 - T1 — .github/workflows/deploy.yml",
+      "narration": "On push to main: checkout, install, lint, npm run build (tsc typecheck + vite build), upload dist/ as a Pages artifact, then a separate deploy job publishes it via actions/deploy-pages. permissions: contents: read, pages: write, id-token: write.",
+      "exercise": 2,
+      "demo": 9,
+      "file": ".github/workflows/deploy.yml",
+      "line": 20,
+      "after": "permissions:\n  contents: read\n  pages: write\n  id-token: write"
+    },
+    {
+      "id": "d9-t2-blocked-pages-not-enabled",
+      "type": "app",
+      "title": "D9 - T2 — Blocked: GitHub Pages not yet enabled",
+      "narration": "The build job (checkout/install/lint/build/upload-artifact) succeeds every time — confirmed via the Actions API. The deploy job fails specifically at the \"Deploy to GitHub Pages\" step because Pages isn't enabled with source \"GitHub Actions\" in the repo's Settings yet (the public repo API confirms has_pages: false) — no tool available in this session can flip that setting. Manual step needed: Settings → Pages → Build and deployment → Source → GitHub Actions.",
+      "exercise": 2,
+      "demo": 9
+    },
+    {
+      "id": "d9-t3-blocked-live-verification",
+      "type": "app",
+      "title": "D9 - T3 — Blocked: can't confirm the live URL yet",
+      "narration": "Showing a real change go live via the workflow requires the URL to exist first, which requires T2's manual step. Once Pages is enabled, the very next push to main will deploy automatically — the workflow itself is already fully built and its build stage is already proven working; nothing about the workflow needs to change once Pages is turned on.",
+      "exercise": 2,
+      "demo": 9
+    },
+    {
+      "id": "d9-q1-why-rerun-lint-and-build",
+      "type": "app",
+      "title": "D9 - Q1 — Why deploy.yml re-runs lint and build itself",
+      "narration": "\"It already passed on my machine\" (or even in Demo 8's separate workflow run) says nothing about what's actually on main at the moment deploy.yml runs — a different commit could be on main than what dev.yml last checked, or dev.yml could have been skipped entirely for that push. The only way to guarantee what gets deployed is exactly what was verified is to lint and build the exact commit being deployed, in the same job that deploys it.",
+      "exercise": 2,
+      "demo": 9
+    },
+    {
+      "id": "d9-q2-deploy-mechanism",
+      "type": "app",
+      "title": "D9 - Q2 — The actual publish mechanism",
+      "narration": "actions/upload-pages-artifact packages dist/ as a build artifact tied to this specific workflow run; actions/deploy-pages then takes that artifact and publishes it to the repo's GitHub Pages environment via GitHub's own deployment API, authenticated with a short-lived OIDC token minted from the id-token: write permission — not a push to a gh-pages branch, and not a personal access token stored as a secret.",
+      "exercise": 2,
+      "demo": 9
+    },
+    {
+      "id": "d9-q3-different-static-host",
+      "type": "app",
+      "title": "D9 - Q3 — What changes for a different static host",
+      "narration": "The build job (checkout, install, lint, npm run build) would stay exactly the same — dist/ is a plain static site regardless of where it's served. What changes is only the publish step: actions/upload-pages-artifact + actions/deploy-pages would be replaced with, e.g., Netlify's/Vercel's own deploy action (needing an API token stored as a repo secret) or an SFTP/rsync step (needing host/credentials secrets) — and the pages: write/id-token: write permissions would no longer be needed since those are GitHub-Pages-specific.",
+      "exercise": 2,
+      "demo": 9
+    },
+    {
+      "id": "d10-t1-ts-error-blocks-before-deploy",
+      "type": "code",
+      "title": "D10 - T1 — Deliberate TS error blocks before the deploy step",
+      "narration": "Changed formatDate()'s return type to number while its body still returned strings. Confirmed via the Actions API job/step breakdown: build job failed specifically at the \"Build\" step (tsc), the \"Upload... artifact\" step shows skipped, and the deploy job's own status is skipped — it never even started, let alone reached the actual Pages publish step. Reverted and confirmed a clean run afterward.",
+      "exercise": 2,
+      "demo": 10,
+      "file": "js/lookup.ts",
+      "line": 60,
+      "before": "export function formatDate(ts: string | number | null | undefined): string {",
+      "after": "export function formatDate(ts: string | number | null | undefined): number { // deliberate break — reverted"
+    },
+    {
+      "id": "d10-t2-permissions-identified",
+      "type": "code",
+      "title": "D10 - T2 — Exact permissions identified and located",
+      "narration": "deploy.yml's permissions: block: contents: read (checkout), pages: write and id-token: write (both required by actions/deploy-pages — neither is in GITHUB_TOKEN's default grant, both had to be listed explicitly). No secrets at all — deploy-pages authenticates via a short-lived OIDC token from id-token: write, not a stored PAT.",
+      "exercise": 2,
+      "demo": 10,
+      "file": ".github/workflows/deploy.yml",
+      "line": 20
+    },
+    {
+      "id": "d10-t3-run-history-read",
+      "type": "app",
+      "title": "D10 - T3 — Run history read and explained via the Actions API",
+      "narration": "Walked the job/step breakdown for multiple runs across this session: a clean pass (build+deploy both succeed except the Pages-not-enabled blocker), a lint failure (dev.yml, b2bad25), and a typecheck failure that skips deploy entirely (397949d). Each one's exact failing step was identified from the API's per-step status/conclusion fields, not guessed from the overall red/green.",
+      "exercise": 2,
+      "demo": 10
+    },
+    {
+      "id": "d10-q1-failed-build-deployed-version",
+      "type": "app",
+      "title": "D10 - Q1 — What happens to the live app when build fails",
+      "narration": "The previously-deployed version stays live — actions/deploy-pages only publishes a new deployment when the workflow actually reaches that step; a failed build job never produces an artifact for it to publish, so there's nothing to replace the current deployment with. This is exactly the behavior wanted: a broken build should never be able to take down or corrupt a working live site.",
+      "exercise": 2,
+      "demo": 10
+    },
+    {
+      "id": "d10-q2-permissions-secrets-risk",
+      "type": "app",
+      "title": "D10 - Q2 — Permissions/secrets needed, and over-granting risk",
+      "narration": "pages: write and id-token: write, granted via deploy.yml's own permissions: block (repo Settings → Actions → General also has a repo-wide default that this workflow-level block overrides down to only what it needs). No stored secrets. The risk of over-granting (e.g. leaving the repo-wide default at read/write for everything) is that ANY workflow in the repo — including one an attacker adds via a malicious PR — would inherit broad push/write access, not just this one trusted deploy workflow.",
+      "exercise": 2,
+      "demo": 10
+    },
+    {
+      "id": "d10-q3-trigger-types-comparison",
+      "type": "app",
+      "title": "D10 - Q3 — push vs pull_request vs workflow_dispatch",
+      "narration": "on: push runs automatically whenever new commits land on the matching ref — used for both workflows here, since both should react automatically to real changes. on: pull_request runs for PR activity specifically (also on dev.yml, so a PR gets checked before it's even merged). on: workflow_dispatch is a manual, human-triggered button in the Actions UI — used for neither workflow here, since both should be fully automatic; it would make sense for something like an on-demand redeploy with no code change.",
+      "exercise": 2,
       "demo": 10
     }
   ]
