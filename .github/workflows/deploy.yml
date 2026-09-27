@@ -1,0 +1,65 @@
+name: Deploy to GitHub Pages
+
+# Only main, not pull_request: a PR's build isn't something that should
+# ever go live — only a change that has actually landed on main should
+# replace what's currently deployed. Demo 8's dev.yml already covers
+# every push/PR with the cheap lint+format gate; this workflow re-runs
+# lint (and adds the build) as its own independent gate rather than
+# trusting "dev.yml already passed" — see Demo 9's Question 1.
+on:
+  push:
+    branches: [main]
+
+# Both required by actions/deploy-pages to publish: id-token to mint the
+# short-lived OIDC token that proves this specific workflow run is allowed
+# to deploy, pages to actually write the Pages deployment. Neither is
+# granted by GITHUB_TOKEN's default permissions, so both must be listed
+# explicitly — see Demo 10's Question 2.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deployment should ever be in flight at a time; a second
+# push while one is still deploying should queue behind it, not race it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build (includes the tsc typecheck gate from Demo 5)
+        run: npm run build
+
+      - name: Upload built site as a Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
