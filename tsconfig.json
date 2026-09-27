@@ -4,7 +4,14 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": false,
+    // Vite resolves a relative "./foo.ts" specifier by its literal path,
+    // not by stripping/guessing an extension the way Node's resolver does
+    // — so cross-module imports here spell out the real .ts filename.
+    // TypeScript itself only allows importing with a literal .ts
+    // extension when this is on, and only accepts it together with
+    // noEmit/emitDeclarationOnly (below) since it can't also be the thing
+    // emitting a colliding .js next to each .ts file.
+    "allowImportingTsExtensions": true,
 
     // Vite/esbuild does the actual transpiling per-file; tsc here only
     // type-checks (wired into `npm run build` — see package.json). noEmit

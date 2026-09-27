@@ -11,7 +11,7 @@
 // for this pure refactor; a cleaner dependency direction (e.g. views only
 // ever going through the router, never each other) is a good candidate for
 // a later cleanup pass, not this one.
-import { state } from "./state.js";
+import { state } from "./state.ts";
 import { renderDashboard } from "./views/dashboard.js";
 import { renderEvidenceList } from "./views/evidence.js";
 import { renderPeople, renderLocations } from "./views/people.js";

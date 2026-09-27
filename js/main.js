@@ -13,7 +13,7 @@
 // place.
 import { loadBookmarksFromStorage, loadNotesFromStorage, loadNoteAsync } from "./storage.ts";
 import { navigateTo, handleHashChange } from "./navigation.ts";
-import loadAllData from "./dataLoading.js";
+import loadAllData from "./dataLoading.ts";
 import {
   clearFilters,
   handleSearchInput,

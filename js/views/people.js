@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 // PEOPLE & LOCATIONS VIEW
 // ---------------------------------------------------------------------
-import { state } from "../state.js";
+import { state } from "../state.ts";
 import { evidenceMentionsPerson } from "../lookup.ts";
 import { navigateTo } from "../navigation.ts";
 import { renderEvidenceList } from "./evidence.js";

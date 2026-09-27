@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 // WORKSPACE VIEW (bookmarks list, notes list, hypothesis form)
 // ---------------------------------------------------------------------
-import { state, STORAGE_KEY_HYPOTHESIS } from "../state.js";
+import { state, STORAGE_KEY_HYPOTHESIS } from "../state.ts";
 import { navigateTo } from "../navigation.ts";
 import { openEvidenceDetail } from "./evidence.js";
 

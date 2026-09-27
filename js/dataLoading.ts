@@ -5,7 +5,7 @@
 // initApp) — every other function here is an internal step of that one
 // loading sequence. One real "public" thing to offer justifies a default
 // export rather than a named one; everything else stays unexported.
-import { state } from "./state.js";
+import { state } from "./state.ts";
 import { renderDashboard } from "./views/dashboard.js";
 import {
   populateEvidenceDropdowns,
@@ -14,15 +14,16 @@ import {
 } from "./views/evidence.js";
 import { populateTimelineDropdowns, renderTimeline } from "./views/timeline.js";
 import { populateHypothesisDropdowns } from "./views/workspace.js";
+import type { CaseInfo, Person, Location, Evidence, TimelineEvent } from "./types.ts";
 
-function showLoadingOverlay(msg) {
+function showLoadingOverlay(msg: string): void {
   const overlay = document.getElementById("loadingOverlay");
   const text = document.getElementById("loadingText");
   if (text) text.textContent = msg;
   if (overlay) overlay.classList.remove("hidden");
 }
 
-function hideLoadingStep() {
+function hideLoadingStep(): void {
   state.loadingStepsRemaining--;
   if (state.loadingStepsRemaining <= 0) {
     const overlay = document.getElementById("loadingOverlay");
@@ -30,11 +31,19 @@ function hideLoadingStep() {
   }
 }
 
-function populateAllDropdowns() {
+function populateAllDropdowns(): void {
   populateEvidenceDropdowns();
   populateTimelineDropdowns();
   populateHypothesisDropdowns();
 }
+
+// Demo 6: fetch()/.json() return `Promise<any>` — TypeScript has no way to
+// know what shape actually comes back over the network, so every one of
+// these `as <Type>` casts is a trust boundary: the compiler doesn't verify
+// the real JSON matches, it only stops treating the value as `any` from
+// this point on. That's the honest scope of what static types buy here —
+// see lookup.ts's getStatusBadgeClass comment for a concrete case where a
+// real record doesn't actually match its declared type.
 
 // Demo 9: was a 6-level-deep nested .then() chain — fetch(case.json) → .then
 // → .json() → .then → fetch(people.json) → .then → .json() → .then →
@@ -48,22 +57,34 @@ function populateAllDropdowns() {
 // sequentially, not in parallel (that stays out of scope until a later
 // exercise). No try/catch here because the original chain had none either —
 // a rejection still propagates out as a rejected Promise, same as before.
-async function loadCorePeopleAndLocations() {
+async function loadCorePeopleAndLocations(): Promise<void> {
   const caseRes = await fetch("data/case.json");
-  const caseJson = await caseRes.json();
-  state.caseData = caseJson;
+  state.caseData = (await caseRes.json()) as CaseInfo;
 
   const peopleRes = await fetch("data/people.json");
-  const peopleJson = await peopleRes.json();
-  state.allPeople = peopleJson;
+  state.allPeople = (await peopleRes.json()) as Person[];
 
   const locationsRes = await fetch("data/locations.json");
-  const locationsJson = await locationsRes.json();
-  state.allLocations = locationsJson;
+  state.allLocations = (await locationsRes.json()) as Location[];
 
   hideLoadingStep();
   renderDashboard();
   populateAllDropdowns();
+}
+
+// Demo 6's ambiguous-field fix (see lookup.ts's evidenceMentionsPerson
+// comment for the full story): public/data/evidence.json's personIds is
+// supposed to be Person ids, but E04 holds "Nova Byte" — a display name —
+// instead of "nova-byte". Rather than have every consumer of
+// state.allEvidence carry a defensive "match by id OR name" fallback,
+// this normalizes personIds once, right after both evidence and the
+// (already-loaded, by the time this runs) people list exist, so
+// everything downstream can trust personIds is really PersonId[].
+function normalizePersonIds(evidence: Evidence[], people: Person[]): void {
+  const nameToId = new Map(people.map((person) => [person.name, person.id]));
+  for (const item of evidence) {
+    item.personIds = item.personIds.map((ref) => nameToId.get(ref) ?? ref);
+  }
 }
 
 // Demo 9: converted from .then()/.catch()/.finally() to async/await with
@@ -74,10 +95,11 @@ async function loadCorePeopleAndLocations() {
 // value (a Promise that settles once the try/catch/finally body has run) —
 // previously it had no `return` at all, so callers had no way to wait for
 // it (see loadAllData below, which now does).
-async function loadEvidenceData() {
+async function loadEvidenceData(): Promise<void> {
   try {
     const res = await fetch("data/evidence.json");
-    const data = await res.json();
+    const data = (await res.json()) as Evidence[];
+    normalizePersonIds(data, state.allPeople);
     state.allEvidence = data;
     applyStoredBookmarkFlags();
     // A copy, not the same array: allEvidence is the canonical, stable
@@ -117,10 +139,10 @@ async function loadEvidenceData() {
   }
 }
 
-function loadTimelineData() {
+function loadTimelineData(): Promise<void> {
   return fetch("data/timeline.json")
     .then(function (res) {
-      return res.json();
+      return res.json() as Promise<TimelineEvent[]>;
     })
     .then(function (data) {
       state.allTimeline = data;
@@ -150,7 +172,7 @@ function loadTimelineData() {
 // finish before the other starts) — Promise.all waits for both without
 // serializing them, which preserves that pre-existing concurrency rather
 // than changing it.
-export default async function loadAllData() {
+export default async function loadAllData(): Promise<void> {
   showLoadingOverlay("Loading case file…");
   // Three independent steps hide the overlay: core (people/locations),
   // evidence, and timeline.

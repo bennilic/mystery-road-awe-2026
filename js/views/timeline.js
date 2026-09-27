@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 // TIMELINE VIEW (+ its quick-view evidence modal)
 // ---------------------------------------------------------------------
-import { state } from "../state.js";
+import { state } from "../state.ts";
 import { findEvidenceById, findLocationById, formatDate } from "../lookup.ts";
 import { navigateTo } from "../navigation.ts";
 import { openEvidenceDetail } from "./evidence.js";

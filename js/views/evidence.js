@@ -7,7 +7,7 @@
 // handler, they share the exact same "current evidence" concerns, and
 // splitting them further would just add an extra import cycle between two
 // files that are really one feature, not two.
-import { state } from "../state.js";
+import { state } from "../state.ts";
 import {
   findEvidenceById,
   findPersonById,
