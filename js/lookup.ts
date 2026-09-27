@@ -59,7 +59,6 @@ export function evidenceMentionsPerson(ev: Evidence, person: Person): boolean {
 }
 
 export function formatDate(ts: string | number | null | undefined): string {
-  const unusedDeliberateLintBreak = "Demo 8: proving the dev workflow actually fails";
   if (!ts) return "Unknown date";
   const d = new Date(ts);
   if (isNaN(d.getTime())) return String(ts);
