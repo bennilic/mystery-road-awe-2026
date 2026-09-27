@@ -1,3 +1,10 @@
 # Local Playwright MCP session artifacts (screenshots, console logs) from
 # interactive testing — not part of the app, regenerated per session.
 .playwright-mcp/
+
+# Exercise 2: npm dependencies and build tooling output — reinstallable/regenerable,
+# never committed. package-lock.json IS committed (see Demo 1).
+node_modules/
+dist/
+*.tsbuildinfo
+

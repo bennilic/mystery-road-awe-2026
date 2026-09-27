@@ -1,0 +1,25 @@
+{
+  "name": "mystery-road-awe-2026",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Project ReMotion Investigation Portal — a browser-based investigation app for a fictional AI-assisted rehabilitation robot incident. Coursework for Advanced Web Engineering (CSDC).",
+  "type": "module",
+  "author": "Benjamin Lichtenstein",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bennilic/mystery-road-awe-2026.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bennilic/mystery-road-awe-2026/issues"
+  },
+  "homepage": "https://github.com/bennilic/mystery-road-awe-2026#readme",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^8.3.1"
+  }
+}
