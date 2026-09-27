@@ -58,7 +58,7 @@ export function evidenceMentionsPerson(ev: Evidence, person: Person): boolean {
   return ev.personIds.includes(person.id);
 }
 
-export function formatDate(ts: string | number | null | undefined): string {
+export function formatDate(ts: string | number | null | undefined): number {
   if (!ts) return "Unknown date";
   const d = new Date(ts);
   if (isNaN(d.getTime())) return String(ts);
