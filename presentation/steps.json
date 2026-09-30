@@ -1214,13 +1214,25 @@
     {
       "id": "d5-t3-build-gate-proven",
       "type": "code",
-      "title": "D5 - T3 — tsc wired into build, proven to actually block",
+      "title": "D5 - T3 — tsc wired into build (1/2)",
       "narration": "package.json's build script became \"npm run typecheck && vite build\". Verified for real: broke formatDate()'s return type on purpose, confirmed npm run build failed at the typecheck step before vite build ever ran, then reverted and confirmed it passes again.",
       "exercise": 2,
       "demo": 5,
       "file": "package.json",
       "line": 19,
       "after": "\"typecheck\": \"tsc --noEmit\",\n\"build\": \"npm run typecheck && vite build\","
+    },
+    {
+      "id": "d5-t3-failing-function",
+      "type": "code",
+      "exercise": 2,
+      "demo": 5,
+      "title": "D5 - T3 — the deliberately broken function and tsc's error (2/2)",
+      "narration": "To prove the gate really blocks, formatDate()'s declared return type was changed from string to number while its body still returns strings. Running npm run build stops at the typecheck step with three TS2322 errors (lines 62, 64 and 65 — every return statement) and vite build never runs. No test or runtime execution was needed: the compiler catches the mismatch statically. Switch between the Before and After tabs to see the one-word change; the error output is shown as comments at the bottom of After. Reverted afterwards and the build passes again.",
+      "file": "js/lookup.ts",
+      "line": 61,
+      "before": "export function formatDate(ts: string | number | null | undefined): string {\n  if (!ts) return \"Unknown date\";\n  const d = new Date(ts);\n  if (isNaN(d.getTime())) return String(ts);\n  return (\n    d.toLocaleDateString(undefined, { year: \"numeric\", month: \"short\", day: \"numeric\" }) +\n    \" \" +\n    d.toLocaleTimeString(undefined, { hour: \"2-digit\", minute: \"2-digit\" })\n  );\n}",
+      "after": "export function formatDate(ts: string | number | null | undefined): number {\n  if (!ts) return \"Unknown date\";\n  const d = new Date(ts);\n  if (isNaN(d.getTime())) return String(ts);\n  return (\n    d.toLocaleDateString(undefined, { year: \"numeric\", month: \"short\", day: \"numeric\" }) +\n    \" \" +\n    d.toLocaleTimeString(undefined, { hour: \"2-digit\", minute: \"2-digit\" })\n  );\n}\n\n// npm run typecheck:\n// js/lookup.ts(62,12): error TS2322: Type 'string' is not assignable to type 'number'.\n// js/lookup.ts(64,27): error TS2322: Type 'string' is not assignable to type 'number'.\n// js/lookup.ts(65,3): error TS2322: Type 'string' is not assignable to type 'number'."
     },
     {
       "id": "d5-q1-strict-mode-checks",
