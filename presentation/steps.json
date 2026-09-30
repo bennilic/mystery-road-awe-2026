@@ -1400,16 +1400,16 @@
     {
       "id": "d9-t2-blocked-pages-not-enabled",
       "type": "app",
-      "title": "D9 - T2 — Blocked: GitHub Pages not yet enabled",
-      "narration": "The build job (checkout/install/lint/build/upload-artifact) succeeds every time — confirmed via the Actions API. The deploy job fails specifically at the \"Deploy to GitHub Pages\" step because Pages isn't enabled with source \"GitHub Actions\" in the repo's Settings yet (the public repo API confirms has_pages: false) — no tool available in this session can flip that setting. Manual step needed: Settings → Pages → Build and deployment → Source → GitHub Actions.",
+      "title": "D9 - T2 — Live URL confirmed serving the app end-to-end",
+      "narration": "Benjamin enabled GitHub Pages (source: GitHub Actions) in repo settings, unblocking this. Live at https://bennilic.github.io/mystery-road-awe-2026/ — visited directly with a browser (not assumed from a green Actions run) and confirmed all 5 views render with the same data counts as every local verification all through this exercise: 18 evidence cards, 6 people cards with images actually loading from the deployed assets/ path, 15 timeline events, 18 hypothesis-evidence options, zero console errors.",
       "exercise": 2,
       "demo": 9
     },
     {
       "id": "d9-t3-blocked-live-verification",
       "type": "app",
-      "title": "D9 - T3 — Blocked: can't confirm the live URL yet",
-      "narration": "Showing a real change go live via the workflow requires the URL to exist first, which requires T2's manual step. Once Pages is enabled, the very next push to main will deploy automatically — the workflow itself is already fully built and its build stage is already proven working; nothing about the workflow needs to change once Pages is turned on.",
+      "title": "D9 - T3 — A real change, pushed, live with no manual step",
+      "narration": "Pushed commit 2e3316a straight to main: a real favicon fix (every Playwright pass in this whole exercise had logged a genuine favicon.ico 404 — <link rel=\"icon\"> now points at the existing logo.svg). Confirmed via the Actions jobs/steps API — not assumed — that run 36397494889's build job passed and its deploy job actually succeeded this time (previously it failed only at the \"Deploy to GitHub Pages\" step; now that step is green too). The fix is live at the URL above with zero manual deployment step — <link rel=\"icon\"> is present in the served HTML.",
       "exercise": 2,
       "demo": 9
     },

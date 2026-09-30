@@ -43,7 +43,7 @@ or answer on the spot, live.**
 | 6 | Typing the domain data | ☑ |
 | 7 | Full migration & resolving type errors | ☑ |
 | 8 | GitHub Actions: development workflow | ☑ |
-| 9 | GitHub Actions: deployment workflow | ☐ (blocked — GitHub Pages not yet enabled, see Demo 9 Task 2/3) |
+| 9 | GitHub Actions: deployment workflow | ☑ |
 | 10 | Workflow triggers, permissions & failure modes | ☑ |
 
 A demo only counts as "Ready" once **every** task and question checkbox inside it (below) is
@@ -188,8 +188,8 @@ ticked. The table above is just a fast overview, tick the boxes inside each demo
 **Tasks**
 
 - [x] Write a second workflow that, on push to your main branch (or another trigger you choose and can justify), checks out the repo, installs dependencies, lints, builds (`vite build`), and deploys the `dist/` output to GitHub Pages (or an equivalent static host).
-- [ ] Confirm the deployed URL actually serves the working app end-to-end, not just that the workflow reports success. **Blocked**: GitHub Pages isn't enabled with source "GitHub Actions" yet in bennilic/mystery-road-awe-2026's repo settings (confirmed via the repo API: `has_pages: false`). No tool available in this session can flip that setting. The workflow's `build` job (checkout/install/lint/build/upload-artifact) has been verified passing for real; only the final `deploy` job's publish step is blocked on this one manual setting. Manual step: **Settings → Pages → Build and deployment → Source → GitHub Actions**.
-- [ ] Make a real change, push it, and show it going live via the workflow without any manual deployment step. **Blocked for the same reason as above** — once Pages is enabled, the next push to `main` will deploy automatically with no further workflow changes needed.
+- [x] Confirm the deployed URL actually serves the working app end-to-end, not just that the workflow reports success. Live at **https://bennilic.github.io/mystery-road-awe-2026/** — visited directly (not assumed from a green run) and confirmed all 5 views render with the same data counts as every local verification (18 evidence cards, 6 people cards with images actually loading from the deployed `assets/` path, 15 timeline events, 18 hypothesis-evidence options), zero console errors.
+- [x] Make a real change, push it, and show it going live via the workflow without any manual deployment step. Pushed a real fix (commit `2e3316a` — added a favicon, closing a genuine `favicon.ico` 404 every prior Playwright pass in this exercise had logged) straight to `main`; the deploy workflow ran fully automatically and the fix is live at the URL above, confirmed via `<link rel="icon">` present in the served HTML.
 
 **Questions** (depend on the tasks above)
 
