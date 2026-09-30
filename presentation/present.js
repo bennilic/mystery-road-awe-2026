@@ -343,16 +343,46 @@ function renderCodeTab(step) {
   }
   if (isJavaScriptFile(step.file)) {
     renderHighlightedJavaScript(el.codeContent, snippet);
+  } else if (isJsonFile(step.file)) {
+    renderHighlightedJson(el.codeContent, snippet);
   } else {
     el.codeContent.textContent = snippet;
   }
 }
 
-// Only JS is highlighted: snippets are ~all JS, and a tiny in-file tokenizer keeps the presenter
-// dependency-free and usable offline (a CDN highlighter would break a talk on bad wifi).
-// Matches "x.js" and "app.js (pre-refactor)" — the file label sometimes carries a suffix.
+// Only JS/TS is highlighted: snippets are ~all JS or TS, and a tiny in-file tokenizer keeps the
+// presenter dependency-free and usable offline (a CDN highlighter would break a talk on bad wifi).
+// Matches "x.js", "x.ts" and "app.js (pre-refactor)" — the file label sometimes carries a suffix.
 function isJavaScriptFile(fileLabel) {
-  return /\.js\b/.test(fileLabel || "");
+  return /\.(js|ts)\b/.test(fileLabel || "");
+}
+
+// Matches "package.json" and "tsconfig.json" (which is JSONC: may carry // comments).
+function isJsonFile(fileLabel) {
+  return /\.json\b/.test(fileLabel || "");
+}
+
+// Dark+ JSON coloring: keys light blue, string values orange, numbers green, true/false/null blue.
+// A string followed by ":" is a key; snippets are often fragments (e.g. a few lines of a
+// tsconfig), so this tokenizes flatly instead of parsing.
+const JSON_TOKEN_PATTERN =
+  /(?<comment>\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(?<string>"(?:[^"\\\n]|\\.)*")|(?<number>-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b)|(?<literal>\b(?:true|false|null)\b)/g;
+
+function renderHighlightedJson(container, source) {
+  container.textContent = "";
+  let cursor = 0;
+  for (const match of source.matchAll(JSON_TOKEN_PATTERN)) {
+    if (match.index > cursor) appendToken(container, source.slice(cursor, match.index), null);
+    const { comment, string, number } = match.groups;
+    const tokenEnd = match.index + match[0].length;
+    let className = "tok-storage"; // true/false/null
+    if (comment) className = "tok-comment";
+    else if (string) className = /^\s*:/.test(source.slice(tokenEnd)) ? "tok-variable" : "tok-string";
+    else if (number) className = "tok-number";
+    appendToken(container, match[0], className);
+    cursor = tokenEnd;
+  }
+  if (cursor < source.length) appendToken(container, source.slice(cursor), null);
 }
 
 // Split like VS Code's Dark+ theme: control-flow/module keywords are purple, declaration and
@@ -364,6 +394,13 @@ const JS_CONTROL_KEYWORDS = new Set([
 const JS_STORAGE_KEYWORDS = new Set([
   "async", "class", "const", "delete", "extends", "function", "in", "instanceof", "let", "new",
   "of", "typeof", "var", "void",
+  // TypeScript-only declaration/modifier keywords; harmless in plain-JS snippets
+  "abstract", "as", "declare", "enum", "implements", "interface", "keyof", "namespace", "private",
+  "protected", "public", "readonly", "satisfies", "type",
+]);
+// Built-in type names are colored like user-defined types (teal), as in VS Code Dark+.
+const TS_BUILTIN_TYPES = new Set([
+  "any", "bigint", "boolean", "never", "number", "object", "string", "symbol", "unknown",
 ]);
 const JS_LITERALS = new Set(["true", "false", "null", "undefined", "this", "NaN", "Infinity"]);
 
@@ -380,11 +417,16 @@ const JS_TOKEN_PATTERN = new RegExp(
   "g"
 );
 
-function classifyJavaScriptWord(word, followingText) {
+// `precedingText` lets soft keywords like `type`/`as`/`of` stay plain when used as property names
+// (`item.type`, `{ type: "x" }`), which TS snippets do constantly.
+function classifyJavaScriptWord(word, followingText, precedingText) {
+  const isPropertyName = /\.\s*$/.test(precedingText) || /^\s*:(?!:)/.test(followingText);
+  if (isPropertyName && !followingText.startsWith("(")) return "tok-variable";
   if (JS_CONTROL_KEYWORDS.has(word)) return "tok-control";
   if (JS_STORAGE_KEYWORDS.has(word) || JS_LITERALS.has(word)) return "tok-storage";
-  if (followingText.startsWith("(")) return "tok-function";
-  if (/^[A-Z][a-z]/.test(word)) return "tok-type";
+  if (TS_BUILTIN_TYPES.has(word)) return "tok-type";
+  if (/^(<[^>\n]*>)?\(/.test(followingText)) return "tok-function"; // also generic calls: f<T>(…)
+  if (/^[A-Z]([a-z]|$)/.test(word)) return "tok-type";
   return "tok-variable";
 }
 
@@ -410,7 +452,7 @@ function renderHighlightedJavaScript(container, source) {
     if (comment) appendToken(container, comment, "tok-comment");
     else if (string) appendToken(container, string, "tok-string");
     else if (number) appendToken(container, number, "tok-number");
-    else appendToken(container, word, classifyJavaScriptWord(word, source.slice(tokenEnd)));
+    else appendToken(container, word, classifyJavaScriptWord(word, source.slice(tokenEnd), source.slice(Math.max(0, match.index - 3), match.index)));
     cursor = tokenEnd;
   }
   if (cursor < source.length) appendToken(container, source.slice(cursor), null);

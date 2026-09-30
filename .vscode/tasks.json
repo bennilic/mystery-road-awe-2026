@@ -4,14 +4,14 @@
     {
       "label": "Serve",
       "type": "shell",
-      "command": "npx vite --port 8080 --strictPort --host 127.0.0.1",
+      "command": "NO_COLOR=1 npx vite --port 8080 --strictPort --host 127.0.0.1",
       "isBackground": true,
       "problemMatcher": {
         "pattern": { "regexp": "^$" },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "VITE v",
-          "endsPattern": "Local:"
+          "beginsPattern": "VITE",
+          "endsPattern": "Local:\\s+http"
         }
       }
     },
