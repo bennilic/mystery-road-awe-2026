@@ -4,21 +4,21 @@
     {
       "label": "Serve",
       "type": "shell",
-      "command": "python3 -m http.server 8080 --bind 127.0.0.1",
+      "command": "npx vite --port 8080 --strictPort --host 127.0.0.1",
       "isBackground": true,
       "problemMatcher": {
         "pattern": { "regexp": "^$" },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "^Serving HTTP",
-          "endsPattern": "^Serving HTTP"
+          "beginsPattern": "VITE v",
+          "endsPattern": "Local:"
         }
       }
     },
     {
       "label": "Stop server",
       "type": "shell",
-      "command": "pkill -f 'http.server 8080' || true",
+      "command": "pkill -f 'vite --port 8080' || true",
       "problemMatcher": []
     },
     {

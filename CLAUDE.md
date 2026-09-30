@@ -95,12 +95,11 @@ don't add it again on every subsequent update to the same exercise's slides.
 
 ## Running the app
 
-Must be served over HTTP (uses `fetch()` for local JSON — `file://` will not work):
+Must be served by the Vite dev server (TypeScript sources + `fetch()` for local JSON — `file://` and
+plain static servers like `python -m http.server` will not work, they serve `.ts` with the wrong MIME type):
 
 ```bash
-python -m http.server 8080
-# or
-npx serve .
+npm run dev -- --port 8080
 ```
 
 Then open `http://localhost:8080`.

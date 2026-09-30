@@ -214,7 +214,6 @@ ticked. The table above is just a fast overview, tick the boxes inside each demo
 - [x] What's the difference between triggering a workflow `on: push`, `on: pull_request`, and `on: workflow_dispatch`? Which did you use for the development workflow (Demo 8) and which for the deployment workflow (Demo 9), and why is that pairing the right one?
 
 ---
-
 ## What to bring to class
 
 For each of the 10 demos: your changed code/config (ideally as commits you can diff live), the actual GitHub Actions run history for both workflows (not just the files), and the ticked checkboxes

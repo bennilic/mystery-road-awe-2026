@@ -16,24 +16,18 @@ during the course will be to analyse, maintain, refactor, migrate, and extend it
 
 ## Running the application
 
-This application uses `fetch()` to load its case data from local JSON files, so it must be served
-over HTTP — opening `index.html` directly from the filesystem (`file://`) will not work in most
-browsers.
-
-Any static file server will do. For example, from the project root:
+The app is written in TypeScript and built with [Vite](https://vite.dev), so it cannot be served
+by a plain static file server (browsers won't execute `.ts` files, and `file://` blocks `fetch()`).
+Use the Vite dev server, which compiles TypeScript on the fly:
 
 ```bash
-# Python 3
-python -m http.server 8080
-
-# Node.js (no install required)
-npx serve .
-
-# VS Code
-# Use the "Live Server" extension
+npm install          # first time only
+npm run dev -- --port 8080
 ```
 
-Then open `http://localhost:8080` (or whatever port your server prints) in your browser.
+Then open `http://localhost:8080`. The presentation is at `http://localhost:8080/presentation/present.html`.
+
+To check the production build locally: `npm run build && npm run preview`.
 
 ## Features
 
