@@ -1181,13 +1181,35 @@
     {
       "id": "d5-t2-first-conversions",
       "type": "code",
-      "title": "D5 - T2 — lookup.ts, storage.ts, navigation.ts converted, zero any",
+      "title": "D5 - T2 — lookup.ts: generic finder typed with Identifiable (1/3)",
       "narration": "The three smallest/most clearly-utility modules — formatting/lookup helpers, localStorage read/write, hash routing. Where a function touched state.js's still-untyped exports, committed to the narrowest real shape needed (an Identifiable{id:string} for the finder functions) rather than accepting the any that would otherwise leak in.",
       "exercise": 2,
       "demo": 5,
       "file": "js/lookup.ts",
       "line": 19,
       "after": "interface Identifiable {\n  id: string;\n}\n\nfunction findById<T extends Identifiable>(list: T[], id: string): T | null {\n  for (const item of list) {\n    if (item.id === id) return item;\n  }\n  return null;\n}"
+    },
+    {
+      "type": "code",
+      "exercise": 2,
+      "demo": 5,
+      "id": "d5-t2-storage-ts",
+      "title": "D5 - T2 — storage.ts: JSON.parse result is `unknown`, narrowed before use (2/3)",
+      "narration": "localStorage hands back strings, and JSON.parse returns `any` — the exact kind of hole strict mode can't see. Here the parsed value is deliberately annotated `unknown`, which forces a runtime check (Array.isArray) before it is allowed into state.bookmarks. The cast to string[] only happens after that check passes, and a corrupted value falls back to an empty list instead of crashing app boot. Zero `any` in the file.",
+      "file": "js/storage.ts",
+      "line": 20,
+      "after": "export function loadBookmarksFromStorage(): void {\n  try {\n    const raw = localStorage.getItem(STORAGE_KEY_BOOKMARKS);\n    const parsed: unknown = raw ? JSON.parse(raw) : [];\n    state.bookmarks = Array.isArray(parsed) ? (parsed as string[]) : [];\n  } catch (err) {\n    console.warn(\"Could not read stored bookmarks, starting empty\", err);\n    state.bookmarks = [];\n  }\n}"
+    },
+    {
+      "type": "code",
+      "exercise": 2,
+      "demo": 5,
+      "id": "d5-t2-navigation-ts",
+      "title": "D5 - T2 — navigation.ts: view names as a union type + type guard (3/3)",
+      "narration": "The router's five valid hashes used to be plain strings, so a typo like navigateTo(\"evidnce\") compiled fine and silently showed nothing. ViewName is now a string-literal union, so the compiler rejects bad names at every call site. The hash comes from the URL, which the user can edit, so isViewName is a type guard: it checks at runtime and narrows the type at compile time, and anything invalid falls back to the dashboard. The for-of loops also avoid `Element | undefined` under noUncheckedIndexedAccess.",
+      "file": "js/navigation.ts",
+      "line": 21,
+      "after": "export type ViewName = \"dashboard\" | \"evidence\" | \"people\" | \"timeline\" | \"workspace\";\n\nconst VALID_VIEWS: ViewName[] = [\"dashboard\", \"evidence\", \"people\", \"timeline\", \"workspace\"];\n\nexport function navigateTo(viewName: ViewName): void {\n  window.location.hash = viewName;\n}\n\nfunction isViewName(value: string): value is ViewName {\n  return (VALID_VIEWS as string[]).includes(value);\n}\n\nexport function handleHashChange(): void {\n  const rawHash = window.location.hash.replace(\"#\", \"\");\n  const hash: ViewName = isViewName(rawHash) ? rawHash : \"dashboard\";"
     },
     {
       "id": "d5-t3-build-gate-proven",
