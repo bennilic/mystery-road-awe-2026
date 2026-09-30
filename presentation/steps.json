@@ -95,6 +95,7 @@
       "demo": 1,
       "file": "js/main.js",
       "line": 26,
+      "before": "// index.html (classic script: runs immediately where it sits at the end of <body>;\n// every top-level var/function in app.js becomes a property of window)\n<script src=\"app.js\"></script>\n\n// index.html (inline handlers resolve names in global scope)\n<button type=\"button\" class=\"nav-btn\" data-view=\"dashboard\" onclick=\"navigateTo('dashboard')\">Dashboard</button>\n\n// app.js (plain top-level declaration => window.navigateTo exists automatically)\n\nfunction navigateTo(viewName) {\n  window.location.hash = viewName;\n  // handleHashChange() will pick this up via the hashchange listener\n}",
       "after": "// Functions reached only through inline HTML attributes (onclick=\"...\",\n// onchange=\"...\", or the onchange string set via setAttribute below) must\n// exist as globals — inline handler attributes are evaluated in the global\n// scope, not in this module's scope.\nwindow.navigateTo = navigateTo;\nwindow.switchPeopleTab = switchPeopleTab;\nwindow.handleSortChange = handleSortChange;\nwindow.saveHypothesis = saveHypothesis;\nwindow.closeEvidenceDetail = closeEvidenceDetail;\nwindow.saveCurrentNote = saveCurrentNote;\nwindow.renderEvidenceList = renderEvidenceList; // needed by the setAttribute(\"onchange\", ...) below"
     },
     {
@@ -118,6 +119,7 @@
       "demo": 1,
       "file": "js/lookup.js",
       "line": 12,
+      "before": "// app.js (pre-refactor): no exports, plain globals\nfunction findEvidenceById(id) {\n  for (var i = 0; i < allEvidence.length; i++) {\n    if (allEvidence[i].id === id) return allEvidence[i];\n  }\n  return null;\n}\n\nfunction findPersonById(id) {\n  for (var i = 0; i < allPeople.length; i++) {\n    if (allPeople[i].id === id) return allPeople[i];\n  }\n  return null;\n}\n\nfunction findLocationById(id) {\n  for (var i = 0; i < allLocations.length; i++) {\n    if (allLocations[i].id === id) return allLocations[i];\n  }\n  return null;\n}",
       "after": "// All are exported as named exports — there are seven equally-weighted\n// utilities here, with no single \"primary\" one that would justify a\n// default export.\nimport { state } from \"./state.js\";\n\nexport function findEvidenceById(id) {\n  for (var i = 0; i < state.allEvidence.length; i++) {\n    if (state.allEvidence[i].id === id) return state.allEvidence[i];\n  }\n  return null;\n}\n\nexport function findPersonById(id) {\n  for (var i = 0; i < state.allPeople.length; i++) {\n    if (state.allPeople[i].id === id) return state.allPeople[i];\n  }\n  return null;\n}\n\nexport function findLocationById(id) {\n  for (var i = 0; i < state.allLocations.length; i++) {\n    if (state.allLocations[i].id === id) return state.allLocations[i];\n  }\n  return null;\n}"
     },
     {
@@ -129,6 +131,7 @@
       "demo": 1,
       "file": "js/dataLoading.js",
       "line": 97,
+      "before": "// app.js (pre-refactor): every loader is a global; nothing is exported or private\nfunction loadAllData() {\n  showLoadingOverlay(\"Loading case file…\");\n  loadingStepsRemaining = 2;\n  return loadCorePeopleAndLocations().then(function () {\n    loadEvidenceData();\n    loadTimelineData();\n  });\n}",
       "after": "// Only `loadAllData` is ever called from outside this module (main.js's\n// initApp) — every other function here is an internal step of that one\n// loading sequence. One real \"public\" thing to offer justifies a default\n// export rather than a named one; everything else stays unexported.\n\n// ... loadCorePeopleAndLocations / loadEvidenceData / loadTimelineData /\n// showLoadingOverlay / hideLoadingStep — all module-private, omitted here ...\n\nexport default function loadAllData() {\n  showLoadingOverlay(\"Loading case file…\");\n  state.loadingStepsRemaining = 2;\n  return loadCorePeopleAndLocations().then(function () {\n    loadEvidenceData();\n    loadTimelineData();\n  });\n}"
     },
     {
@@ -140,6 +143,7 @@
       "demo": 1,
       "file": "js/dataLoading.js",
       "line": 60,
+      "before": "// app.js (pre-refactor, classic script): the same fetch() call, subject to the same file:// restriction\nfunction loadEvidenceData() {\n  fetch(\"data/evidence.json\")\n    .then(function (res) {\n      return res.json();\n    })\n    .then(function (data) {\n      allEvidence = data;\n      applyStoredBookmarkFlags();\n      filteredEvidence = allEvidence; \n      renderDashboard();\n      populateAllDropdowns();\n      if (currentPage === \"evidence\") renderEvidenceList();\n    })\n    .catch(function (err) {\n      console.error(\"Failed to load evidence.json\", err);\n      alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n    });\n}",
       "after": "function loadEvidenceData() {\n  fetch(\"data/evidence.json\")\n    .then(function (res) {\n      return res.json();\n    })\n    .then(function (data) {\n      state.allEvidence = data;\n      applyStoredBookmarkFlags();\n      state.filteredEvidence = state.allEvidence;\n      renderDashboard();\n      populateAllDropdowns();\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .catch(function (err) {\n      console.error(\"Failed to load evidence.json\", err);\n      alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n    });\n}"
     },
     {
@@ -233,9 +237,10 @@
       "narration": "renderEvidenceList() (js/views/evidence.js) gates the whole catalogue render on state.evidenceViewLoading — while true it shows the placeholder and returns immediately, before ever reaching getFilteredEvidence() or building any cards. That flag is declared `evidenceViewLoading: true` in js/state.js, clearly meant to flip false once the evidence.json fetch that's supposed to populate the catalogue resolves. I grepped the entire repo for every reference to it and found exactly three: the `true` initialization, this `if` check, and nothing else — no callback, anywhere, ever assigned it `false`. So the flag wasn't reset by a slow fetch or a race; it was never going to be reset at all, by design-gone-wrong: the person who wrote the placeholder logic never wired up the code that was supposed to clear it once loadEvidenceData()'s fetch settled. I confirmed this is the actual cause (not just a plausible-looking dead flag) live: after load, state.allEvidence.length was 18 while state.evidenceViewLoading was still true — the exact combination this hypothesis predicts.",
       "exercise": 1,
       "demo": 3,
-      "file": "js/views/evidence.js",
+      "file": "js/views/evidence.js (before) / js/dataLoading.js (after)",
       "line": 87,
-      "after": "export function renderEvidenceList() {\n  var container = document.getElementById(\"evidenceList\");\n  if (!container) return;\n\n  var loadingIndicator = document.getElementById(\"evidenceLoadingIndicator\");\n  if (state.evidenceViewLoading) {\n    if (loadingIndicator) loadingIndicator.classList.remove(\"hidden\");\n    container.innerHTML = \"\";\n    return; // <-- always taken: state.evidenceViewLoading (js/state.js:34,\n            //     initialized true) is never set false by any callback\n            //     anywhere in the codebase (repo-wide grep confirmed it).\n  }\n  if (loadingIndicator) loadingIndicator.classList.add(\"hidden\");\n\n  var results = getFilteredEvidence();\n  // ...card rendering never reached..."
+      "before": "export function renderEvidenceList() {\n  var container = document.getElementById(\"evidenceList\");\n  if (!container) return;\n\n  var loadingIndicator = document.getElementById(\"evidenceLoadingIndicator\");\n  if (state.evidenceViewLoading) {\n    if (loadingIndicator) loadingIndicator.classList.remove(\"hidden\");\n    container.innerHTML = \"\";\n    return; // <-- always taken: state.evidenceViewLoading (js/state.js:34,\n            //     initialized true) is never set false by any callback\n            //     anywhere in the codebase (repo-wide grep confirmed it).\n  }\n  if (loadingIndicator) loadingIndicator.classList.add(\"hidden\");\n\n  var results = getFilteredEvidence();\n  // ...card rendering never reached...",
+      "after": "function loadEvidenceData() {\n  fetch(\"data/evidence.json\")\n    .then(function (res) {\n      return res.json();\n    })\n    .then(function (data) {\n      state.allEvidence = data;\n      applyStoredBookmarkFlags();\n      // A copy, not the same array: allEvidence is the canonical, stable\n      // list (order relied on by the Dashboard, Workspace notes list,\n      // hypothesis evidence picker, etc.), while filteredEvidence is a\n      // disposable \"current view\" of it that the Evidence catalogue filters\n      // and sorts in place (see handleSortChange in views/evidence.js,\n      // which calls state.filteredEvidence.sort(...)). Assigning the same\n      // array reference to both meant sorting the catalogue's view\n      // silently reordered the canonical list too.\n      state.filteredEvidence = state.allEvidence.slice();\n      // The catalogue's own loading placeholder (see renderEvidenceList in\n      // views/evidence.js) is gated on this flag, not on state.allEvidence\n      // being populated. It starts true so the placeholder shows before\n      // this fetch resolves; it must flip false here, once the data this\n      // fetch promised has actually landed in state, or renderEvidenceList\n      // keeps early-returning the placeholder forever, even after the data\n      // it's waiting for has arrived.\n      state.evidenceViewLoading = false;\n      renderDashboard();\n      populateAllDropdowns();\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .catch(function (err) {\n      console.error(\"Failed to load evidence.json\", err);\n      alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n      // Also clear on failure: the fetch has settled either way, and\n      // leaving this true would strand the catalogue on \"Loading evidence…\"\n      // forever instead of showing the (empty) result of the failed load.\n      state.evidenceViewLoading = false;\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    });\n}"
     },
     {
       "id": "demo3-fix",
@@ -575,6 +580,7 @@
       "demo": 7,
       "file": "js/views/evidence.js",
       "line": 148,
+      "before": "// app.js (pre-module-split original of the same function)\nfunction renderEvidenceCardHTML(ev) {\n  var isBookmarked = bookmarks.indexOf(ev.id) !== -1;\n  var html = '<div class=\"evidence-card\" data-id=\"' + ev.id + '\">';\n  html += '<button class=\"bookmark-btn ' + (isBookmarked ? \"active\" : \"\") + '\" data-action=\"bookmark\" data-id=\"' + ev.id + '\" aria-label=\"Toggle bookmark for ' + ev.title + '\"><span class=\"bookmark-icon\">' + (isBookmarked ? \"★\" : \"☆\") + \"</span></button>\";\n  html += \"<h3>\" + ev.title + \"</h3>\";\n  html += '<div class=\"evidence-meta\">' + ev.id + \" &middot; \" + ev.type + \" &middot; \" + formatDate(ev.timestamp) + \"</div>\";\n  html += '<div class=\"evidence-summary\">' + ev.summary + \"</div>\";\n\n  if (ev.tags.indexOf(\"critical\") !== -1) {\n    html += '<span class=\"badge badge-critical\">Critical</span>';\n  }\n  html += '<span class=\"badge ' + getStatusBadgeClass(ev.status) + '\">' + ev.status + \"</span>\";\n  html += '<span class=\"badge ' + getRelevanceBadgeClass(ev.relevance) + '\">' + ev.relevance + \"</span>\";\n  html += \"<div>\";\n  for (var t = 0; t < ev.tags.length; t++) {\n    html += '<span class=\"tag-chip\">' + ev.tags[t] + \"</span>\";\n  }\n  html += \"</div>\";\n  html += \"</div>\";\n  return html;\n}",
       "after": "function renderEvidenceCardHTML(ev) {\n  var isBookmarked = state.bookmarks.indexOf(ev.id) !== -1;\n  var html = '<div class=\"evidence-card\" data-id=\"' + ev.id + '\">';\n  html += '<button class=\"bookmark-btn ' + (isBookmarked ? \"active\" : \"\") + '\" ...>' + ...;\n  html += \"<h3>\" + ev.title + \"</h3>\";\n  html += '<div class=\"evidence-meta\">' + ev.id + \" &middot; \" + ev.type + \" &middot; \" + formatDate(ev.timestamp) + \"</div>\";\n  html += '<div class=\"evidence-summary\">' + ev.summary + \"</div>\";\n  ...\n  html += '<span class=\"badge \" + getStatusBadgeClass(ev.status) + '\">' + ev.status + \"</span>\";\n  html += '<span class=\"badge \" + getRelevanceBadgeClass(ev.relevance) + '\">' + ev.relevance + \"</span>\";\n  ...\n}"
     },
     {
@@ -713,7 +719,8 @@
       "demo": 9,
       "file": "js/dataLoading.js (pre-refactor)",
       "line": 35,
-      "before": "function loadCorePeopleAndLocations() {\n  return fetch(\"data/case.json\").then(function (caseRes) {\n    return caseRes.json().then(function (caseJson) {\n      state.caseData = caseJson;\n\n      return fetch(\"data/people.json\").then(function (peopleRes) {\n        return peopleRes.json().then(function (peopleJson) {\n          state.allPeople = peopleJson;\n\n          return fetch(\"data/locations.json\").then(function (locationsRes) {\n            return locationsRes.json().then(function (locationsJson) {\n              state.allLocations = locationsJson;\n\n              hideLoadingStep();\n              renderDashboard();\n              populateAllDropdowns();\n            });\n          });\n        });\n      });\n    });\n  });\n}"
+      "before": "function loadCorePeopleAndLocations() {\n  return fetch(\"data/case.json\").then(function (caseRes) {\n    return caseRes.json().then(function (caseJson) {\n      state.caseData = caseJson;\n\n      return fetch(\"data/people.json\").then(function (peopleRes) {\n        return peopleRes.json().then(function (peopleJson) {\n          state.allPeople = peopleJson;\n\n          return fetch(\"data/locations.json\").then(function (locationsRes) {\n            return locationsRes.json().then(function (locationsJson) {\n              state.allLocations = locationsJson;\n\n              hideLoadingStep();\n              renderDashboard();\n              populateAllDropdowns();\n            });\n          });\n        });\n      });\n    });\n  });\n}",
+      "after": "async function loadCorePeopleAndLocations() {\n  const caseRes = await fetch(\"data/case.json\");\n  const caseJson = await caseRes.json();\n  state.caseData = caseJson;\n\n  const peopleRes = await fetch(\"data/people.json\");\n  const peopleJson = await peopleRes.json();\n  state.allPeople = peopleJson;\n\n  const locationsRes = await fetch(\"data/locations.json\");\n  const locationsJson = await locationsRes.json();\n  state.allLocations = locationsJson;\n\n  hideLoadingStep();\n  renderDashboard();\n  populateAllDropdowns();\n}"
     },
     {
       "id": "demo9-t2-core-async-await-conversion",
@@ -748,7 +755,8 @@
       "demo": 9,
       "file": "js/dataLoading.js",
       "line": 47,
-      "before": "Breakpoint at line 48 (`const caseRes = await fetch(\"data/case.json\");`), the first statement of loadCorePeopleAndLocations().\n\nSync call stack at the pause:\n  loadCorePeopleAndLocations:48 <- loadAllData:154 <- initApp:79\n(already the full chain — an async function runs synchronously up to its first await, and the very first statement IS that await, so nothing has yielded to the event loop yet)\n\nStepping over with state read at each pause (caseData keys / allPeople.length / allLocations.length):\n  pause at line 48 (nothing run yet)........... 0, 0, 0\n  after `state.caseData = caseJson` (line 52)... 9, 0, 0\n  after people fetch started (line 53).......... 9, 0, 0\n  after `state.allPeople = peopleJson` (line 56). 9, 6, 0\n  after Debugger.resume, load finishes.......... 9, 6, 6"
+      "before": "function loadCorePeopleAndLocations() {\n  return fetch(\"data/case.json\").then(function (caseRes) {\n    return caseRes.json().then(function (caseJson) {\n      state.caseData = caseJson;\n\n      return fetch(\"data/people.json\").then(function (peopleRes) {\n        return peopleRes.json().then(function (peopleJson) {\n          state.allPeople = peopleJson;\n\n          return fetch(\"data/locations.json\").then(function (locationsRes) {\n            return locationsRes.json().then(function (locationsJson) {\n              state.allLocations = locationsJson;\n\n              hideLoadingStep();\n              renderDashboard();\n              populateAllDropdowns();\n            });\n          });\n        });\n      });\n    });\n  });\n}",
+      "after": "Breakpoint at line 48 (`const caseRes = await fetch(\"data/case.json\");`), the first statement of loadCorePeopleAndLocations().\n\nSync call stack at the pause:\n  loadCorePeopleAndLocations:48 <- loadAllData:154 <- initApp:79\n(already the full chain — an async function runs synchronously up to its first await, and the very first statement IS that await, so nothing has yielded to the event loop yet)\n\nStepping over with state read at each pause (caseData keys / allPeople.length / allLocations.length):\n  pause at line 48 (nothing run yet)........... 0, 0, 0\n  after `state.caseData = caseJson` (line 52)... 9, 0, 0\n  after people fetch started (line 53).......... 9, 0, 0\n  after `state.allPeople = peopleJson` (line 56). 9, 6, 0\n  after Debugger.resume, load finishes.......... 9, 6, 6"
     },
     {
       "id": "demo9-q1-why-nested-then-harder",
@@ -771,7 +779,8 @@
       "demo": 9,
       "file": "js/dataLoading.js",
       "line": 47,
-      "before": "async function loadCorePeopleAndLocations() {\n  const caseRes = await fetch(\"data/case.json\"); // <- execution suspends HERE\n  // everything below only runs once fetch() settles;\n  // meanwhile the rest of the program keeps running\n  const caseJson = await caseRes.json();\n  ..."
+      "before": "function loadCorePeopleAndLocations() {\n  return fetch(\"data/case.json\").then(function (caseRes) {\n    return caseRes.json().then(function (caseJson) {\n      state.caseData = caseJson;\n\n      // ...next fetch starts inside this callback...",
+      "after": "async function loadCorePeopleAndLocations() {\n  const caseRes = await fetch(\"data/case.json\"); // <- execution suspends HERE\n  // everything below only runs once fetch() settles;\n  // meanwhile the rest of the program keeps running\n  const caseJson = await caseRes.json();\n  ..."
     },
     {
       "id": "demo9-q3-async-always-returns-promise",
@@ -782,7 +791,8 @@
       "demo": 9,
       "file": "js/dataLoading.js",
       "line": 149,
-      "before": "// Live-captured, real page:\nconst mod = await import('/js/dataLoading.js');\nconst call = mod.default(); // loadAllData()\ncall instanceof Promise;      // -> true\nawait call.then(v => v);      // -> undefined (no explicit return)\n\n// isolated proof of the \"plain value\" half:\nasync function demoReturnsPlainValue() { return 42; }\ndemoReturnsPlainValue() instanceof Promise; // -> true\nawait demoReturnsPlainValue().then(v => v); // -> 42"
+      "before": "export default function loadAllData() {\n  showLoadingOverlay(\"Loading case file…\");\n  // Three independent steps hide the overlay: core (people/locations),\n  // evidence, and timeline. This was previously budgeted for 2 — evidence's\n  // own step never called hideLoadingStep() at all — so the overlay could\n  // dismiss once core+timeline settled even if evidence.json was still\n  // in flight. Note: loadEvidenceData()/loadTimelineData() below still run\n  // un-awaited (loadAllData's own returned promise resolves right after\n  // loadCorePeopleAndLocations, not after all three) — that's the Demo 9\n  // .then()-to-async/await scope, left as-is here; this fix only corrects\n  // the loading-step count so the overlay's own timing is right regardless.\n  state.loadingStepsRemaining = 3;\n  return loadCorePeopleAndLocations().then(function () {\n    loadEvidenceData();\n    loadTimelineData();\n  });\n}",
+      "after": "// Live-captured, real page:\nconst mod = await import('/js/dataLoading.js');\nconst call = mod.default(); // loadAllData()\ncall instanceof Promise;      // -> true\nawait call.then(v => v);      // -> undefined (no explicit return)\n\n// isolated proof of the \"plain value\" half:\nasync function demoReturnsPlainValue() { return 42; }\ndemoReturnsPlainValue() instanceof Promise; // -> true\nawait demoReturnsPlainValue().then(v => v); // -> 42"
     },
     {
       "id": "demo9-q4-async-await-equivalent-of-catch",
@@ -793,7 +803,8 @@
       "demo": 9,
       "file": "js/dataLoading.js",
       "line": 73,
-      "before": "// Live-captured, real page — deliberately no catch:\nasync function willReject() {\n  await Promise.reject(new Error('Q4 deliberate rejection, no catch'));\n}\nwillReject(); // fired without await/try-catch by the caller\n\n// real captured result:\n// window 'unhandledrejection' event fires:\n//   reason -> \"Error: Q4 deliberate rejection, no catch\"\n// browser console logs:\n//   Uncaught (in promise) Error: Q4 deliberate rejection, no catch"
+      "before": "function loadEvidenceData() {\n  fetch(\"data/evidence.json\")\n    .then(function (res) {\n      return res.json();\n    })\n    .then(function (data) {\n      state.allEvidence = data;\n      applyStoredBookmarkFlags();\n      // A copy, not the same array: allEvidence is the canonical, stable\n      // list (order relied on by the Dashboard, Workspace notes list,\n      // hypothesis evidence picker, etc.), while filteredEvidence is a\n      // disposable \"current view\" of it that the Evidence catalogue filters\n      // and sorts in place (see handleSortChange in views/evidence.js,\n      // which calls state.filteredEvidence.sort(...)). Assigning the same\n      // array reference to both meant sorting the catalogue's view\n      // silently reordered the canonical list too.\n      state.filteredEvidence = state.allEvidence.slice();\n      // The catalogue's own loading placeholder (see renderEvidenceList in\n      // views/evidence.js) is gated on this flag, not on state.allEvidence\n      // being populated. It starts true so the placeholder shows before\n      // this fetch resolves; it must flip false here, once the data this\n      // fetch promised has actually landed in state, or renderEvidenceList\n      // keeps early-returning the placeholder forever, even after the data\n      // it's waiting for has arrived.\n      state.evidenceViewLoading = false;\n      renderDashboard();\n      populateAllDropdowns();\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .catch(function (err) {\n      console.error(\"Failed to load evidence.json\", err);\n      alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n      // Also clear on failure: the fetch has settled either way, and\n      // leaving this true would strand the catalogue on \"Loading evidence…\"\n      // forever instead of showing the (empty) result of the failed load.\n      state.evidenceViewLoading = false;\n      if (state.currentPage === \"evidence\") renderEvidenceList();\n    })\n    .finally(function () {\n      // Budgeted in loadAllData's loadingStepsRemaining (now 3, not 2) —\n      // without this the \"Loading case file…\" overlay could hide as soon as\n      // the other two steps settled, regardless of whether evidence.json had\n      // actually finished loading yet.\n      hideLoadingStep();\n    });\n}",
+      "after": "async function loadEvidenceData() {\n  try {\n    const res = await fetch(\"data/evidence.json\");\n    const data = await res.json();\n    state.allEvidence = data;\n    applyStoredBookmarkFlags();\n    // A copy, not the same array: allEvidence is the canonical, stable\n    // list (order relied on by the Dashboard, Workspace notes list,\n    // hypothesis evidence picker, etc.), while filteredEvidence is a\n    // disposable \"current view\" of it that the Evidence catalogue filters\n    // and sorts in place (see handleSortChange in views/evidence.js,\n    // which calls state.filteredEvidence.sort(...)). Assigning the same\n    // array reference to both meant sorting the catalogue's view\n    // silently reordered the canonical list too.\n    state.filteredEvidence = state.allEvidence.slice();\n    // The catalogue's own loading placeholder (see renderEvidenceList in\n    // views/evidence.js) is gated on this flag, not on state.allEvidence\n    // being populated. It starts true so the placeholder shows before\n    // this fetch resolves; it must flip false here, once the data this\n    // fetch promised has actually landed in state, or renderEvidenceList\n    // keeps early-returning the placeholder forever, even after the data\n    // it's waiting for has arrived.\n    state.evidenceViewLoading = false;\n    renderDashboard();\n    populateAllDropdowns();\n    if (state.currentPage === \"evidence\") renderEvidenceList();\n  } catch (err) {\n    console.error(\"Failed to load evidence.json\", err);\n    alert(\"Evidence could not be loaded. Some views may be incomplete.\");\n    // Also clear on failure: the fetch has settled either way, and\n    // leaving this true would strand the catalogue on \"Loading evidence…\"\n    // forever instead of showing the (empty) result of the failed load.\n    state.evidenceViewLoading = false;\n    if (state.currentPage === \"evidence\") renderEvidenceList();\n  } finally {\n    // Budgeted in loadAllData's loadingStepsRemaining (3) — without this\n    // the \"Loading case file…\" overlay could hide as soon as the other two\n    // steps settled, regardless of whether evidence.json had actually\n    // finished loading yet.\n    hideLoadingStep();\n  }\n}\n\n// Live-captured, real page — deliberately no catch:\nasync function willReject() {\n  await Promise.reject(new Error('Q4 deliberate rejection, no catch'));\n}\nwillReject(); // fired without await/try-catch by the caller\n\n// real captured result:\n// window 'unhandledrejection' event fires:\n//   reason -> \"Error: Q4 deliberate rejection, no catch\"\n// browser console logs:\n//   Uncaught (in promise) Error: Q4 deliberate rejection, no catch"
     },
     {
       "id": "demo9-q5-is-async-await-faster",
@@ -804,7 +815,8 @@
       "demo": 9,
       "file": "js/dataLoading.js",
       "line": 47,
-      "before": "// Same underlying Promise machinery, same order, same timing — only the syntax differs.\n\n// .then() chain:\nfetch(a).then(resA => resA.json()).then(jsonA => { /* ... next fetch ... */ });\n\n// async/await:\nconst resA = await fetch(a);\nconst jsonA = await resA.json();\n// ... next fetch ...\n\n// Both suspend at the same points, resume as microtasks at the same points,\n// and hit the network in the same order — confirmed directly by the T4\n// debugger trace above, which shows the exact same operation order as the\n// pre-refactor chain."
+      "before": "function loadCorePeopleAndLocations() {\n  return fetch(\"data/case.json\").then(function (caseRes) {\n    return caseRes.json().then(function (caseJson) {\n      state.caseData = caseJson;\n\n      return fetch(\"data/people.json\").then(function (peopleRes) {\n        return peopleRes.json().then(function (peopleJson) {\n          state.allPeople = peopleJson;\n\n      // ...same order: people, then locations, each nested in the previous callback...",
+      "after": "// Same underlying Promise machinery, same order, same timing — only the syntax differs.\n\n// .then() chain:\nfetch(a).then(resA => resA.json()).then(jsonA => { /* ... next fetch ... */ });\n\n// async/await:\nconst resA = await fetch(a);\nconst jsonA = await resA.json();\n// ... next fetch ...\n\n// Both suspend at the same points, resume as microtasks at the same points,\n// and hit the network in the same order — confirmed directly by the T4\n// debugger trace above, which shows the exact same operation order as the\n// pre-refactor chain."
     },
     {
       "id": "demo9-q6-deliberately-break-dropped-await",
@@ -872,7 +884,8 @@
       "highlight": "#evidenceList",
       "file": "js/views/evidence.js",
       "line": 170,
-      "before": "// Only attached from within renderEvidenceList in this same file — private.\n// Demo 10: deliberately NOT converted to an arrow function. It's registered\n// directly by reference as a DOM event listener (`container.addEventListener\n// (\"click\", handleEvidenceListClick)` below, not wrapped in another\n// callback), which is exactly the case where a regular `function` is the\n// safer form to keep — the DOM calls it with `this` bound to the element the\n// listener is attached to (`container`), which is the whole point of the\n// delegated-click pattern this function implements. This version reads\n// `event.target` rather than `this`, but converting it to an arrow function\n// would permanently foreclose that binding: an arrow function ignores the\n// caller-supplied `this` entirely and captures whatever `this` is in the\n// enclosing module scope instead (`undefined`, since ES modules are strict\n// mode) regardless of which element the listener is attached to. That's a\n// silent, easy-to-miss behavior change for a function whose entire job is\n// being a DOM event handler.\nfunction handleEvidenceListClick(event) {\n  const target = event.target;\n\n  if (target.dataset && target.dataset.action === \"bookmark\") {\n    event.stopPropagation();\n    handleBookmarkClick(target.dataset.id);\n    return;\n  }\n\n  const card = target.closest(\".evidence-card\");\n  if (card) {\n    openEvidenceDetail(card.getAttribute(\"data-id\"));\n  }\n}"
+      "before": "// Only attached from within renderEvidenceList in this same file — private.\nfunction handleEvidenceListClick(event) {\n  const target = event.target;\n\n  if (target.dataset && target.dataset.action === \"bookmark\") {\n    event.stopPropagation();\n    handleBookmarkClick(target.dataset.id);\n    return;\n  }\n\n  const card = target.closest(\".evidence-card\");\n  if (card) {\n    openEvidenceDetail(card.getAttribute(\"data-id\"));\n  }\n}",
+      "after": "// Only attached from within renderEvidenceList in this same file — private.\n// Demo 10: deliberately NOT converted to an arrow function. It's registered\n// directly by reference as a DOM event listener (`container.addEventListener\n// (\"click\", handleEvidenceListClick)` below, not wrapped in another\n// callback), which is exactly the case where a regular `function` is the\n// safer form to keep — the DOM calls it with `this` bound to the element the\n// listener is attached to (`container`), which is the whole point of the\n// delegated-click pattern this function implements. This version reads\n// `event.target` rather than `this`, but converting it to an arrow function\n// would permanently foreclose that binding: an arrow function ignores the\n// caller-supplied `this` entirely and captures whatever `this` is in the\n// enclosing module scope instead (`undefined`, since ES modules are strict\n// mode) regardless of which element the listener is attached to. That's a\n// silent, easy-to-miss behavior change for a function whose entire job is\n// being a DOM event handler.\nfunction handleEvidenceListClick(event) {\n  const target = event.target;\n\n  if (target.dataset && target.dataset.action === \"bookmark\") {\n    event.stopPropagation();\n    handleBookmarkClick(target.dataset.id);\n    return;\n  }\n\n  const card = target.closest(\".evidence-card\");\n  if (card) {\n    openEvidenceDetail(card.getAttribute(\"data-id\"));\n  }\n}"
     },
     {
       "id": "demo10-q1-this-binding-difference",
@@ -939,6 +952,7 @@
       "demo": 1,
       "file": "package.json",
       "line": 1,
+      "before": "(file did not exist yet)",
       "after": "{\n  \"name\": \"mystery-road-awe-2026\",\n  \"type\": \"module\",\n  ...\n  \"devDependencies\": {\n    \"vite\": \"^8.3.1\"\n  }\n}"
     },
     {
@@ -949,7 +963,9 @@
       "exercise": 2,
       "demo": 1,
       "file": "package.json",
-      "line": 1
+      "line": 1,
+      "before": "(file did not exist yet)",
+      "after": "{\n  \"name\": \"mystery-road-awe-2026\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"description\": \"Project ReMotion Investigation Portal — a browser-based investigation app for a fictional AI-assisted rehabilitation robot incident. Coursework for Advanced Web Engineering (CSDC).\",\n  \"type\": \"module\",\n  \"author\": \"Benjamin Lichtenstein\",\n  \"license\": \"UNLICENSED\",\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"git+https://github.com/bennilic/mystery-road-awe-2026.git\"\n  },\n  \"bugs\": {\n    \"url\": \"https://github.com/bennilic/mystery-road-awe-2026/issues\"\n  },\n  \"homepage\": \"https://github.com/bennilic/mystery-road-awe-2026#readme\",\n  ...\n}"
     },
     {
       "id": "d1-t3-gitignore",
@@ -959,7 +975,9 @@
       "exercise": 2,
       "demo": 1,
       "file": ".gitignore",
-      "line": 1
+      "line": 1,
+      "before": "# Local Playwright MCP session artifacts (screenshots, console logs) from\n# interactive testing — not part of the app, regenerated per session.\n.playwright-mcp/",
+      "after": "# Local Playwright MCP session artifacts (screenshots, console logs) from\n# interactive testing — not part of the app, regenerated per session.\n.playwright-mcp/\n\n# Exercise 2: npm dependencies and build tooling output — reinstallable/regenerable,\n# never committed. package-lock.json IS committed (see Demo 1).\nnode_modules/\ndist/\n*.tsbuildinfo"
     },
     {
       "id": "d1-t4-lockfile",
@@ -969,7 +987,9 @@
       "exercise": 2,
       "demo": 1,
       "file": "package-lock.json",
-      "line": 1
+      "line": 1,
+      "before": "(file did not exist yet)",
+      "after": "{\n  \"name\": \"mystery-road-awe-2026\",\n  \"version\": \"1.0.0\",\n  \"lockfileVersion\": 3,\n  \"requires\": true,\n  \"packages\": {\n    \"\": {\n      \"name\": \"mystery-road-awe-2026\",\n      \"version\": \"1.0.0\",\n      \"license\": \"UNLICENSED\",\n      \"devDependencies\": {\n        \"vite\": \"^8.3.1\"\n      }\n    },\n  ..."
     },
     {
       "id": "d1-q1-package-manager-problem",
@@ -1012,6 +1032,7 @@
       "demo": 2,
       "file": "vite.config.js",
       "line": 1,
+      "before": "// (file did not exist yet)",
       "after": "export default defineConfig({\n  base: \"./\",\n});"
     },
     {
@@ -1066,7 +1087,9 @@
       "exercise": 2,
       "demo": 3,
       "file": "vite.config.js",
-      "line": 1
+      "line": 1,
+      "before": "index.html\nstyles.css\njs/**/*.js               (16 modules)\npublic/data/*.json\npublic/assets/**",
+      "after": "dist/index.html\ndist/assets/index-<hash>.js\ndist/assets/index-<hash>.css\ndist/data/*.json\ndist/assets/logo/**\ndist/assets/people/**"
     },
     {
       "id": "d3-t2-preview-verified",
@@ -1085,6 +1108,7 @@
       "demo": 3,
       "file": "dist/assets/index-*.js",
       "line": 1,
+      "before": "// Loaded via <script type=\"module\" src=\"js/main.js\"> in index.html. This is\n// the one place in the app that bridges the module world back to the\n// classic global-script world: index.html (and a few HTML strings rendered\n// by the views) still call functions via inline onclick=\"...\"/onchange=\"...\"\n// attributes, and those always run in global scope, never in module scope\n// — a module-scoped function is invisible to them unless explicitly hung\n// off `window`. Centralizing that wiring here (rather than scattering\n// `window.foo = foo` across each view module) keeps the \"this is where\n// module-land meets legacy inline-handler-land\" boundary in one obvious\n// place.\nimport { loadBookmarksFromStorage, loadNotesFromStorage, loadNoteAsync } from \"./storage.js\";\nimport { navigateTo, handleHashChange } from \"./navigation.js\";\nimport loadAllData from \"./dataLoading.js\";\nimport { clearFilters, handleSearchInput, handleSortChange, closeEvidenceDetail, saveCurrentNote, renderEvidenceList } from \"./views/evidence.js\";",
       "after": "(function(){let e=document.createElement(`link`).relList;...  // one line, ~24KB, all 16 modules bundled"
     },
     {
@@ -1119,7 +1143,9 @@
       "exercise": 2,
       "demo": 4,
       "file": "eslint.config.js",
-      "line": 1
+      "line": 1,
+      "before": "// (file did not exist yet)",
+      "after": "import js from \"@eslint/js\";\nimport globals from \"globals\";\nimport prettierConfig from \"eslint-config-prettier\";\n\n// Flat config (ESLint 9+). Scoped to the app's own source — presentation/ is a\n// separate, stable teaching-tool engine (see presentation/README via the\n// create-presentation skill) that isn't part of the app being migrated here,\n// and dist/ is generated build output, never linted.\nexport default [\n  {\n    ignores: [\"dist/**\", \"node_modules/**\", \"presentation/**\", \".claude/**\"],\n  },\n  js.configs.recommended,\n  {\n    files: [\"**/*.js\"],\n    languageOptions: {\n      ecmaVersion: 2022,\n      sourceType: \"module\",\n      globals: {\n        ...globals.browser,\n      },\n    },\n    rules: {\n      \"no-unused-vars\": [\"error\", { argsIgnorePattern: \"^_\" }],\n      eqeqeq: \"error\",\n      \"no-var\": \"error\",\n    },\n  },\n  // Turns off ESLint stylistic rules that would otherwise conflict with\n  // Prettier's own formatting decisions — must stay last so it overrides\n  // the configs above rather than the other way round.\n  prettierConfig,\n];"
     },
     {
       "id": "d4-t2-lint-format-scripts",
@@ -1129,7 +1155,9 @@
       "exercise": 2,
       "demo": 4,
       "file": "package.json",
-      "line": 17
+      "line": 17,
+      "before": "  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"vite build\",\n    \"preview\": \"vite preview\"\n  },",
+      "after": "  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"vite build\",\n    \"preview\": \"vite preview\",\n    \"lint\": \"eslint .\",\n    \"lint:fix\": \"eslint . --fix\",\n    \"format\": \"prettier --write .\",\n    \"format:check\": \"prettier --check .\"\n  },"
     },
     {
       "id": "d4-t3-real-findings",
@@ -1176,6 +1204,7 @@
       "demo": 5,
       "file": "tsconfig.json",
       "line": 21,
+      "before": "(file did not exist yet)",
       "after": "\"strict\": true,\n\"noUnusedLocals\": true,\n\"noUnusedParameters\": true,\n\"noImplicitReturns\": true,\n\"noFallthroughCasesInSwitch\": true,\n\"noUncheckedIndexedAccess\": true,"
     },
     {
@@ -1187,6 +1216,7 @@
       "demo": 5,
       "file": "js/lookup.ts",
       "line": 19,
+      "before": "import { state } from \"./state.js\";\n\nexport function findEvidenceById(id) {\n  for (let i = 0; i < state.allEvidence.length; i++) {\n    if (state.allEvidence[i].id === id) return state.allEvidence[i];\n  }\n  return null;\n}\n\nexport function findPersonById(id) {\n  for (let i = 0; i < state.allPeople.length; i++) {\n    if (state.allPeople[i].id === id) return state.allPeople[i];\n  }\n  return null;\n}\n\nexport function findLocationById(id) {\n  for (let i = 0; i < state.allLocations.length; i++) {\n    if (state.allLocations[i].id === id) return state.allLocations[i];\n  }\n  return null;",
       "after": "interface Identifiable {\n  id: string;\n}\n\nfunction findById<T extends Identifiable>(list: T[], id: string): T | null {\n  for (const item of list) {\n    if (item.id === id) return item;\n  }\n  return null;\n}"
     },
     {
@@ -1198,6 +1228,7 @@
       "narration": "localStorage hands back strings, and JSON.parse returns `any` — the exact kind of hole strict mode can't see. Here the parsed value is deliberately annotated `unknown`, which forces a runtime check (Array.isArray) before it is allowed into state.bookmarks. The cast to string[] only happens after that check passes, and a corrupted value falls back to an empty list instead of crashing app boot. Zero `any` in the file.",
       "file": "js/storage.ts",
       "line": 20,
+      "before": "export function loadBookmarksFromStorage() {\n  try {\n    const raw = localStorage.getItem(STORAGE_KEY_BOOKMARKS);\n    const parsed = raw ? JSON.parse(raw) : [];\n    state.bookmarks = Array.isArray(parsed) ? parsed : [];\n  } catch (err) {\n    console.warn(\"Could not read stored bookmarks, starting empty\", err);\n    state.bookmarks = [];\n  }\n}",
       "after": "export function loadBookmarksFromStorage(): void {\n  try {\n    const raw = localStorage.getItem(STORAGE_KEY_BOOKMARKS);\n    const parsed: unknown = raw ? JSON.parse(raw) : [];\n    state.bookmarks = Array.isArray(parsed) ? (parsed as string[]) : [];\n  } catch (err) {\n    console.warn(\"Could not read stored bookmarks, starting empty\", err);\n    state.bookmarks = [];\n  }\n}"
     },
     {
@@ -1209,6 +1240,7 @@
       "narration": "The router's five valid hashes used to be plain strings, so a typo like navigateTo(\"evidnce\") compiled fine and silently showed nothing. ViewName is now a string-literal union, so the compiler rejects bad names at every call site. The hash comes from the URL, which the user can edit, so isViewName is a type guard: it checks at runtime and narrows the type at compile time, and anything invalid falls back to the dashboard. The for-of loops also avoid `Element | undefined` under noUncheckedIndexedAccess.",
       "file": "js/navigation.ts",
       "line": 21,
+      "before": "export function navigateTo(viewName) {\n  window.location.hash = viewName;\n}\n\nexport function handleHashChange() {\n  let hash = window.location.hash.replace(\"#\", \"\");\n  const validViews = [\"dashboard\", \"evidence\", \"people\", \"timeline\", \"workspace\"];\n  if (validViews.indexOf(hash) === -1) {\n    hash = \"dashboard\";\n  }",
       "after": "export type ViewName = \"dashboard\" | \"evidence\" | \"people\" | \"timeline\" | \"workspace\";\n\nconst VALID_VIEWS: ViewName[] = [\"dashboard\", \"evidence\", \"people\", \"timeline\", \"workspace\"];\n\nexport function navigateTo(viewName: ViewName): void {\n  window.location.hash = viewName;\n}\n\nfunction isViewName(value: string): value is ViewName {\n  return (VALID_VIEWS as string[]).includes(value);\n}\n\nexport function handleHashChange(): void {\n  const rawHash = window.location.hash.replace(\"#\", \"\");\n  const hash: ViewName = isViewName(rawHash) ? rawHash : \"dashboard\";"
     },
     {
@@ -1220,6 +1252,7 @@
       "demo": 5,
       "file": "package.json",
       "line": 19,
+      "before": "    \"dev\": \"vite\",\n    \"build\": \"vite build\",",
       "after": "\"typecheck\": \"tsc --noEmit\",\n\"build\": \"npm run typecheck && vite build\","
     },
     {
@@ -1267,6 +1300,7 @@
       "demo": 6,
       "file": "js/types.ts",
       "line": 54,
+      "before": "interface Identifiable {\n  id: string;\n}\n\ninterface EvidenceLike {\n  personIds?: string[];\n}",
       "after": "export type EvidenceStatus = \"unreviewed\" | \"reviewed\" | \"flagged\";\nexport type EvidenceRelevance = \"unknown\" | \"relevant\" | \"irrelevant\";"
     },
     {
@@ -1278,6 +1312,7 @@
       "demo": 6,
       "file": "js/dataLoading.ts",
       "line": 63,
+      "before": "async function loadCorePeopleAndLocations() {\n  const caseRes = await fetch(\"data/case.json\");\n  const caseJson = await caseRes.json();\n  state.caseData = caseJson;\n\n  const peopleRes = await fetch(\"data/people.json\");\n  const peopleJson = await peopleRes.json();\n  state.allPeople = peopleJson;\n\n  const locationsRes = await fetch(\"data/locations.json\");\n  const locationsJson = await locationsRes.json();",
       "after": "const peopleRes = await fetch(\"data/people.json\");\nstate.allPeople = (await peopleRes.json()) as Person[];"
     },
     {
@@ -1289,6 +1324,7 @@
       "demo": 6,
       "file": "js/dataLoading.ts",
       "line": 79,
+      "before": "export function evidenceMentionsPerson(ev: EvidenceLike, person: PersonLike): boolean {\n  if (!ev.personIds) return false;\n  return ev.personIds.indexOf(person.id) !== -1 || ev.personIds.indexOf(person.name) !== -1;\n}",
       "after": "function normalizePersonIds(evidence: Evidence[], people: Person[]): void {\n  const nameToId = new Map(people.map((p) => [p.name, p.id]));\n  for (const item of evidence) {\n    item.personIds = item.personIds.map((ref) => nameToId.get(ref) ?? ref);\n  }\n}"
     },
     {
@@ -1324,6 +1360,7 @@
       "demo": 7,
       "file": "js/dom.ts",
       "line": 1,
+      "before": "// js/views/evidence.js (before): every caller cast by hand, or read .value off a nullable element\n  const typeVal = document.getElementById(\"filterType\").value;\n  const personVal = document.getElementById(\"filterPerson\").value;\n  const locationVal = document.getElementById(\"filterLocation\").value;\n  const statusVal = document.getElementById(\"filterStatus\").value;",
       "after": "export function el<T extends HTMLElement = HTMLElement>(id: string): T | null {\n  return document.getElementById(id) as T | null;\n}"
     },
     {
@@ -1378,7 +1415,9 @@
       "exercise": 2,
       "demo": 8,
       "file": ".github/workflows/dev.yml",
-      "line": 1
+      "line": 1,
+      "before": "# (file did not exist yet)",
+      "after": "name: Dev checks\n\n# push covers commits landing directly on main (this repo has no branch\n# protection / required-review workflow — see EXERCISE_2.md); pull_request\n# covers any PR opened against it, so a check still runs even if someone\n# proposes changes from a fork or a feature branch instead of pushing\n# straight to main.\non:\n  push:\n  pull_request:\n\njobs:\n  lint-and-format:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Check out repository\n        uses: actions/checkout@v4\n\n      - name: Set up Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: \"24\"\n          cache: \"npm\"\n\n      - name: Install dependencies\n        run: npm ci\n\n      - name: Lint\n        run: npm run lint\n\n      - name: Format check\n        run: npm run format:check"
     },
     {
       "id": "d8-t2-real-failure-shown",
@@ -1429,6 +1468,7 @@
       "demo": 9,
       "file": ".github/workflows/deploy.yml",
       "line": 20,
+      "before": "# (file did not exist yet)",
       "after": "permissions:\n  contents: read\n  pages: write\n  id-token: write"
     },
     {
@@ -1491,7 +1531,9 @@
       "exercise": 2,
       "demo": 10,
       "file": ".github/workflows/deploy.yml",
-      "line": 20
+      "line": 20,
+      "before": "# .github/workflows/dev.yml (Demo 8): no `permissions:` block at all\nname: Dev checks\n\n# push covers commits landing directly on main (this repo has no branch\n...",
+      "after": "# Both required by actions/deploy-pages to publish: id-token to mint the\n# short-lived OIDC token that proves this specific workflow run is allowed\n# to deploy, pages to actually write the Pages deployment. Neither is\n# granted by GITHUB_TOKEN's default permissions, so both must be listed\n# explicitly — see Demo 10's Question 2.\npermissions:\n  contents: read\n  pages: write\n  id-token: write\n\n# Only one Pages deployment should ever be in flight at a time; a second\n# push while one is still deploying should queue behind it, not race it.\nconcurrency:"
     },
     {
       "id": "d10-t3-run-history-read",
