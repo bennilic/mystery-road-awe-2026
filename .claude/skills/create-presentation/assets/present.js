@@ -235,6 +235,18 @@ function showAppStep(step, token) {
     }, needsNav ? STEP_SETTLE_DELAY_MS : 30);
   };
 
+  // Optional `page` (e.g. "react.html"): which HTML entry the iframe should show. Steps without
+  // it get index.html, so switching back from the React page needs no per-step bookkeeping.
+  const desiredPage = step.page || "index.html";
+  const currentPage = (el.frame.contentWindow?.location.pathname || "").split("/").pop();
+  if (currentPage && currentPage !== desiredPage) {
+    el.frame.addEventListener("load", () => !isStale() && setTimeout(apply, INITIAL_LOAD_DELAY_MS), {
+      once: true,
+    });
+    el.frame.src = `../${desiredPage}`;
+    return;
+  }
+
   apply();
 }
 

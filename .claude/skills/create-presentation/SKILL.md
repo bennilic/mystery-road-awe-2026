@@ -144,6 +144,18 @@ bug-fix diffs.
 - If a correct side genuinely can't be derived from history, say so in your report rather than
   fabricating one.
 
+### Highlight the page before showing code changes
+
+Every `"code"` slide must be **immediately preceded** by an `"app"` slide (same `exercise`/`demo`)
+that spotlights the part of the running page the upcoming change affects — `view` + `highlight`
+(+ `waitFor` for async content), and `page` when the change lives in `react.html` instead of
+`index.html`. Show *where* on screen first, then *what* in the code. Place the page slide directly
+before its code slide in the array (equal `exercise`/`demo` keys keep array order). Narration:
+"Before the code: this is <the region>…". Exception: code with no on-screen surface (e.g. a
+config-only slide for a component not mounted anywhere) — say so in the slide's narration.
+`page` (optional, app steps): which HTML entry the iframe shows; omitted means `index.html`, and
+the engine reloads the iframe whenever consecutive steps need different pages.
+
 ## Syntax highlighting (`present.js`)
 
 The code panel colours snippets with a tiny dependency-free tokenizer (Dark+ palette, `.tok-*`

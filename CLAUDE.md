@@ -72,6 +72,12 @@ the change was made and *why* it fixes/achieves what it does, matching the "expl
 *why*, not just what" guidance already in the skill. Tag it with the correct `exercise`/`demo` per
 the skill's schema.
 
+### Highlight the page before code slides
+
+Standing instruction (2026-10-04): never show a code slide cold. Put an `app` slide with a
+`view` + `highlight` spotlight on the affected part of the running page directly before every code
+slide, then the code. Full rule in `.claude/skills/create-presentation/SKILL.md`.
+
 ### Slide title convention
 
 Every slide that answers a specific Task or Question from `EXERCISE_1.md`'s per-demo checklist
