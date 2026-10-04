@@ -352,9 +352,9 @@ function renderCodeTab(step) {
 
 // Only JS/TS is highlighted: snippets are ~all JS or TS, and a tiny in-file tokenizer keeps the
 // presenter dependency-free and usable offline (a CDN highlighter would break a talk on bad wifi).
-// Matches "x.js", "x.ts" and "app.js (pre-refactor)" — the file label sometimes carries a suffix.
+// Matches "x.js", "x.ts", "x.tsx" and "app.js (pre-refactor)" — the file label sometimes carries a suffix.
 function isJavaScriptFile(fileLabel) {
-  return /\.(js|ts)\b/.test(fileLabel || "");
+  return /\.(js|ts|jsx|tsx)\b/.test(fileLabel || "");
 }
 
 // Matches "package.json" and "tsconfig.json" (which is JSONC: may carry // comments).

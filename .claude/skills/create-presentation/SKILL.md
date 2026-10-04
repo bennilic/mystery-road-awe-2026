@@ -152,7 +152,7 @@ currently coloured:
 
 | Extension | Renderer |
 |-----------|----------|
-| `.js`, `.ts` (also labels with a suffix, e.g. `app.js (pre-refactor)`) | `renderHighlightedJavaScript` — keywords incl. TS ones, built-in types, generics, strings, numbers, comments |
+| `.js`, `.ts`, `.jsx`, `.tsx` (also labels with a suffix, e.g. `app.js (pre-refactor)`) | `renderHighlightedJavaScript` — keywords incl. TS ones, built-in types, generics, strings, numbers, comments |
 | `.json` (incl. JSONC `//` comments) | `renderHighlightedJson` — keys, string values, numbers, `true/false/null` |
 
 Anything else (`.yml`, `.css`, `.gitignore`, …) renders as plain monospace text.

@@ -1566,6 +1566,427 @@
       "narration": "on: push runs automatically whenever new commits land on the matching ref — used for both workflows here, since both should react automatically to real changes. on: pull_request runs for PR activity specifically (also on dev.yml, so a PR gets checked before it's even merged). on: workflow_dispatch is a manual, human-triggered button in the Actions UI — used for neither workflow here, since both should be fully automatic; it would make sense for something like an on-demand redeploy with no code change.",
       "exercise": 2,
       "demo": 10
+    },
+    {
+      "id": "exercise-3-intro",
+      "type": "app",
+      "title": "Exercise 3 — React Foundations & First Migration",
+      "narration": "Section marker: from here on the deck is Exercise 3 — web architecture theory (history, SSR/CSR, virtual DOM, SPA/MPA), React basics, and the first migration step: the application shell plus the Dashboard, served next to the vanilla app at react.html. Written answers live in docs/exercise-3/.",
+      "exercise": 3,
+      "demo": -1
+    },
+    {
+      "id": "ex3-d1-t1",
+      "type": "app",
+      "title": "D1 - T1 — Evolution of the web and where this app sits",
+      "narration": "Static documents, then server-rendered multi-page apps (PHP/JSP), then AJAX and jQuery, then SPA frameworks, then hybrid rendering. This app sits between AJAX and SPA frameworks: one HTML document, content created by client JS from fetched JSON — but no framework, so innerHTML string building, a global state object and a hand-written hashchange router. That is how SPAs were built before declarative UI libraries.",
+      "exercise": 3,
+      "demo": 1
+    },
+    {
+      "id": "ex3-d1-q1",
+      "type": "app",
+      "title": "D1 - Q1 — What AJAX solved and what it introduced",
+      "narration": "Solved: any interaction needing fresh data forced a full request and reload, losing scroll, focus and UI state. AJAX/jQuery fetched just the data and patched part of the DOM. New problems: you update every dependent DOM spot by hand (renderDashboard is called from four places here), state is scattered between DOM and globals, URL and history stop matching the screen, and there is no component model. SPA frameworks answered with declarative rendering, components and routers.",
+      "exercise": 3,
+      "demo": 1
+    },
+    {
+      "id": "ex3-d1-q2",
+      "type": "app",
+      "title": "D1 - Q2 — Hash routing: which era?",
+      "narration": "Early SPA era, roughly 2008–2013. Changing only the fragment is the one URL change that does not reload the page, so it was the only way to get reload-free navigation and a working back button before the History API (pushState) became reliable around 2012. It tells us client-side routing became common once browsers could change the URL without reloading. A hash is never sent to the server, so such routes cannot be server-rendered or indexed per view.",
+      "exercise": 3,
+      "demo": 1
+    },
+    {
+      "id": "ex3-d2-t1",
+      "type": "app",
+      "title": "D2 - T1 — SSR vs CSR comparison",
+      "narration": "SSR: first response is complete HTML with content, browser just parses and paints, later navigation is another document request. CSR: first response is an almost empty shell plus script tags; the browser must download and run JS, then fetch data, then build the DOM (HTML → JS → JSON waterfall); later navigation swaps views in place with at most a small JSON request. CSR is cheap to host and snappy afterwards; SSR wins on first paint, no-JS users and crawlers.",
+      "exercise": 3,
+      "demo": 2
+    },
+    {
+      "id": "ex3-d2-t2",
+      "type": "app",
+      "title": "D2 - T2 — Wikipedia is primarily SSR",
+      "narration": "Evidence from curl on en.wikipedia.org/wiki/Server-side_scripting, equivalent to view-source: a 133 KB HTML document whose paragraphs, headings and title are already in the raw response, only a handful of enhancing script tags, and no JSON call carrying the article in the network tab. Following a link triggers a new document request with a complete new HTML response — classic server-rendered navigation.",
+      "exercise": 3,
+      "demo": 2
+    },
+    {
+      "id": "ex3-d2-q1",
+      "type": "app",
+      "title": "D2 - Q1 — This app is CSR: path to a visible Dashboard",
+      "narration": "index.html contains an empty #dashboardContent with the comment rendered by app.js. Steps: server returns index.html unchanged → parser hits the stylesheet and module script → browser loads the module graph → initApp reads localStorage and calls loadAllData → fetches case, people, locations, then evidence and timeline in parallel → each step writes into state and calls renderDashboard, which sets innerHTML → overlay hides and handleHashChange shows the Dashboard. Only then is content visible.",
+      "exercise": 3,
+      "demo": 2
+    },
+    {
+      "id": "ex3-d2-q2",
+      "type": "app",
+      "title": "D2 - Q2 — A real cost of CSR",
+      "narration": "Everything the user sees depends on JavaScript and several round trips. With JS disabled: header, dead nav, empty page, loading overlay forever, no noscript fallback. Slow connection: HTML + bundle + five JSON requests before content, where SSR could paint on the first response. Crawlers that skip JS index an empty shell, and hash routes are never even seen by the server. Acceptable here because nobody needs to find this tool through search.",
+      "exercise": 3,
+      "demo": 2
+    },
+    {
+      "id": "ex3-d3-t1",
+      "type": "app",
+      "title": "D3 - T1 — What the virtual DOM is",
+      "narration": "The real DOM is the browser live element tree; replacing subtrees is costly and throws away focus, scroll and typed text. The virtual DOM is a cheap in-memory description of the UI as plain objects. On each state change a new description is built, diffed against the previous one, and only the minimal real DOM operations are applied. It solves how to write render everything from state without paying for rebuilding the whole real DOM or hand-writing the which-nodes-changed logic.",
+      "exercise": 3,
+      "demo": 3
+    },
+    {
+      "id": "ex3-d3-t2",
+      "type": "code",
+      "title": "D3 - T2 — One bookmark click rebuilds every card",
+      "narration": "In the original app.js, toggling one bookmark flips one id in an array, but then calls renderEvidenceList, which concatenates all 18 cards into one string and assigns innerHTML — destroying and recreating every card to change one class and one star glyph. It also re-adds the click listener on every render. The After tab is an illustrative React equivalent (the Evidence list itself migrates in Exercise 4): the same toggle yields a new virtual tree where only one className and one icon differ.",
+      "exercise": 3,
+      "demo": 3,
+      "file": "app.js (pre-refactor)",
+      "before": "function handleBookmarkClick(evidenceId) {\n  var ev = findEvidenceById(evidenceId);\n  if (!ev) return;\n\n  if (bookmarks.indexOf(evidenceId) === -1) {\n    bookmarks.push(evidenceId);\n    ev.bookmarked = true;\n  } else {\n    bookmarks = bookmarks.filter(function (id) {\n      return id !== evidenceId;\n    });\n    ev.bookmarked = false;\n  }\n  saveBookmarksToStorage();\n  if (currentPage === \"evidence\") renderEvidenceList();\n}\n\n// ...which does, for ALL cards:\n  var html = \"\";\n  if (results.length === 0) {\n    html = \"<p>No evidence matches the current filters.</p>\";\n  }\n  for (var i = 0; i < results.length; i++) {\n    html += renderEvidenceCardHTML(results[i]);\n  }\n  container.innerHTML = html;",
+      "after": "// Illustrative (Evidence view is migrated in Exercise 4):\nfunction EvidenceGrid({ items, bookmarks, onToggle }) {\n  return items.map((ev) => (\n    // key lets React match old and new cards by identity\n    <EvidenceCard key={ev.id} ev={ev} isBookmarked={bookmarks.includes(ev.id)} onToggle={onToggle} />\n  ));\n}\n// Toggling one bookmark: 17 cards produce identical elements,\n// the diff finds 1 className + 1 text change -> 2 real DOM writes."
+    },
+    {
+      "id": "ex3-d3-q1",
+      "type": "app",
+      "title": "D3 - Q1 — How a virtual DOM avoids the rebuild",
+      "narration": "After the click the library produces a new virtual tree where 17 cards are identical and one has a different className and icon text. Diffing finds only those two differences, so two real DOM updates happen and the other cards keep their nodes, focus and scroll. In React, key={ev.id} lets reconciliation match cards by identity rather than position.",
+      "exercise": 3,
+      "demo": 3
+    },
+    {
+      "id": "ex3-d3-q2",
+      "type": "app",
+      "title": "D3 - Q2 — Is the virtual DOM faster than innerHTML?",
+      "narration": "Not inherently — it is a trade. Diffing is extra CPU and memory on top of the eventual DOM writes; a hand-written classList.toggle beats it, and a one-off full replacement via the native HTML parser can too. What you buy is a good worst case and a simple model: write render everything from state, get small DOM updates. You trade diffing cost for less DOM churn and far less hand-written update code.",
+      "exercise": 3,
+      "demo": 3
+    },
+    {
+      "id": "ex3-d3-q3",
+      "type": "app",
+      "title": "D3 - Q3 — Does a virtual DOM make an app fast?",
+      "narration": "No. React apps are still slow with excessive re-renders from state placed too high, expensive work in render instead of useMemo, missing or unstable keys that defeat the diff, huge lists without windowing, large bundles and request waterfalls (untouched by the virtual DOM), and effects that set state in loops.",
+      "exercise": 3,
+      "demo": 3
+    },
+    {
+      "id": "ex3-d4-t1",
+      "type": "app",
+      "title": "D4 - T1 — How navigation works today",
+      "narration": "Click → navigateTo sets location.hash (no request) → hashchange event → handleHashChange: read hash with dashboard fallback, set state.currentPage, move .active between sections and nav buttons, render the view on first visit only. Not happening versus an MPA: no HTTP request for a document, no HTML re-parse, no JS reload — the heap, state, filters and open detail all survive — and no re-sent header or stylesheet. Try it live with the hash in the address bar.",
+      "exercise": 3,
+      "demo": 4
+    },
+    {
+      "id": "ex3-d4-t2",
+      "type": "app",
+      "title": "D4 - T2 — State lost on reload vs preserved",
+      "narration": "Preserved: bookmarks, notes and the saved hypothesis (localStorage), and the current view (URL hash). Lost: all fetched data (re-fetched on boot), evidence filters/search/sort, the open evidence detail, the People/Locations tab, timeline filters, unsaved hypothesis edits, viewRendered flags and loading flags — everything that lives only in memory or DOM control values.",
+      "exercise": 3,
+      "demo": 4
+    },
+    {
+      "id": "ex3-d4-q1",
+      "type": "app",
+      "title": "D4 - Q1 — Where does the current page data live?",
+      "narration": "MPA: on the server (database, session) and in the request (URL, cookies, form post); the client is stateless between requests. SPA: in browser memory (the state object here) and browser storage; the server only serves data. Good: instant navigation, no refetching, UI state survives view changes, simple cacheable server. Bad: state is lost on reload unless persisted, can go stale (the vanilla dashboard bug), is not shareable via URL, and two tabs diverge.",
+      "exercise": 3,
+      "demo": 4
+    },
+    {
+      "id": "ex3-d4-q2",
+      "type": "app",
+      "title": "D4 - Q2 — What a router library adds",
+      "narration": "handleHashChange only maps a hash string to class toggling. A router also provides History API path URLs, route params and nesting, query strings (shareable filters), real not-found handling, declarative route matching, scroll and focus management, navigation guards and redirects, lazy loading per route, real anchor-link semantics (middle-click, new tab) and per-route data loading.",
+      "exercise": 3,
+      "demo": 4
+    },
+    {
+      "id": "ex3-d4-q3",
+      "type": "app",
+      "title": "D4 - Q3 — The back button today",
+      "narration": "Each navigateTo assigns the hash, which adds a history entry. Back restores the previous hash, fires hashchange (no page load), and handleHashChange shows that view — the browser owns the stack, the app only reacts. In-view state is not in the URL, so Evidence looks as before only because its DOM section was never destroyed; after a reload that state is gone.",
+      "exercise": 3,
+      "demo": 4
+    },
+    {
+      "id": "ex3-d5-t1",
+      "type": "code",
+      "title": "D5 - T1 — A tiny JSX component",
+      "narration": "A deliberately tiny component: no props, no state, static data rendered as JSX. It type-checks under the strict tsconfig. Curly braces embed JS expressions, className replaces the reserved word class, and exactly one root element is returned.",
+      "exercise": 3,
+      "demo": 5,
+      "file": "react/sandbox/CaseBadge.tsx",
+      "before": "(file did not exist yet)",
+      "after": "// Exercise 3 / Demo 5 — Task 1: a deliberately tiny component. No props, no\n// state: it only proves JSX can render a piece of static data. It is not\n// mounted anywhere in the app; `npm run typecheck` still compiles it.\nconst CASE_ID = \"REMOTION-2026-10\";\nconst CASE_STATUS = \"open\";\n\nexport function CaseBadge() {\n  return (\n    <p>\n      Case <strong>{CASE_ID}</strong> is <span className=\"badge badge-flagged\">{CASE_STATUS}</span>\n    </p>\n  );\n}\n"
+    },
+    {
+      "id": "ex3-d5-t2",
+      "type": "code",
+      "title": "D5 - T2 — Component vs function returning an HTML string",
+      "narration": "renderEvidenceCardHTML returns a string that the caller must push through innerHTML; afterwards it has no relationship to the DOM it produced — nothing re-runs it, it has no state or lifecycle, markup is untyped and escaping is manual (title is concatenated unescaped). A React component returns elements that React owns: it decides when to re-call it, diffs and patches the DOM, holds state via hooks, composes as a tag, and escapes by default.",
+      "exercise": 3,
+      "demo": 5,
+      "file": "app.js (pre-refactor) vs react/sandbox/CaseBadge.tsx",
+      "before": "function renderEvidenceCardHTML(ev) {\n  var isBookmarked = bookmarks.indexOf(ev.id) !== -1;\n  var html = '<div class=\"evidence-card\" data-id=\"' + ev.id + '\">';\n  html += '<button class=\"bookmark-btn ' + (isBookmarked ? \"active\" : \"\") + '\" data-action=\"bookmark\" data-id=\"' + ev.id + '\" aria-label=\"Toggle bookmark for ' + ev.title + '\"><span class=\"bookmark-icon\">' + (isBookmarked ? \"★\" : \"☆\") + \"</span></button>\";\n  html += \"<h3>\" + ev.title + \"</h3>\";\n  html += '<div class=\"evidence-meta\">' + ev.id + \" &middot; \" + ev.type + \" &middot; \" + formatDate(ev.timestamp) + \"</div>\";\n  html += '<div class=\"evidence-summary\">' + ev.summary + \"</div>\";\n\n  if (ev.tags.indexOf(\"critical\") !== -1) {\n    html += '<span class=\"badge badge-critical\">Critical</span>';\n  }\n  html += '<span class=\"badge ' + getStatusBadgeClass(ev.status) + '\">' + ev.status + \"</span>\";\n  html += '<span class=\"badge ' + getRelevanceBadgeClass(ev.relevance) + '\">' + ev.relevance + \"</span>\";\n  html += \"<div>\";\n  for (var t = 0; t < ev.tags.length; t++) {\n    html += '<span class=\"tag-chip\">' + ev.tags[t] + \"</span>\";\n  }\n  html += \"</div>\";\n  html += \"</div>\";\n  return html;\n}",
+      "after": "// Exercise 3 / Demo 5 — Task 1: a deliberately tiny component. No props, no\n// state: it only proves JSX can render a piece of static data. It is not\n// mounted anywhere in the app; `npm run typecheck` still compiles it.\nconst CASE_ID = \"REMOTION-2026-10\";\nconst CASE_STATUS = \"open\";\n\nexport function CaseBadge() {\n  return (\n    <p>\n      Case <strong>{CASE_ID}</strong> is <span className=\"badge badge-flagged\">{CASE_STATUS}</span>\n    </p>\n  );\n}\n"
+    },
+    {
+      "id": "ex3-d5-q1",
+      "type": "app",
+      "title": "D5 - Q1 — What is JSX?",
+      "narration": "JSX is syntax sugar for function calls, not HTML and not a string. With the automatic runtime, <p>Case <strong>{id}</strong></p> becomes jsxs(\"p\", { children: [\"Case \", jsx(\"strong\", { children: id })] }); the classic form is React.createElement. Each call returns a plain object, a React element — so a component returns a tree of objects that React diffs before touching the DOM. Vite plugin-react and tsconfig jsx react-jsx do this.",
+      "exercise": 3,
+      "demo": 5
+    },
+    {
+      "id": "ex3-d5-q2",
+      "type": "app",
+      "title": "D5 - Q2 — How each output becomes real DOM",
+      "narration": "String version: text goes into innerHTML and the browser HTML parser rebuilds all nodes every time, replacing what was there; the app keeps no representation of the result. Component version: React elements are objects in memory; React keeps the previous tree, diffs, and calls DOM APIs (createElement, className, textContent) only for differences. Values go in as text nodes and properties, so nothing is interpreted as markup.",
+      "exercise": 3,
+      "demo": 5
+    },
+    {
+      "id": "ex3-d5-q3",
+      "type": "app",
+      "title": "D5 - Q3 — Components are just functions",
+      "narration": "A component is (props) => UI and React expects it pure. React may call it more than once (StrictMode double-invokes in dev), pause or discard renders (concurrent rendering), or skip it. A render-time side effect — mutating a global, localStorage write, fetch — runs an unpredictable number of times, makes components order-dependent, shows inconsistent UI between components sharing the global, and leaves effects of renders the user never saw. Effects belong in event handlers and useEffect.",
+      "exercise": 3,
+      "demo": 5
+    },
+    {
+      "id": "ex3-d6-t1",
+      "type": "code",
+      "title": "D6 - T1 — Vite: React plugin and two build entries",
+      "narration": "Added the React plugin (JSX transform plus Fast Refresh) and listed both HTML pages in rollupOptions.input — the dev server serves any root html file, but vite build only bundles listed inputs, so react.html would otherwise be silently dropped from production.",
+      "exercise": 3,
+      "demo": 6,
+      "file": "vite.config.js",
+      "before": "import { defineConfig } from \"vite\";\n\n// Relative base (\"./\" instead of the default \"/\") so the built app's asset\n// URLs work both at a domain root and at a GitHub Pages project-site path\n// like /mystery-road-awe-2026/ — without this, the production build's\n// injected <script>/<link> tags would 404 once deployed under a subpath.\nexport default defineConfig({\n  base: \"./\",\n});\n",
+      "after": "import { defineConfig } from \"vite\";\nimport react from \"@vitejs/plugin-react\";\n\n// Relative base (\"./\" instead of the default \"/\") so the built app's asset\n// URLs work both at a domain root and at a GitHub Pages project-site path\n// like /mystery-road-awe-2026/ — without this, the production build's\n// injected <script>/<link> tags would 404 once deployed under a subpath.\n//\n// Exercise 3: the React migration ships as a second HTML entry point\n// (react.html) next to the untouched vanilla index.html. Vite's dev server\n// serves every root-level .html file as-is, but `vite build` only bundles\n// the entries listed in rollupOptions.input — without listing both, the\n// production build would silently drop react.html.\nexport default defineConfig({\n  base: \"./\",\n  plugins: [react()],\n  build: {\n    rollupOptions: {\n      input: {\n        main: \"index.html\",\n        react: \"react.html\",\n      },\n    },\n  },\n});\n"
+    },
+    {
+      "id": "ex3-d6-t1b",
+      "type": "code",
+      "title": "D6 - T1 — tsconfig: JSX mode and include",
+      "narration": "jsx react-jsx tells tsc to type-check JSX with the automatic runtime (no import React); tsc only checks, Vite compiles. The include change matters: without react/**/*.tsx, npm run typecheck would silently skip the new files. Types come from @types/react and @types/react-dom, which the React packages do not ship.",
+      "exercise": 3,
+      "demo": 6,
+      "file": "tsconfig.json",
+      "before": "\"module\": \"ESNext\",\n\"moduleResolution\": \"Bundler\",\n...\n\"include\": [\"js/**/*.ts\", \"vite.config.ts\"]",
+      "after": "\"module\": \"ESNext\",\n\"jsx\": \"react-jsx\",\n\"moduleResolution\": \"Bundler\",\n...\n\"include\": [\"js/**/*.ts\", \"react/**/*.ts\", \"react/**/*.tsx\", \"vite.config.ts\"]"
+    },
+    {
+      "id": "ex3-d6-t2",
+      "type": "code",
+      "title": "D6 - T2 — Entry point: react.html and main.tsx",
+      "narration": "react.html is a second page with an empty #root and a module script; main.tsx mounts <App /> with createRoot. The vanilla index.html is untouched, so the working app keeps working.",
+      "exercise": 3,
+      "demo": 6,
+      "file": "react/main.tsx",
+      "before": "(file did not exist yet)",
+      "after": "import { StrictMode } from \"react\";\nimport { createRoot } from \"react-dom/client\";\nimport { App } from \"./App.tsx\";\n\nconst rootElement = document.getElementById(\"root\");\nif (!rootElement) {\n  throw new Error('react.html has no <div id=\"root\"> to mount the React app into.');\n}\n\ncreateRoot(rootElement).render(\n  <StrictMode>\n    <App />\n  </StrictMode>,\n);\n"
+    },
+    {
+      "id": "ex3-d6-t3",
+      "type": "code",
+      "title": "D6 - T3 / Q3 — How vanilla and React coexist",
+      "narration": "Decision: two HTML entry points side by side (index.html vanilla, react.html React); choosing the version is choosing the URL. It keeps the app and this presentation working, allows side-by-side comparison, and avoids two renderers fighting over the same DOM nodes. A full swap-over would remove four views that do not exist in React yet. Cost: the other four views are stubs linking to the vanilla app until Exercise 5.",
+      "exercise": 3,
+      "demo": 6,
+      "file": "vite.config.js",
+      "before": "export default defineConfig({\n  base: \"./\",\n  // single page: index.html only\n});",
+      "after": "export default defineConfig({\n  base: \"./\",\n  plugins: [react()],\n  build: {\n    rollupOptions: {\n      // two coexisting pages: vanilla (index.html) and React (react.html)\n      input: { main: \"index.html\", react: \"react.html\" },\n    },\n  },\n});"
+    },
+    {
+      "id": "ex3-d6-q1",
+      "type": "app",
+      "title": "D6 - Q1 — What had to be installed and why",
+      "narration": "react: core, elements, hooks, jsx-runtime. react-dom: the browser renderer that turns elements into DOM. @vitejs/plugin-react: JSX transform and Fast Refresh in Vite. @types/react and @types/react-dom: type declarations. tsconfig jsx: how tsc types JSX. tsconfig include and rollupOptions.input: so type-check and production build see the new files.",
+      "exercise": 3,
+      "demo": 6
+    },
+    {
+      "id": "ex3-d6-q2",
+      "type": "app",
+      "title": "D6 - Q2 — From .tsx to the DOM",
+      "narration": "Browser loads react.html → requests react/main.tsx → Vite transforms on demand (esbuild strips types, compiles JSX to jsx() calls, rewrites bare imports to pre-bundled deps) → main.tsx calls createRoot(#root).render(<App />) → React runs App and child components recursively down to host elements (render phase) → react-dom creates real nodes and inserts them (commit phase) → later updates diff and patch.",
+      "exercise": 3,
+      "demo": 6
+    },
+    {
+      "id": "ex3-d7-t1",
+      "type": "app",
+      "title": "D7 - T1 — Component hierarchy for the whole app",
+      "narration": "Shell (Header with NavBar, router outlet, Footer) over five pages. Dashboard (built): HowToUseCard, CaseSummaryCard, StatGrid/StatCard, ReviewProgress, RecentEvidenceList, RecentTimelineList. Evidence (Ex 4): toolbar, grid of EvidenceCard with BookmarkButton, Badge and TagChip, plus EvidenceDetail with NoteEditor. People (Ex 4): TabBar, PersonCard and modal, LocationCard. Timeline and Workspace (Ex 5): TimelineItem, BookmarkList, NotesList, HypothesisForm. Mermaid diagram in docs/exercise-3/03-component-hierarchy.md.",
+      "exercise": 3,
+      "demo": 7
+    },
+    {
+      "id": "ex3-d7-t2",
+      "type": "app",
+      "title": "D7 - T2 — Props and data sources",
+      "narration": "EvidenceCard: evidence, isBookmarked, onToggleBookmark, onOpen — from the filtered list in EvidencePage and the bookmarks store. Badge: kind and value, mapped via lookup.ts helpers. StatCard: value and label from StatGrid, derived from CaseDataContext. FilterSelect: label, options, value, onChange — options derived from data, value from page filter state. HypothesisForm: people, evidence, draft, onSave — draft from localStorage. TimelineItem and NoteEditor are in the table too.",
+      "exercise": 3,
+      "demo": 7
+    },
+    {
+      "id": "ex3-d7-q1",
+      "type": "app",
+      "title": "D7 - Q1 — Own component vs inline",
+      "narration": "Extract when it is reused (or clearly will be), has its own state or behavior, is a nameable unit with a small stable prop interface, can be rendered and tested from props alone, or its parent has become hard to read. Keep inline when used once, static and tiny — the brand block in Header. Rule of thumb: extract on the second real use, earlier if two or three of the criteria hold.",
+      "exercise": 3,
+      "demo": 7
+    },
+    {
+      "id": "ex3-d7-q2",
+      "type": "app",
+      "title": "D7 - Q2 — Badge: extracted instead of duplicated",
+      "narration": "The status badge appears in Evidence cards, the detail view, Dashboard recent rows and Workspace bookmarks. One component keeps the class mapping, the lowercase guard for dirty data and escaping in one place. Vanilla copy-pasted the string fragment into each renderer, sharing only the getStatusBadgeClass helper, not the markup — adding an icon or aria-label meant editing every copy. The one place it did extract markup was statCardHTML, the string-based ancestor of StatCard.",
+      "exercise": 3,
+      "demo": 7
+    },
+    {
+      "id": "ex3-d7-q3",
+      "type": "app",
+      "title": "D7 - Q3 — Why design the whole tree now",
+      "narration": "It sets the seams before code resists them (build Badge once, not twice), shows where state must live — bookmarks are needed by EvidenceCard, BookmarkList and the Dashboard StatGrid, which exposes that the placeholder provider must grow writable shared state — avoids costly later lifting of state, lets Exercises 4 and 5 be split and estimated, and gives the ADR something concrete. The trade-off: a plan before building is a hypothesis, so it stays a living document.",
+      "exercise": 3,
+      "demo": 7
+    },
+    {
+      "id": "ex3-d8-t1",
+      "type": "app",
+      "title": "D8 - T1 — ADR: is an SPA with React right for this app?",
+      "narration": "Recommended: keep the SPA, render it with React + TypeScript. The app is interaction-heavy (filter, sort, bookmark, notes, hypothesis), data is small static JSON, state is client-held in localStorage, there is no backend, and no SEO or first-paint pressure. React removes the stale-render and duplicated-markup bug classes seen in Exercises 1 and 3. Full text: docs/exercise-3/04-adr-spa-react.md.",
+      "exercise": 3,
+      "demo": 8
+    },
+    {
+      "id": "ex3-d8-t2",
+      "type": "app",
+      "title": "D8 - T2 — Honest downsides",
+      "narration": "React bundle is about 227 kB (71 kB gzip) versus about 20 kB for the whole vanilla app — roughly 11 times more JS for the same screen. More tooling and dependencies, CSR costs remain (blank without JS, waterfall, nothing for crawlers), hooks have their own bug classes, it is arguably overkill for 1.8k lines, and the migration leaves a split codebase until Exercise 5. Alternatives: server-rendered MPA, Preact or Svelte, Astro/Next if SEO or SSR ever matter.",
+      "exercise": 3,
+      "demo": 8
+    },
+    {
+      "id": "ex3-d8-q1",
+      "type": "app",
+      "title": "D8 - Q1 — What each alternative would lose",
+      "narration": "Server-rendered vanilla loses instant reload-free interaction (filters, open detail and notes UI reset), a single place for shared state, and component reuse — but gains tiny payloads, no-JS operation and crawlability. React over another SPA approach loses size and startup (about 70 kB gzip vs about 4 kB Preact or near zero compiled), simplicity (build step, JSX, hooks rules) and direct control over updates — but gains ecosystem, teaching standard and best TypeScript tooling.",
+      "exercise": 3,
+      "demo": 8
+    },
+    {
+      "id": "ex3-d8-q2",
+      "type": "app",
+      "title": "D8 - Q2 — Low-end devices as a hard requirement",
+      "narration": "I would change the architecture: a CSR SPA puts download, parse, execute, fetch and render cost on exactly the device and network least able to pay. First choice is prerendering or SSG the content with selective hydration of the interactive parts (islands, e.g. Astro); then a lighter client (Preact or plain TS, route-level code splitting); then fewer round trips by inlining critical JSON and caching with a service worker. The requirement flips the priority from interactivity to first meaningful paint on weak hardware.",
+      "exercise": 3,
+      "demo": 8
+    },
+    {
+      "id": "ex3-d9-t1",
+      "type": "code",
+      "title": "D9 - T1 — Shell: header, nav bar and routing skeleton",
+      "narration": "The shell is Header (with brand and NavBar), the PAGES table in App.tsx, and Footer; useHashRoute is the routing skeleton. PAGES is typed Record<ViewName, ...> so a sixth view without a page is a compile error.",
+      "exercise": 3,
+      "demo": 9,
+      "file": "react/App.tsx",
+      "before": "(file did not exist yet)",
+      "after": "import type { ReactNode } from \"react\";\nimport { Header } from \"./components/Header.tsx\";\nimport { Footer } from \"./components/Footer.tsx\";\nimport { CaseDataProvider } from \"./data/CaseDataContext.tsx\";\nimport { DashboardPage } from \"./pages/DashboardPage.tsx\";\nimport { StubPage } from \"./pages/StubPage.tsx\";\nimport { useHashRoute, type ViewName } from \"./routing/useHashRoute.ts\";\n\n// One entry per route. Typing the record as Record<ViewName, ...> makes the\n// compiler fail if a sixth view is added to ViewName without a page here.\nconst PAGES: Record<ViewName, () => ReactNode> = {\n  dashboard: () => <DashboardPage />,\n  evidence: () => <StubPage title=\"Evidence Catalogue\" migratedInExercise={4} />,\n  people: () => <StubPage title=\"People & Locations\" migratedInExercise={4} />,\n  timeline: () => <StubPage title=\"Investigation Timeline\" migratedInExercise={5} />,\n  workspace: () => <StubPage title=\"Investigator Workspace\" migratedInExercise={5} />,\n};\n\nexport function App() {\n  const currentView = useHashRoute();\n\n  return (\n    <CaseDataProvider>\n      <Header currentView={currentView} />\n      <main id=\"app\" className=\"app-main\">\n        {PAGES[currentView]()}\n      </main>\n      <Footer />\n    </CaseDataProvider>\n  );\n}\n"
+    },
+    {
+      "id": "ex3-d9-t2",
+      "type": "code",
+      "title": "D9 - T2 — Navigating between stub pages",
+      "narration": "Five routes mirror the vanilla views; dashboard is real, the other four render StubPage with the milestone where they are migrated. Clicking a nav button changes the rendered page and the active nav styling; Back and Forward work because the hash is still the source of truth. Verified live in the browser.",
+      "exercise": 3,
+      "demo": 9,
+      "file": "react/components/NavBar.tsx",
+      "before": "(file did not exist yet)",
+      "after": "import { VIEWS, navigateTo, type ViewName } from \"../routing/useHashRoute.ts\";\n\ninterface NavBarProps {\n  currentView: ViewName;\n}\n\nexport function NavBar({ currentView }: NavBarProps) {\n  return (\n    <nav className=\"main-nav\" aria-label=\"Main navigation\">\n      {VIEWS.map((view) => (\n        <button\n          key={view.id}\n          type=\"button\"\n          className={view.id === currentView ? \"nav-btn active\" : \"nav-btn\"}\n          onClick={() => navigateTo(view.id)}\n        >\n          {view.label}\n        </button>\n      ))}\n    </nav>\n  );\n}\n"
+    },
+    {
+      "id": "ex3-d9-q1",
+      "type": "code",
+      "title": "D9 - Q1 — How the current view is tracked",
+      "narration": "Same idea: the URL hash is the source of truth, a hashchange listener reacts, unknown values fall back to dashboard. Different: vanilla copies the view into state.currentPage and into which section and which button has the active class — three places to keep in sync — and handleHashChange imperatively edits the DOM. React derives the view from the hash on every render via useSyncExternalStore, so no copy exists, and the output declares the active button and page. Superficial: addEventListener hashchange versus subscribe.",
+      "exercise": 3,
+      "demo": 9,
+      "file": "js/navigation.ts vs react/routing/useHashRoute.ts",
+      "before": "export function handleHashChange(): void {\n  const rawHash = window.location.hash.replace(\"#\", \"\");\n  const hash: ViewName = isViewName(rawHash) ? rawHash : \"dashboard\";\n  state.currentPage = hash;",
+      "after": "export function useHashRoute(): ViewName {\n  const hash = useSyncExternalStore(subscribe, () => window.location.hash);\n  return parseView(hash);\n}\n"
+    },
+    {
+      "id": "ex3-d9-q2",
+      "type": "code",
+      "title": "D9 - Q2 — A view that does not exist",
+      "narration": "#nonsense falls back to the Dashboard, identical to the vanilla fallback: parseView is the old isViewName check. Honest caveat: the URL still says #nonsense and it is not a real 404; a NotFoundPage branch or redirect would be the alternative. I kept the vanilla behaviour so the migration stays behaviour-preserving; a router library would make this an explicit catch-all route.",
+      "exercise": 3,
+      "demo": 9,
+      "file": "js/navigation.ts vs react/routing/useHashRoute.ts",
+      "before": "const rawHash = window.location.hash.replace(\"#\", \"\");\nconst hash: ViewName = isViewName(rawHash) ? rawHash : \"dashboard\";",
+      "after": "function parseView(hash: string): ViewName {\n  const raw = hash.replace(\"#\", \"\");\n  return isViewName(raw) ? raw : \"dashboard\";\n}\n"
+    },
+    {
+      "id": "ex3-d10-t1",
+      "type": "code",
+      "title": "D10 - T1 — Dashboard rebuilt as components",
+      "narration": "The string builder is split into CaseSummaryCard, StatGrid/StatCard, ReviewProgress, RecentEvidenceList and RecentTimelineList under DashboardPage, following the Demo 7 hierarchy, reading the same data/*.json files.",
+      "exercise": 3,
+      "demo": 10,
+      "file": "js/views/dashboard.ts vs react/pages/DashboardPage.tsx",
+      "before": "export function renderDashboard(): void {\n  const container = document.getElementById(\"dashboardContent\");\n  if (!container) return;\n\n  let reviewedCount = 0;\n  for (const item of state.allEvidence) {\n    if ((item.status || \"\").toLowerCase() === \"reviewed\") reviewedCount++;\n  }\n\n  const progressPct =\n    state.allEvidence.length === 0\n      ? 0\n      : Math.round((reviewedCount / state.allEvidence.length) * 100);\n\n  let html = \"\";\n  html += '<div class=\"case-summary-card\">';\n  html += \"<h3>\" + (state.caseData?.title || \"Case\") + \"</h3>\";\n  html +=\n    '<p><span class=\"badge badge-flagged\">' +\n    (state.caseData?.status || \"unknown\").toUpperCase() +\n    \"</span></p>\";\n  html += \"<p>\" + (state.caseData?.summary || \"\") + \"</p>\";\n  html += \"</div>\";\n\n  html += '<div class=\"stat-grid\">';\n  html += statCardHTML(state.allEvidence.length, \"Evidence items\");\n  html += statCardHTML(state.allPeople.length, \"People\");\n  html += statCardHTML(state.allLocations.length, \"Locations\");\n  html += statCardHTML(state.bookmarks.length, \"Bookmarked\");\n  html += statCardHTML(reviewedCount, \"Reviewed\");\n  html += \"</div>\";\n\n  html += '<div class=\"dashboard-panel\">';",
+      "after": "import { useState } from \"react\";\nimport { useCaseData, type CaseData } from \"../data/CaseDataContext.tsx\";\nimport { readBookmarkCount } from \"../data/bookmarks.ts\";\nimport { HowToUseCard } from \"../dashboard/HowToUseCard.tsx\";\nimport { CaseSummaryCard } from \"../dashboard/CaseSummaryCard.tsx\";\nimport { StatGrid } from \"../dashboard/StatGrid.tsx\";\nimport { ReviewProgress } from \"../dashboard/ReviewProgress.tsx\";\nimport { RecentEvidenceList } from \"../dashboard/RecentEvidenceList.tsx\";\nimport { RecentTimelineList } from \"../dashboard/RecentTimelineList.tsx\";\n\nconst RECENT_ITEM_COUNT = 5;\n\nfunction DashboardContent({ data }: { data: CaseData }) {\n  // Lazy initializer: runs once per mount. The page unmounts when the user\n  // navigates away, so coming back re-reads localStorage and can never show\n  // a stale bookmark count.\n  const [bookmarkCount] = useState(readBookmarkCount);\n\n  // Derived values are computed during render from the data, not stored in\n  // state — there is no second copy that could go out of sync.\n  const reviewedCount = data.evidence.filter(\n    (item) => (item.status || \"\").toLowerCase() === \"reviewed\",\n  ).length;\n  const progressPercent =\n    data.evidence.length === 0 ? 0 : Math.round((reviewedCount / data.evidence.length) * 100);\n\n  const recentEvidence = data.evidence.slice(-RECENT_ITEM_COUNT).reverse();\n  const recentTimeline = data.timeline.slice(-RECENT_ITEM_COUNT).reverse();\n\n  return (\n    <>\n      <CaseSummaryCard caseInfo={data.caseInfo} />\n      <StatGrid\n        evidenceCount={data.evidence.length}\n        peopleCount={data.people.length}\n        locationCount={data.locations.length}\n        bookmarkCount={bookmarkCount}\n        reviewedCount={reviewedCount}\n      />\n      <ReviewProgress progressPercent={progressPercent} />\n      <div className=\"dashboard-columns\">\n        <RecentEvidenceList items={recentEvidence} />\n        <RecentTimelineList events={recentTimeline} />\n      </div>\n    </>\n  );\n}\n\nexport function DashboardPage() {\n  const caseData = useCaseData();\n\n  return (\n    <section className=\"view active\">\n      <h2>Case Dashboard</h2>\n      <HowToUseCard />\n      {caseData.status === \"loading\" && <p>Loading case file&hellip;</p>}\n      {caseData.status === \"error\" && (\n        <p role=\"alert\">\n          The case file could not be loaded ({caseData.message}). Check that the dev server is\n          running and reload the page.\n        </p>\n      )}\n      {caseData.status === \"ready\" && <DashboardContent data={caseData.data} />}\n    </section>\n  );\n}\n"
+    },
+    {
+      "id": "ex3-d10-t2",
+      "type": "app",
+      "title": "D10 - T2 — Verified with real data",
+      "narration": "Playwright against the dev server: the visible text of <main> in react.html is character-for-character identical to #view-dashboard in the vanilla app (18 evidence, 6 people, 6 locations, 1 bookmarked, 1 reviewed, 6 percent, same recent lists). Navigating Dashboard → Workspace → Dashboard keeps data, and the bookmark count re-reads localStorage on return (1 → 3). typecheck, lint and build pass. Open http://localhost:8080/react.html next to the vanilla app to show it live.",
+      "exercise": 3,
+      "demo": 10
+    },
+    {
+      "id": "ex3-d10-q1",
+      "type": "code",
+      "title": "D10 - Q1 — Where the data comes from",
+      "narration": "CaseDataProvider fetches the same five data/*.json files once with Promise.all into a loading/error/ready state and exposes it through context; DashboardPage reads it with useCaseData() and passes slices down as props. This is a placeholder: it is read-only while Evidence and Workspace will write bookmarks, notes and the hypothesis; there is no caching; it deliberately does not reuse dataLoading.ts, which mutates the state singleton and pokes DOM React does not own; and bookmarks are read from localStorage instead of shared state. Exercises 4/5 lift shared domain state into a reducer or store.",
+      "exercise": 3,
+      "demo": 10,
+      "file": "js/dataLoading.ts vs react/data/CaseDataContext.tsx",
+      "before": "async function loadCorePeopleAndLocations(): Promise<void> {\n  const caseRes = await fetch(\"data/case.json\");\n  state.caseData = (await caseRes.json()) as CaseInfo;\n\n  const peopleRes = await fetch(\"data/people.json\");\n  state.allPeople = (await peopleRes.json()) as Person[];\n\n  const locationsRes = await fetch(\"data/locations.json\");\n  state.allLocations = (await locationsRes.json()) as Location[];\n\n  hideLoadingStep();\n  renderDashboard();\n  populateAllDropdowns();\n}",
+      "after": "async function loadCaseData(): Promise<CaseData> {\n  const [caseInfo, evidence, people, locations, timeline] = await Promise.all([\n    fetchJson<CaseInfo>(\"data/case.json\"),\n    fetchJson<Evidence[]>(\"data/evidence.json\"),\n    fetchJson<Person[]>(\"data/people.json\"),\n    fetchJson<Location[]>(\"data/locations.json\"),\n    fetchJson<TimelineEvent[]>(\"data/timeline.json\"),\n  ]);\n  return { caseInfo, evidence, people, locations, timeline };\n}"
+    },
+    {
+      "id": "ex3-d10-q2",
+      "type": "code",
+      "title": "D10 - Q2 — Stale-on-first-visit risk in React?",
+      "narration": "The vanilla bug came from a manual cache flag: render only if !viewRendered.dashboard. React has no such flag: DashboardContent re-runs whenever its inputs change, the page remounts on every visit, and values are derived during render rather than stored, so there is no second copy to drift. Honest limits: the bookmark count is read once per mount, so it would be stale if bookmarks changed while the Dashboard stays mounted (impossible until Evidence is migrated), and the fetched data loads once.",
+      "exercise": 3,
+      "demo": 10,
+      "file": "js/navigation.ts vs react/pages/DashboardPage.tsx",
+      "before": "if (hash === \"dashboard\" && !state.viewRendered.dashboard) {\n  renderDashboard();\n  state.viewRendered.dashboard = true;\n}",
+      "after": "  // Lazy initializer: runs once per mount. The page unmounts when the user\n  // navigates away, so coming back re-reads localStorage and can never show\n  // a stale bookmark count.\n  const [bookmarkCount] = useState(readBookmarkCount);\n\n  // Derived values are computed during render from the data, not stored in\n  // state — there is no second copy that could go out of sync.\n  const reviewedCount = data.evidence.filter(\n    (item) => (item.status || \"\").toLowerCase() === \"reviewed\",\n  ).length;\n  const progressPercent =\n    data.evidence.length === 0 ? 0 : Math.round((reviewedCount / data.evidence.length) * 100);\n\n  const recentEvidence = data.evidence.slice(-RECENT_ITEM_COUNT).reverse();\n  const recentTimeline = data.timeline.slice(-RECENT_ITEM_COUNT).reverse();"
+    },
+    {
+      "id": "ex3-d10-q3",
+      "type": "code",
+      "title": "D10 - Q3 — When derived values are recalculated",
+      "narration": "Vanilla recomputes only when something calls renderDashboard — after each of three loading steps and on first visit — so a later bookmark toggle never reached the numbers; the developer has to remember to call it. React recomputes reviewedCount and progressPercent on every render of DashboardContent, i.e. on mount or when props/state change, never otherwise. It is declarative and data-driven, and the percentage cannot disagree with the stat cards because both come from one pass over the same array. Left un-memoised on purpose: 18 items; useMemo with [data.evidence] if it grew.",
+      "exercise": 3,
+      "demo": 10,
+      "file": "js/views/dashboard.ts vs react/pages/DashboardPage.tsx",
+      "before": "  let reviewedCount = 0;\n  for (const item of state.allEvidence) {\n    if ((item.status || \"\").toLowerCase() === \"reviewed\") reviewedCount++;\n  }\n\n  const progressPct =\n    state.allEvidence.length === 0\n      ? 0\n      : Math.round((reviewedCount / state.allEvidence.length) * 100);",
+      "after": "  const reviewedCount = data.evidence.filter(\n    (item) => (item.status || \"\").toLowerCase() === \"reviewed\",\n  ).length;\n  const progressPercent =\n    data.evidence.length === 0 ? 0 : Math.round((reviewedCount / data.evidence.length) * 100);"
     }
   ]
 }
