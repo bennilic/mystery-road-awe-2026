@@ -78,6 +78,11 @@ Standing instruction (2026-10-04): never show a code slide cold. Put an `app` sl
 `view` + `highlight` spotlight on the affected part of the running page directly before every code
 slide, then the code. Full rule in `.claude/skills/create-presentation/SKILL.md`.
 
+### Never dim the explanation panel
+
+Standing instruction (2026-10-04): when a highlight and the explanation are shown together, only
+the page is dimmed — the narration panel stays fully bright. Details in the create-presentation skill.
+
 ### Slide title convention
 
 Every slide that answers a specific Task or Question from `EXERCISE_1.md`'s per-demo checklist

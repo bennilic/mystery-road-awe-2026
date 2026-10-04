@@ -156,6 +156,11 @@ config-only slide for a component not mounted anywhere) — say so in the slide'
 `page` (optional, app steps): which HTML entry the iframe shows; omitted means `index.html`, and
 the engine reloads the iframe whenever consecutive steps need different pages.
 
+**Never dim the explanation panel.** The spotlight's dark mask covers only the app stage; the
+narration panel must stay at full brightness while a highlight is active (`#narration` is
+`position: relative; z-index: 10`, above `#spotlight`'s z-index 5 — keep it that way if the CSS is
+touched).
+
 ## Syntax highlighting (`present.js`)
 
 The code panel colours snippets with a tiny dependency-free tokenizer (Dark+ palette, `.tok-*`

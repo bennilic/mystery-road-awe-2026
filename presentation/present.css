@@ -175,6 +175,10 @@ body {
   background: var(--panel-bg);
   border-left: 1px solid var(--panel-border);
   gap: 10px;
+  /* Must out-rank #spotlight (z-index 5): its 9999px box-shadow mask is position:fixed and
+     would otherwise paint over — and dim — this panel too. Only the app frame gets dimmed. */
+  position: relative;
+  z-index: 10;
 }
 
 #stepCounter {
