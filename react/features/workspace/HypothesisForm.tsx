@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import {
   readHypothesisDraft,
   writeHypothesisDraft,
@@ -7,10 +7,9 @@ import type { Evidence, HypothesisDraft, Person } from "../../../js/types.ts";
 
 const SAVED_MESSAGE_MS = 2000;
 
-function readText(formData: FormData, fieldName: string): string {
-  const value = formData.get(fieldName);
-  return typeof value === "string" ? value : "";
-}
+// Every field the user edits, in one object. savedAt is stamped on save, so it
+// is not part of the form's own state.
+type HypothesisFormValues = Omit<HypothesisDraft, "savedAt">;
 
 interface HypothesisFormProps {
   people: Person[];
@@ -18,28 +17,21 @@ interface HypothesisFormProps {
 }
 
 export function HypothesisForm({ people, evidence }: HypothesisFormProps) {
-  // Initial values only: the fields below are uncontrolled (defaultValue).
-  const [storedDraft] = useState(readHypothesisDraft);
-  const [confidence, setConfidence] = useState(storedDraft.confidence);
+  const [values, setValues] = useState<HypothesisFormValues>(readHypothesisDraft);
   const [isSavedMessageVisible, setIsSavedMessageVisible] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  function handleConfidenceChange(event: ChangeEvent<HTMLInputElement>) {
-    setConfidence(event.target.value);
+  // One updater for all fields: copies the old object and replaces one key.
+  function updateField<Field extends keyof HypothesisFormValues>(
+    field: Field,
+    value: HypothesisFormValues[Field],
+  ) {
+    setValues((previous) => ({ ...previous, [field]: value }));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const draft: HypothesisDraft = {
-      suspectId: readText(formData, "suspectId"),
-      nature: readText(formData, "nature"),
-      evidenceIds: formData.getAll("evidenceIds").filter((id) => typeof id === "string"),
-      confidence: readText(formData, "confidence"),
-      explanation: readText(formData, "explanation"),
-      alternative: readText(formData, "alternative"),
-      savedAt: new Date().toISOString(),
-    };
+    const draft: HypothesisDraft = { ...values, savedAt: new Date().toISOString() };
     try {
       writeHypothesisDraft(draft);
     } catch (error) {
@@ -60,7 +52,11 @@ export function HypothesisForm({ people, evidence }: HypothesisFormProps) {
       <form id="hypothesisForm" onSubmit={handleSubmit}>
         <div className="form-row">
           <label htmlFor="hypSuspect">Suspected responsible person</label>
-          <select id="hypSuspect" name="suspectId" defaultValue={storedDraft.suspectId}>
+          <select
+            id="hypSuspect"
+            value={values.suspectId}
+            onChange={(event) => updateField("suspectId", event.target.value)}
+          >
             <option value="">Select a person…</option>
             {people.map((person) => (
               <option key={person.id} value={person.id}>
@@ -72,7 +68,11 @@ export function HypothesisForm({ people, evidence }: HypothesisFormProps) {
 
         <div className="form-row">
           <label htmlFor="hypNature">Accidental or deliberate incident</label>
-          <select id="hypNature" name="nature" defaultValue={storedDraft.nature}>
+          <select
+            id="hypNature"
+            value={values.nature}
+            onChange={(event) => updateField("nature", event.target.value)}
+          >
             <option value="">Select…</option>
             <option value="accidental">Accidental</option>
             <option value="deliberate">Deliberate</option>
@@ -82,12 +82,19 @@ export function HypothesisForm({ people, evidence }: HypothesisFormProps) {
 
         <div className="form-row">
           <label htmlFor="hypEvidence">Selected supporting evidence</label>
+          {/* A multi-select's value is an array; the change event exposes the
+              chosen <option>s through selectedOptions. */}
           <select
             id="hypEvidence"
-            name="evidenceIds"
             multiple
             size={6}
-            defaultValue={storedDraft.evidenceIds}
+            value={values.evidenceIds}
+            onChange={(event) =>
+              updateField(
+                "evidenceIds",
+                Array.from(event.target.selectedOptions, (option) => option.value),
+              )
+            }
           >
             {evidence.map((item) => (
               <option key={item.id} value={item.id}>
@@ -102,23 +109,23 @@ export function HypothesisForm({ people, evidence }: HypothesisFormProps) {
           <input
             type="range"
             id="hypConfidence"
-            name="confidence"
             min={0}
             max={100}
-            defaultValue={storedDraft.confidence}
-            onChange={handleConfidenceChange}
+            value={values.confidence}
+            onChange={(event) => updateField("confidence", event.target.value)}
           />
-          <output id="hypConfidenceValue">{confidence}</output>
+          {/* Read from the same state as the slider: no second copy to sync. */}
+          <output id="hypConfidenceValue">{values.confidence}</output>
         </div>
 
         <div className="form-row">
           <label htmlFor="hypExplanation">Written explanation</label>
           <textarea
             id="hypExplanation"
-            name="explanation"
             rows={4}
             placeholder="Explain your reasoning…"
-            defaultValue={storedDraft.explanation}
+            value={values.explanation}
+            onChange={(event) => updateField("explanation", event.target.value)}
           />
         </div>
 
@@ -126,10 +133,10 @@ export function HypothesisForm({ people, evidence }: HypothesisFormProps) {
           <label htmlFor="hypAlternative">Alternative explanation</label>
           <textarea
             id="hypAlternative"
-            name="alternative"
             rows={3}
             placeholder="What else could explain the evidence?"
-            defaultValue={storedDraft.alternative}
+            value={values.alternative}
+            onChange={(event) => updateField("alternative", event.target.value)}
           />
         </div>
 

@@ -23,7 +23,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | # | Demo | Ready? |
 |---|---|---|
 | 1 | Migrate event handling from vanilla listeners | ☑ |
-| 2 | `useState` & controlled forms | ☐ |
+| 2 | `useState` & controlled forms | ☑ |
 | 3 | Immutable updates | ☐ |
 | 4 | Derived values vs. stored state | ☐ |
 | 5 | Lifting state to the nearest common owner | ☐ |
@@ -54,15 +54,15 @@ every render. Do you still need that pattern in React? Why or why not?
 
 **Tasks**
 
-- [ ] Make the Evidence search box a controlled input (`value` + `onChange` backed by `useState`).
-- [ ] Make the entire hypothesis form (suspect select, nature select, evidence multi-select,
+- [x] Make the Evidence search box a controlled input (`value` + `onChange` backed by `useState`).
+- [x] Make the entire hypothesis form (suspect select, nature select, evidence multi-select,
 confidence range, explanation and alternative textareas) fully controlled.
-- [ ] Wire the "Save hypothesis draft" action to read from your controlled state and persist it (still to `localStorage` for now).
+- [x] Wire the "Save hypothesis draft" action to read from your controlled state and persist it (still to `localStorage` for now).
 
 **Questions** (depend on the tasks above)
 
-- [ ] What makes an input "controlled" versus "uncontrolled" in React? Show what happens if you try to type in one of your controlled inputs without wiring its `onChange` and explain, in terms of React's render cycle, *why* that happens.
-- [ ] The hypothesis form has several different input types (select, multi-select, range, textarea). Did you use one `useState` per field, or a single object? Justify your choice — and note this question again once you get to Demo 7 (`useReducer`), which asks you to reconsider it for a different form.
+- [x] What makes an input "controlled" versus "uncontrolled" in React? Show what happens if you try to type in one of your controlled inputs without wiring its `onChange` and explain, in terms of React's render cycle, *why* that happens.
+- [x] The hypothesis form has several different input types (select, multi-select, range, textarea). Did you use one `useState` per field, or a single object? Justify your choice — and note this question again once you get to Demo 7 (`useReducer`), which asks you to reconsider it for a different form.
 
 ---
 

@@ -3323,6 +3323,111 @@
       "file": "react/features/evidence/EvidenceCard.tsx",
       "before": "  container.innerHTML = html;\n\n  // Event delegation for card clicks / bookmark button.\n  container.addEventListener(\"click\", handleEvidenceListClick);\nfunction handleEvidenceListClick(event: Event): void {\n  const target = event.target as HTMLElement;\n\n  if (target.dataset && target.dataset.action === \"bookmark\") {\n    event.stopPropagation();\n    handleBookmarkClick(target.dataset.id!);\n    return;\n  }\n\n  const card = target.closest<HTMLElement>(\".evidence-card\");\n  if (card) {\n    openEvidenceDetail(card.getAttribute(\"data-id\")!);\n  }\n}",
       "after": "    // React attaches this handler itself; there is no inline HTML attribute string\n    // and no listener on a parent container to dispatch by event.target.\n    <div className=\"evidence-card\" onClick={() => onOpen(item.id)}>\n      <button\n        type=\"button\"\n        className={isBookmarked ? \"bookmark-btn active\" : \"bookmark-btn\"}\n        aria-label={`Toggle bookmark for ${item.title}`}\n        onClick={(event) => {\n          // The button sits inside the clickable card: without this the same\n          // click would also open the detail panel.\n          event.stopPropagation();\n          onToggleBookmark(item.id);\n        }}\n      >\n        <span className=\"bookmark-icon\">{isBookmarked ? \"★\" : \"☆\"}</span>"
+    },
+    {
+      "id": "ex5-d2-t1-page",
+      "type": "app",
+      "title": "D2 - T1 — On the page: the search box",
+      "narration": "Before the code: the search box is now controlled. What you see in it is always the searchTerm state; the list below is filtered from that same value.",
+      "exercise": 5,
+      "demo": 2,
+      "highlight": "#evidenceSearch",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d2-t1",
+      "type": "code",
+      "title": "D2 - T1 — Controlled search input (value + onChange backed by useState)",
+      "narration": "Demo 1 had onChange but no value: the DOM owned the text and React only listened. Now value={searchTerm} makes React the source of truth: the field always shows the state, and onChange is the only way the state (and therefore the screen) can change. Benefit visible later: anything that sets searchTerm (Clear filters in Demo 7, a URL, a saved filter) updates the field for free, which an uncontrolled input cannot do without poking the DOM. Verified in the browser: typing 'chat' keeps the text and leaves 2 of 18 cards.",
+      "exercise": 5,
+      "demo": 2,
+      "file": "react/features/evidence/EvidenceToolbar.tsx",
+      "before": "        <input\n          type=\"text\"\n          id=\"evidenceSearch\"\n          placeholder=\"Search evidence by title, summary, or tag…\"\n          autoComplete=\"off\"\n          defaultValue=\"\"\n          onChange={onSearchChange}\n        />\n        <FilterSelect\n          id=\"filterType\"",
+      "after": "        <input\n          type=\"text\"\n          id=\"evidenceSearch\"\n          placeholder=\"Search evidence by title, summary, or tag…\"\n          autoComplete=\"off\"\n          value={searchTerm}\n          onChange={onSearchChange}\n        />\n        <FilterSelect\n          id=\"filterType\"\n          label=\"Filter by type\"",
+      "line": 69
+    },
+    {
+      "id": "ex5-d2-t2-page",
+      "type": "app",
+      "title": "D2 - T2 — On the page: the hypothesis form",
+      "narration": "Before the code: all six fields of the hypothesis form (person select, nature select, evidence multi-select, confidence slider, two textareas) are controlled; the number next to the slider is read from the same state as the slider.",
+      "exercise": 5,
+      "demo": 2,
+      "highlight": ".hypothesis-card",
+      "waitFor": "#hypSuspect",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d2-t2",
+      "type": "code",
+      "title": "D2 - T2 — The whole hypothesis form controlled by one state object",
+      "narration": "Every field has value + onChange. The multi-select is the odd one: its value is an array and the change event only exposes the picked options through selectedOptions, so onChange maps them with Array.from(event.target.selectedOptions, o => o.value). The range's value is a string (HypothesisDraft.confidence is a string for that reason). The <output> next to the slider used to be updated by a hand-written input listener that set textContent; now it simply prints values.confidence, so it cannot disagree with the slider. Verified: choosing a person, nature, three evidence items, confidence 81 and two texts, then saving and reloading the page restores every field.",
+      "exercise": 5,
+      "demo": 2,
+      "file": "react/features/workspace/HypothesisForm.tsx",
+      "before": "export function HypothesisForm({ people, evidence }: HypothesisFormProps) {\n  // Initial values only: the fields below are uncontrolled (defaultValue).\n  const [storedDraft] = useState(readHypothesisDraft);\n  const [confidence, setConfidence] = useState(storedDraft.confidence);\n  const [isSavedMessageVisible, setIsSavedMessageVisible] = useState(false);\n  const [saveError, setSaveError] = useState<string | null>(null);\n\n  function handleConfidenceChange(event: ChangeEvent<HTMLInputElement>) {\n    setConfidence(event.target.value);\n  }\n\n  function handleSubmit(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const formData = new FormData(event.currentTarget);\n    const draft: HypothesisDraft = {\n      suspectId: readText(formData, \"suspectId\"),\n      nature: readText(formData, \"nature\"),\n      evidenceIds: formData.getAll(\"evidenceIds\").filter((id) => typeof id === \"string\"),\n      confidence: readText(formData, \"confidence\"),\n      explanation: readText(formData, \"explanation\"),\n      alternative: readText(formData, \"alternative\"),\n      savedAt: new Date().toISOString(),",
+      "after": "export function HypothesisForm({ people, evidence }: HypothesisFormProps) {\n  const [values, setValues] = useState<HypothesisFormValues>(readHypothesisDraft);\n  const [isSavedMessageVisible, setIsSavedMessageVisible] = useState(false);\n  const [saveError, setSaveError] = useState<string | null>(null);\n\n  // One updater for all fields: copies the old object and replaces one key.\n  function updateField<Field extends keyof HypothesisFormValues>(\n    field: Field,\n    value: HypothesisFormValues[Field],\n  ) {\n    setValues((previous) => ({ ...previous, [field]: value }));\n  }\n\n  function handleSubmit(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const draft: HypothesisDraft = { ...values, savedAt: new Date().toISOString() };\n    try {\n      writeHypothesisDraft(draft);\n    } catch (error) {\n      const reason = error instanceof Error ? error.message : String(error);\n      setSaveError(\n        `Your hypothesis draft could not be saved to this browser (${reason}). Free up browser storage or leave private browsing, then press Save again.`,\n      );\n      return;\n    }",
+      "line": 19
+    },
+    {
+      "id": "ex5-d2-t3",
+      "type": "code",
+      "title": "D2 - T3 — Save reads the controlled state and persists it",
+      "narration": "handleSubmit no longer reads the DOM (FormData in the Demo 1 version, getElementById(...).value in the vanilla one): the draft is just the state object plus a timestamp. Because the state always equals what is on screen, 'read the form' and 'read the state' are the same thing, but the state is typed and testable. It is still written to localStorage under remotion_hypothesis (same key and shape as the vanilla app) and a failed write shows the reason and what to do instead of failing silently. Verified in localStorage after clicking Save: {suspectId:'nova-byte', nature:'deliberate', evidenceIds:['E02','E05','E09'], confidence:'81', ...}. The 'Saved' message disappears after 2 s.",
+      "exercise": 5,
+      "demo": 2,
+      "file": "react/features/workspace/HypothesisForm.tsx",
+      "before": "  function handleSubmit(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const formData = new FormData(event.currentTarget);\n    const draft: HypothesisDraft = {\n      suspectId: readText(formData, \"suspectId\"),\n      nature: readText(formData, \"nature\"),\n      evidenceIds: formData.getAll(\"evidenceIds\").filter((id) => typeof id === \"string\"),\n      confidence: readText(formData, \"confidence\"),\n      explanation: readText(formData, \"explanation\"),\n      alternative: readText(formData, \"alternative\"),\n      savedAt: new Date().toISOString(),\n    };\n    try {\n      writeHypothesisDraft(draft);\n    } catch (error) {\n      const reason = error instanceof Error ? error.message : String(error);\n      setSaveError(\n        `Your hypothesis draft could not be saved to this browser (${reason}). Free up browser storage or leave private browsing, then press Save again.`,\n      );\n      return;\n    }\n    setSaveError(null);",
+      "after": "  function handleSubmit(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const draft: HypothesisDraft = { ...values, savedAt: new Date().toISOString() };\n    try {\n      writeHypothesisDraft(draft);\n    } catch (error) {\n      const reason = error instanceof Error ? error.message : String(error);\n      setSaveError(\n        `Your hypothesis draft could not be saved to this browser (${reason}). Free up browser storage or leave private browsing, then press Save again.`,",
+      "line": 32
+    },
+    {
+      "id": "ex5-d2-q1-page",
+      "type": "app",
+      "title": "D2 - Q1 — On the page: a field with value but no onChange",
+      "narration": "Before the code: this is a throwaway sandbox page. The first field has value=\"try typing here\" and no onChange. Typing 'abc' into it changes nothing. The second field is wired and echoes what is typed.",
+      "exercise": 5,
+      "demo": 2,
+      "highlight": "#frozenInput",
+      "waitFor": "#frozenInput",
+      "page": "sandbox-state.html"
+    },
+    {
+      "id": "ex5-d2-q1",
+      "type": "code",
+      "title": "D2 - Q1 — Controlled vs uncontrolled, and the frozen field",
+      "narration": "Controlled: React state is the single source of truth and the DOM element only displays it (value + onChange). Uncontrolled: the DOM element keeps its own text and React reads it when needed (defaultValue, ref, FormData), like Demo 1. What happens without onChange (recorded with Playwright: typed 'abc' into the field, value stayed 'try typing here', and React logged \"You provided a `value` prop to a form field without an `onChange` handler. This will render a read-only field\"): a keystroke fires an input event, React runs the handlers (none), nothing calls setState, so there is no re-render, and after the event React sets the DOM value back to the prop value because the render output still says 'try typing here'. The render cycle is: event, setState, re-render with new state, DOM updated to match. Break the first link and the DOM is reset to the last render. The wired field proves it: typing 'abc' produces three events, three setState calls, three renders, and the echo shows 'abc'.",
+      "exercise": 5,
+      "demo": 2,
+      "file": "react/sandbox/ControlledInputDemo.tsx",
+      "before": "<input id=\"frozenInput\" type=\"text\" value=\"try typing here\" />\n// typed 'abc' -> value is still \"try typing here\"\n// console: You provided a `value` prop to a form field without an `onChange` handler. This will render a read-only field.",
+      "after": "<input id=\"wiredInput\" type=\"text\" value={text} onChange={(event) => setText(event.target.value)} />\n// typed 'abc' -> value \"abc\", echo \"abc\""
+    },
+    {
+      "id": "ex5-d2-q2-page",
+      "type": "app",
+      "title": "D2 - Q2 — On the page: six different input types",
+      "narration": "Before the code: select, multi-select, range and two textareas, all feeding one object.",
+      "exercise": 5,
+      "demo": 2,
+      "highlight": ".hypothesis-card",
+      "waitFor": "#hypSuspect",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d2-q2",
+      "type": "code",
+      "title": "D2 - Q2 — One useState object or one per field? (revisit in Demo 7)",
+      "narration": "I used a single object with one updateField(field, value) helper. Reasons: the six values form one thing that is saved, restored and (later) reset together, so the draft written to localStorage is simply the state plus savedAt; the loaded draft initialises the state in one call (useState(readHypothesisDraft)); and the typed updateField<Field extends keyof Values> keeps each field's type (evidenceIds is a string[], the others strings). The price: every update must copy the object ({...previous, [field]: value}); forgetting the spread would lose the other five fields, and every keystroke re-renders the whole form. Six useStates would avoid the spread and need no helper, but would give six setters and a draft that must be assembled by hand at save time. Both are fine at this size. Note for Demo 7: the Evidence filters are the other form-like state, with seven fields and a 'reset everything' operation, and there I switch to useReducer; this question is asked again there.",
+      "exercise": 5,
+      "demo": 2,
+      "file": "react/features/workspace/HypothesisForm.tsx",
+      "before": "// six separate fields instead (the alternative, not used)\nconst [suspectId, setSuspectId] = useState(draft.suspectId);\nconst [nature, setNature] = useState(draft.nature);\nconst [evidenceIds, setEvidenceIds] = useState(draft.evidenceIds);\nconst [confidence, setConfidence] = useState(draft.confidence);\nconst [explanation, setExplanation] = useState(draft.explanation);\nconst [alternative, setAlternative] = useState(draft.alternative);",
+      "after": "type HypothesisFormValues = Omit<HypothesisDraft, \"savedAt\">;\n\n  const [values, setValues] = useState<HypothesisFormValues>(readHypothesisDraft);\n  function updateField<Field extends keyof HypothesisFormValues>(\n    field: Field,\n    value: HypothesisFormValues[Field],\n  ) {\n    setValues((previous) => ({ ...previous, [field]: value }));\n  }\n"
     }
   ]
 }

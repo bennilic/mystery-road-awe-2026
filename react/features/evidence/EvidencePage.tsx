@@ -63,6 +63,7 @@ function EvidenceContent({ data }: { data: CaseData }) {
   return (
     <>
       <EvidenceToolbar
+        searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
         typeOptions={[...new Set(data.evidence.map((item) => item.type.toLowerCase()))].map(
           (type) => ({ value: type, label: type }),

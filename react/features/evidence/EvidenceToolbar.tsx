@@ -44,6 +44,7 @@ const RELEVANCE_OPTIONS: FilterOption[] = [
 ];
 
 interface EvidenceToolbarProps {
+  searchTerm: string;
   onSearchChange: (event: ChangeEvent<HTMLInputElement>) => void;
   typeOptions: FilterOption[];
   personOptions: FilterOption[];
@@ -51,6 +52,7 @@ interface EvidenceToolbarProps {
 }
 
 export function EvidenceToolbar({
+  searchTerm,
   onSearchChange,
   typeOptions,
   personOptions,
@@ -62,14 +64,14 @@ export function EvidenceToolbar({
         <label htmlFor="evidenceSearch" className="visually-hidden">
           Search evidence
         </label>
-        {/* onChange hands us React's SyntheticEvent; the input itself stays
-            uncontrolled (defaultValue) until Demo 2. */}
+        {/* Controlled: what is shown is always the searchTerm state; typing
+            only changes the screen because onChange updates that state. */}
         <input
           type="text"
           id="evidenceSearch"
           placeholder="Search evidence by title, summary, or tag…"
           autoComplete="off"
-          defaultValue=""
+          value={searchTerm}
           onChange={onSearchChange}
         />
         <FilterSelect
