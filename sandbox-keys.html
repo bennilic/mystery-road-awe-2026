@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Exercise 4 / Demo 4 &ndash; key sandbox (throwaway)</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-main">
+      <h2>key sandbox (throwaway, not part of the app)</h2>
+      <p>
+        The first row's note field was filled in by hand-typed text. Now change the array behind the
+        list:
+      </p>
+      <!-- Plain buttons OUTSIDE React: they re-render the root with a new array,
+           which is exactly what a parent would do if its data were reordered. -->
+      <div class="toolbar-row">
+        <button type="button" id="reverseBtn" class="btn btn-primary">Reverse order</button>
+        <button type="button" id="dropFirstBtn" class="btn">Drop first person</button>
+      </div>
+      <div id="sandboxRoot"></div>
+    </main>
+    <script type="module" src="react/sandbox/keysMain.tsx"></script>
+  </body>
+</html>
