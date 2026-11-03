@@ -2521,6 +2521,115 @@
       "before": "{data.people.map((person) => (\n  <PersonCard person={person} ... />   // no key: React warns and matches by position\n))}",
       "after": "{data.people.map((person) => (\n  <PersonCard key={person.id} person={person} ... />\n))}",
       "line": 33
+    },
+    {
+      "id": "ex4-d4-t1-before-page",
+      "type": "app",
+      "title": "D4 - T1 — On the page: the sandbox before changing the list",
+      "narration": "Before the code: a throwaway page (not part of the app) with a list of people. Each row has a note field, and the first row already has text typed into it. The next slide reverses the array.",
+      "exercise": 4,
+      "demo": 4,
+      "highlight": "ul.mini-list",
+      "waitFor": "li",
+      "page": "sandbox-keys.html"
+    },
+    {
+      "id": "ex4-d4-t1-after-page",
+      "type": "app",
+      "title": "D4 - T1 — On the page: after reversing (key={person.id})",
+      "narration": "Before the code: this slide presses \"Reverse order\" with the FIXED list. The typed text stays with Signal Scholar, who is now last. With the key={index} version (commit cde2a9f) the text stayed in row 1 and ended up next to Root Harbor.",
+      "exercise": 4,
+      "demo": 4,
+      "highlight": "ul.mini-list",
+      "waitFor": "li",
+      "page": "sandbox-keys.html",
+      "action": {
+        "type": "click",
+        "selector": "#reverseBtn"
+      }
+    },
+    {
+      "id": "ex4-d4-t1",
+      "type": "code",
+      "title": "D4 - T1 — key={index} goes wrong, key={person.id} fixes it",
+      "narration": "Row 1 holds uncontrolled DOM state (what was typed into the input), which React does not track. With key={index}, after the array is reversed React sees \"key 0 again\" and reuses the first row element: it updates the name next to it but keeps the old input, so the note now belongs to Root Harbor. Dropping the first person has the same effect: Kernel Colt inherits the text. Before tab: the index version plus what I recorded in the browser; After tab: stable ids plus the recorded result. Why this happens: key says \"this is the same item as before\", and an index only says \"this is the same position\".",
+      "exercise": 4,
+      "demo": 4,
+      "file": "react/sandbox/KeyedPersonList.tsx",
+      "before": "import type { Person } from \"../../js/types.ts\";\n\ninterface KeyedPersonListProps {\n  people: Person[];\n}\n\n// Exercise 4 / Demo 4 — THROWAWAY. Every row owns one piece of state React\n// does not track: what was typed into the uncontrolled <input>. That makes\n// \"which row is this?\" visible. Not mounted anywhere in the app.\nexport function KeyedPersonList({ people }: KeyedPersonListProps) {\n  return (\n    <ul className=\"mini-list\">\n      {people.map((person, index) => (\n        <li className=\"mini-list-item\" key={index}>\n          <strong>{person.name}</strong>{\" \"}\n          <input type=\"text\" aria-label={`Note about ${person.name}`} />\n        </li>\n      ))}\n    </ul>\n  );\n}\n\n/* Playwright against sandbox-keys.html with key={index}:\n   typed text \"typed for the first person\" sits in row 1 (Signal Scholar).\n   After \"Reverse order\":\n     Root Harbor     | typed for the first person   <-- WRONG row\n     Refactor Rex    |\n     ...\n     Signal Scholar  |                              <-- note lost\n   After \"Drop first person\" (instead of reverse):\n     Kernel Colt     | typed for the first person   <-- WRONG row */",
+      "after": "import type { Person } from \"../../js/types.ts\";\n\ninterface KeyedPersonListProps {\n  people: Person[];\n}\n\n// Exercise 4 / Demo 4 — THROWAWAY (now fixed with key={person.id}; the previous\n// commit has the key={index} version). Every row owns one piece of state React\n// does not track: what was typed into the uncontrolled <input>. That makes\n// \"which row is this?\" visible. Not mounted anywhere in the app.\nexport function KeyedPersonList({ people }: KeyedPersonListProps) {\n  return (\n    <ul className=\"mini-list\">\n      {people.map((person) => (\n        <li className=\"mini-list-item\" key={person.id}>\n          <strong>{person.name}</strong>{\" \"}\n          <input type=\"text\" aria-label={`Note about ${person.name}`} />\n        </li>\n      ))}\n    </ul>\n  );\n}\n\n/* Same steps with key={person.id}:\n   After \"Reverse order\":\n     Root Harbor     |\n     ...\n     Signal Scholar  | typed for the first person   <-- follows its person\n   After \"Drop first person\":\n     Kernel Colt     |   (nobody inherits the dropped person's text) */",
+      "line": 11
+    },
+    {
+      "id": "ex4-d4-q1-page",
+      "type": "app",
+      "title": "D4 - Q1 — On the page: real lists use ids",
+      "narration": "Before the code: the real people list on the page uses key={person.id}, so it is safe if the array ever changes order.",
+      "exercise": 4,
+      "demo": 4,
+      "highlight": ".people-grid",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d4-q1",
+      "type": "code",
+      "title": "D4 - Q1 — Missing, duplicated and index keys",
+      "narration": "Missing: React warns and silently falls back to position (same as index). Duplicated: React warns, and two siblings share an identity, so on update one of them may be skipped, duplicated or kept stale, and the behaviour is unspecified. Index on a list that can reorder, filter or insert: elements are matched by position, so anything that lives with the element (typed text, focus, scroll, checked state, a child component's useState, a CSS animation) stays at the position instead of following the data. That is exactly what the sandbox showed. It also causes needless work: after inserting at the top, every row looks \"changed\". Index keys are fine for a list that never changes.",
+      "exercise": 4,
+      "demo": 4,
+      "file": "react/sandbox/KeyedPersonList.tsx",
+      "before": "import type { Person } from \"../../js/types.ts\";\n\ninterface KeyedPersonListProps {\n  people: Person[];\n}\n\n// Exercise 4 / Demo 4 — THROWAWAY. Every row owns one piece of state React\n// does not track: what was typed into the uncontrolled <input>. That makes\n// \"which row is this?\" visible. Not mounted anywhere in the app.\nexport function KeyedPersonList({ people }: KeyedPersonListProps) {\n  return (\n    <ul className=\"mini-list\">\n      {people.map((person, index) => (\n        <li className=\"mini-list-item\" key={index}>\n          <strong>{person.name}</strong>{\" \"}\n          <input type=\"text\" aria-label={`Note about ${person.name}`} />\n        </li>\n      ))}\n    </ul>\n  );\n}",
+      "after": "import type { Person } from \"../../js/types.ts\";\n\ninterface KeyedPersonListProps {\n  people: Person[];\n}\n\n// Exercise 4 / Demo 4 — THROWAWAY (now fixed with key={person.id}; the previous\n// commit has the key={index} version). Every row owns one piece of state React\n// does not track: what was typed into the uncontrolled <input>. That makes\n// \"which row is this?\" visible. Not mounted anywhere in the app.\nexport function KeyedPersonList({ people }: KeyedPersonListProps) {\n  return (\n    <ul className=\"mini-list\">\n      {people.map((person) => (\n        <li className=\"mini-list-item\" key={person.id}>\n          <strong>{person.name}</strong>{\" \"}\n          <input type=\"text\" aria-label={`Note about ${person.name}`} />\n        </li>\n      ))}\n    </ul>\n  );\n}",
+      "line": 11
+    },
+    {
+      "id": "ex4-d4-q2-page",
+      "type": "app",
+      "title": "D4 - Q2 — On the page: the vanilla Workspace notes list",
+      "narration": "Before the code: this is the Workspace notes list in the vanilla app, where each note was rendered into a div whose id was built from an array index.",
+      "exercise": 4,
+      "demo": 4,
+      "highlight": "#notesList",
+      "view": "workspace",
+      "page": "index.html"
+    },
+    {
+      "id": "ex4-d4-q2",
+      "type": "code",
+      "title": "D4 - Q2 — The index-as-identifier bug, ported to key={index}",
+      "narration": "The vanilla renderNotesList pushed {index: i, ...} where i is the position in allEvidence and rendered id=\"noteText-\" + index. That id is a position, not an identity: Exercise 1 Demo 2 found that allEvidence was being re-sorted by accident, so the same note would get a different id. Ported directly as key={index}, would a user notice? Only sometimes. React does not warn at all for index keys (it warns only for MISSING keys), so there is not even a console hint. And for rows that are plain text React just updates the text in place and the screen is correct. The user only sees a bug if the row owns state outside the data: a note with an editable textarea, an expanded/collapsed panel, focus, or a row component with its own useState. In Exercise 5 the notes become editable, so then it would produce the visible symptom from the sandbox (my text appears under another evidence item). So: silent today, a real bug the moment rows get state.",
+      "exercise": 4,
+      "demo": 4,
+      "file": "js/views/workspace.ts",
+      "before": "html += '<div id=\"noteText-' + entry.index + '\">' + entry.text + \"</div></div>\";",
+      "after": "{notes.map((note) => (\n  <NoteRow key={note.evidenceId} note={note} />   // stable id: the evidence id\n))}",
+      "line": 90
+    },
+    {
+      "id": "ex4-d4-q3-page",
+      "type": "app",
+      "title": "D4 - Q3 — On the page: ids are available here",
+      "narration": "Before the code: people, locations and timeline events all carry ids (signal-scholar, L01, T01...), so none of these lists needs an index key.",
+      "exercise": 4,
+      "demo": 4,
+      "highlight": ".timeline-container",
+      "waitFor": ".timeline-event",
+      "view": "timeline",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d4-q3",
+      "type": "code",
+      "title": "D4 - Q3 — Is key={index} ever legitimate?",
+      "narration": "Yes, when the list is static and has no identity of its own: it is never reordered, filtered, inserted into or removed from, items have no state, and there is no unique value to use. Examples: a hard-coded list of three labels, a skeleton loader with five placeholder rows, or the pages in a pagination bar generated from a number. Even then it should be a deliberate decision, with a comment. Things to avoid: generating an id with Math.random() or crypto.randomUUID() inside render, which creates a new key every render and remounts every row. In this app everything already has a stable id, so using the index would only add risk, e.g. ResponsibilityList uses the responsibility text itself.",
+      "exercise": 4,
+      "demo": 4,
+      "file": "react/components/ResponsibilityList.tsx",
+      "before": "{responsibilities.map((_, index) => (\n  <li key={index}>{/* ... */}</li>\n))}",
+      "after": "{responsibilities.map((responsibility) => (\n  <li key={responsibility}>{responsibility}</li>\n))}",
+      "line": 12
     }
   ]
 }

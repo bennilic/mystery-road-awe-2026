@@ -31,7 +31,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 1 | JSX, function components, typed props, composition & children | ☑ |
 | 2 | Conditional rendering | ☑ |
 | 3 | Rendering collections | ☑ |
-| 4 | Stable keys and list identity | ☐ |
+| 4 | Stable keys and list identity | ☑ |
 | 5 | Presentational vs. feature components and component boundaries | ☐ |
 | 6 | Feature-oriented folder structure | ☐ |
 | 7 | Reusable UI elements | ☐ |
@@ -88,13 +88,13 @@ each with an explicitly typed props interface/type (no untyped or `any` props).
 
 **Tasks**
 
-- [ ] Deliberately use `key={index}` in one throwaway example, then demonstrate (e.g. by reordering or filtering the underlying array) a case where it produces a visibly wrong result, before replacing it with a real stable id.
+- [x] Deliberately use `key={index}` in one throwaway example, then demonstrate (e.g. by reordering or filtering the underlying array) a case where it produces a visibly wrong result, before replacing it with a real stable id.
 
 **Questions** (depend on the tasks above)
 
-- [ ] What goes wrong, concretely, when keys are missing, duplicated, or based on array index for a list that can reorder or filter?
-- [ ] The *original* vanilla version of this app had a real bug where one feature used an array index as an identifier instead of a stable id. Would that same mistake, ported directly into React as `key={index}`, have caused a symptom a user could notice, or only a console warning? Explain why.
-- [ ] All of this app's real data (people, locations, timeline events) already has stable ids. Is there ever a legitimate reason to use `key={index}` anyway? When?
+- [x] What goes wrong, concretely, when keys are missing, duplicated, or based on array index for a list that can reorder or filter?
+- [x] The *original* vanilla version of this app had a real bug where one feature used an array index as an identifier instead of a stable id. Would that same mistake, ported directly into React as `key={index}`, have caused a symptom a user could notice, or only a console warning? Explain why.
+- [x] All of this app's real data (people, locations, timeline events) already has stable ids. Is there ever a legitimate reason to use `key={index}` anyway? When?
 
 ---
 
