@@ -1,5 +1,5 @@
-import { formatDate } from "../../js/lookup.ts";
-import type { TimelineEvent } from "../../js/types.ts";
+import { formatDate } from "../../../js/lookup.ts";
+import type { TimelineEvent } from "../../../js/types.ts";
 
 export function RecentTimelineList({ events }: { events: TimelineEvent[] }) {
   return (

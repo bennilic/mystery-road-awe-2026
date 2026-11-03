@@ -1,5 +1,5 @@
-import { formatDate } from "../../js/lookup.ts";
-import type { TimelineCertainty, TimelineEvent } from "../../js/types.ts";
+import { formatDate } from "../../../js/lookup.ts";
+import type { TimelineCertainty, TimelineEvent } from "../../../js/types.ts";
 
 // Lookup technique: certainty -> badge colour class. The Record type makes the
 // compiler flag any new certainty value that has no badge yet.

@@ -1,8 +1,8 @@
-import { useCaseData, type CaseData } from "../data/CaseDataContext.tsx";
-import { PeopleLocationsView } from "../components/PeopleLocationsView.tsx";
-import type { PeopleTab } from "../components/TabBar.tsx";
-import type { Evidence, Person } from "../../js/types.ts";
-import { evidenceMentionsPerson } from "../../js/lookup.ts";
+import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
+import { PeopleLocationsView } from "./PeopleLocationsView.tsx";
+import type { PeopleTab } from "./TabBar.tsx";
+import type { Evidence, Person } from "../../../js/types.ts";
+import { evidenceMentionsPerson } from "../../../js/lookup.ts";
 
 // Reading a query parameter ONCE to decide what to show initially is allowed
 // in this exercise; the tab becomes a real route in Demo 8.

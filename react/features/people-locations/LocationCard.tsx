@@ -1,4 +1,4 @@
-import type { Location } from "../../js/types.ts";
+import type { Location } from "../../../js/types.ts";
 import { Card } from "./Card.tsx";
 
 interface LocationCardProps {

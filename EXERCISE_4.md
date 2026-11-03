@@ -33,7 +33,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 3 | Rendering collections | ☑ |
 | 4 | Stable keys and list identity | ☑ |
 | 5 | Presentational vs. feature components and component boundaries | ☑ |
-| 6 | Feature-oriented folder structure | ☐ |
+| 6 | Feature-oriented folder structure | ☑ |
 | 7 | Reusable UI elements | ☐ |
 | 8 | Routing: People & Locations as real routes | ☐ |
 | 9 | Route parameters | ☐ |
@@ -116,15 +116,15 @@ each with an explicitly typed props interface/type (no untyped or `any` props).
 
 **Tasks**
 
-- [ ] Reorganize your React source into a feature-oriented structure (e.g. grouping by
+- [x] Reorganize your React source into a feature-oriented structure (e.g. grouping by
 `people-locations/`, `timeline/`, `dashboard/`, shared `components/`, rather than one flat
 folder of files). Including the Dashboard and shell from Exercise 3.
-- [ ] Document the structure you landed on (a short `ARCHITECTURE.md` section or README snippet is enough) and the rule you used to decide what's "shared" versus "feature-local."
+- [x] Document the structure you landed on (a short `ARCHITECTURE.md` section or README snippet is enough) and the rule you used to decide what's "shared" versus "feature-local."
 
 **Questions** (depend on the tasks above)
 
-- [ ] What's the difference between organizing files "by type" (all components in one folder, all hooks in another) and "by feature"? What made you choose the structure you chose for this app specifically?
-- [ ] Where did you draw the line between a component that lives inside one feature folder and one that belongs in a shared/common folder? Give one real example of each from your own structure.
+- [x] What's the difference between organizing files "by type" (all components in one folder, all hooks in another) and "by feature"? What made you choose the structure you chose for this app specifically?
+- [x] Where did you draw the line between a component that lives inside one feature folder and one that belongs in a shared/common folder? Give one real example of each from your own structure.
 
 ---
 

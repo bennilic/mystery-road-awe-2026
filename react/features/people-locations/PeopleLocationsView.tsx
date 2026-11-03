@@ -1,4 +1,4 @@
-import type { Location, Person, PersonId } from "../../js/types.ts";
+import type { Location, Person, PersonId } from "../../../js/types.ts";
 import { LocationCard } from "./LocationCard.tsx";
 import { PersonCard } from "./PersonCard.tsx";
 import { TabBar, type PeopleTab } from "./TabBar.tsx";

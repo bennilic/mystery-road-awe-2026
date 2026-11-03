@@ -1,4 +1,4 @@
-import { VIEWS, navigateTo, type ViewName } from "../routing/useHashRoute.ts";
+import { VIEWS, navigateTo, type ViewName } from "../shared/routing/useHashRoute.ts";
 
 interface NavBarProps {
   currentView: ViewName;

@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useCaseData, type CaseData } from "../data/CaseDataContext.tsx";
-import { readBookmarkCount } from "../data/bookmarks.ts";
-import { HowToUseCard } from "../dashboard/HowToUseCard.tsx";
-import { CaseSummaryCard } from "../dashboard/CaseSummaryCard.tsx";
-import { StatGrid } from "../dashboard/StatGrid.tsx";
-import { ReviewProgress } from "../dashboard/ReviewProgress.tsx";
-import { RecentEvidenceList } from "../dashboard/RecentEvidenceList.tsx";
-import { RecentTimelineList } from "../dashboard/RecentTimelineList.tsx";
+import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
+import { readBookmarkCount } from "./bookmarks.ts";
+import { HowToUseCard } from "./HowToUseCard.tsx";
+import { CaseSummaryCard } from "./CaseSummaryCard.tsx";
+import { StatGrid } from "./StatGrid.tsx";
+import { ReviewProgress } from "./ReviewProgress.tsx";
+import { RecentEvidenceList } from "./RecentEvidenceList.tsx";
+import { RecentTimelineList } from "./RecentTimelineList.tsx";
 
 const RECENT_ITEM_COUNT = 5;
 

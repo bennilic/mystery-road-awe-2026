@@ -1,4 +1,4 @@
-import type { TimelineEvent } from "../../js/types.ts";
+import type { TimelineEvent } from "../../../js/types.ts";
 import { TimelineItem } from "./TimelineItem.tsx";
 import { TimelineToolbar, type FilterOption } from "./TimelineToolbar.tsx";
 

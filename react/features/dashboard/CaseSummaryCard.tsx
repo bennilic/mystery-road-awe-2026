@@ -1,4 +1,4 @@
-import type { CaseInfo } from "../../js/types.ts";
+import type { CaseInfo } from "../../../js/types.ts";
 
 export function CaseSummaryCard({ caseInfo }: { caseInfo: CaseInfo }) {
   return (

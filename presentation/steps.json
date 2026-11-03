@@ -2725,6 +2725,98 @@
       "before": "// vanilla: one function fetched, counted and built HTML\nfor (const person of state.allPeople) {\n  const count = countEvidenceForPerson(person);\n  html += '<div class=\"person-card\">' + /* ... */;\n}",
       "after": "import type { Person } from \"../../js/types.ts\";\nimport { Card } from \"./Card.tsx\";\nimport { ResponsibilityList } from \"./ResponsibilityList.tsx\";\n\ninterface PersonCardProps {\n  person: Person;\n  relatedEvidenceCount: number;\n}\n\nexport function PersonCard({ person, relatedEvidenceCount }: PersonCardProps) {\n  return (\n    <Card variant=\"person\">\n      <div className=\"person-card-header\">\n        <img className=\"person-avatar\" src={person.avatar} alt={`Portrait of ${person.name}`} />\n        <div>\n          <h3>{person.name}</h3>\n          <div className=\"person-role\">{person.role}</div>\n        </div>\n      </div>\n      <p>\n        <strong>Speciality:</strong> {person.speciality}\n      </p>\n      <ResponsibilityList responsibilities={person.responsibilities} />\n      <div className=\"person-statement\">&ldquo;{person.statement}&rdquo;</div>\n      <p>\n        {relatedEvidenceCount} related evidence item{relatedEvidenceCount === 1 ? \"\" : \"s\"}\n      </p>\n    </Card>\n  );\n}",
       "line": 1
+    },
+    {
+      "id": "ex4-d6-t1-page",
+      "type": "app",
+      "title": "D6 - T1 — On the page: three features and a shell",
+      "narration": "Before the code: the header and navigation are the shell; each page below it (Dashboard, People & Locations, Timeline) is now its own feature folder.",
+      "exercise": 4,
+      "demo": 6,
+      "highlight": ".app-header",
+      "waitFor": ".nav-btn",
+      "view": "dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d6-t1",
+      "type": "code",
+      "title": "D6 - T1 — From a flat by-type tree to feature folders",
+      "narration": "I moved the files with git mv (so history follows them) and let a script rewrite every relative import. Dashboard, People & Locations and Timeline each have a folder with their page, their presentational pieces and their private helpers (bookmarks.ts belongs only to the Dashboard). The shell (header, nav, footer) and App sit around them, and the two things used by several features live in shared/. After the move: typecheck, lint, prettier and the production build pass, and the Dashboard, People & Locations and Timeline text still matches the vanilla app exactly, no console warnings.",
+      "exercise": 4,
+      "demo": 6,
+      "file": "react/ (directory layout)",
+      "before": "react/\n  App.tsx  main.tsx\n  components/   Header NavBar Footer Card PersonCard LocationCard TabBar\n                ResponsibilityList PeopleLocationsView TimelineView\n                TimelineItem TimelineToolbar          <- by type\n  dashboard/    StatGrid CaseSummaryCard ... (6 files)\n  pages/        DashboardPage PeoplePage TimelinePage StubPage\n  data/         CaseDataContext bookmarks\n  routing/      useHashRoute\n  sandbox/",
+      "after": "react/\n  main.tsx\n  app/          App.tsx\n  shell/        Header NavBar Footer StubPage\n  features/\n    dashboard/         DashboardPage StatGrid CaseSummaryCard ReviewProgress\n                       RecentEvidenceList RecentTimelineList HowToUseCard bookmarks\n    people-locations/  PeoplePage PeopleLocationsView PersonCard LocationCard\n                       Card TabBar ResponsibilityList\n    timeline/          TimelinePage TimelineView TimelineItem TimelineToolbar\n  shared/\n    data/CaseDataContext.tsx   routing/useHashRoute.ts\n  sandbox/"
+    },
+    {
+      "id": "ex4-d6-t2-page",
+      "type": "app",
+      "title": "D6 - T2 — On the page: the app being documented",
+      "narration": "Before the code: this is the running React app whose structure ARCHITECTURE.md now documents.",
+      "exercise": 4,
+      "demo": 6,
+      "highlight": "#app",
+      "waitFor": ".stat-card",
+      "view": "dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d6-t2",
+      "type": "code",
+      "title": "D6 - T2 — ARCHITECTURE.md and the shared-vs-feature rule",
+      "narration": "ARCHITECTURE.md (new, repo root) shows the tree and the rule: a file stays inside the one feature that uses it, however generic it looks (Card.tsx), and is promoted to shared/ only when a second feature needs it (CaseDataContext, useHashRoute). Dependencies point one way: app, then features, then shared; a feature never imports another feature. Writing the rule down while moving exposed one violation of my own first draft: HowToUseCard (Dashboard) imported navigateTo from shell/, so I moved useHashRoute to shared/routing/.",
+      "exercise": 4,
+      "demo": 6,
+      "file": "ARCHITECTURE.md",
+      "before": "(file did not exist yet)",
+      "after": "# Architecture\n\n## React source layout (`react/`) — added in Exercise 4, Demo 6\n\nThe React app is organised **by feature**, not by file type.\n\n```\nreact/\n  main.tsx                      entry point mounted by react.html\n  app/\n    App.tsx                     composition root: provider + shell + route table\n  shell/                        the frame around every page\n    Header.tsx  NavBar.tsx  Footer.tsx  StubPage.tsx\n  features/\n    dashboard/                  everything only the Dashboard needs\n      DashboardPage.tsx  StatGrid.tsx  CaseSummaryCard.tsx  ReviewProgress.tsx\n      RecentEvidenceList.tsx  RecentTimelineList.tsx  HowToUseCard.tsx  bookmarks.ts\n    people-locations/\n      PeoplePage.tsx (feature)  PeopleLocationsView.tsx (presentational)\n      PersonCard.tsx  LocationCard.tsx  Card.tsx  TabBar.tsx  ResponsibilityList.tsx\n    timeline/\n      TimelinePage.tsx (feature)  TimelineView.tsx (presentational)\n      TimelineItem.tsx  TimelineToolbar.tsx\n  shared/                       used by more than one feature\n    data/CaseDataContext.tsx\n    routing/useHashRoute.ts\n  sandbox/                      throwaway teaching demos, not part of the app\n```\n\nDomain types and helpers (`js/types.ts`, `js/lookup.ts`) are still imported from the vanilla\n`js/` folder, because the vanilla app keeps running next to the React one (`index.html` vs\n`react.html`).\n\n### Rule: shared vs. feature-local\n\n1. A file lives **inside the one feature that uses it**, however generic it looks. Example:\n   `Card.tsx` is a generic children-based box, but only `people-locations` uses it, so it stays\n   in `features/people-locations/`.\n2. It moves to **`shared/`** when a **second feature** needs it (or when it is app-wide\n   infrastructure). Examples: `CaseDataContext.tsx` is read by Dashboard, People & Locations and\n   Timeline, so it lives in `shared/data/`; `useHashRoute.ts` is used by the shell (NavBar,\n   App) and by the Dashboard's HowToUseCard, so it lives in `shared/routing/`.\n3. Dependencies point one way: `app` -> `features` -> `shared`. A feature never imports from\n   another feature; if two features need the same thing, that is the signal to promote it to\n   `shared/`.\n4. `shell/` is not a feature: it is the frame (header, navigation, footer) that\n   hosts the features.\n\nWhy by feature for this app: the three migrated views barely share UI (a person card is of no\nuse on the timeline) but each view's files change together, so a change to the Timeline touches\none folder. A by-type layout (`components/`, `hooks/`, `pages/`) would put 20 unrelated components\nin one folder.\n\nSee also: `docs/exercise-3/03-component-hierarchy.md` (planned tree) and\n`docs/exercise-4/05-component-classification.md` (presentational vs. feature)."
+    },
+    {
+      "id": "ex4-d6-q1-page",
+      "type": "app",
+      "title": "D6 - Q1 — On the page: three views, little in common",
+      "narration": "Before the code: look at the three views. A person card, a stat card and a timeline item share almost no UI.",
+      "exercise": 4,
+      "demo": 6,
+      "highlight": ".people-grid",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d6-q1",
+      "type": "code",
+      "title": "D6 - Q1 — By type vs by feature",
+      "narration": "By type: folders named after what a file is (components/, hooks/, pages/); a feature is scattered across them, and components/ grows into one long list of unrelated files. By feature: folders named after what part of the product a file serves; things that change together sit together, a feature can be read, moved or deleted as a unit, and imports between features are visible. I chose by feature because this app is three views that barely share UI: the Timeline work touches only features/timeline, and nobody has to scan 20 components to find one. By type would make sense with many small, heavily shared primitives (a design system). The cost of by-feature is the judgment call about what is shared, which is why ARCHITECTURE.md states the rule.",
+      "exercise": 4,
+      "demo": 6,
+      "file": "react/ (directory layout)",
+      "before": "react/\n  App.tsx  main.tsx\n  components/   Header NavBar Footer Card PersonCard LocationCard TabBar\n                ResponsibilityList PeopleLocationsView TimelineView\n                TimelineItem TimelineToolbar          <- by type\n  dashboard/    StatGrid CaseSummaryCard ... (6 files)\n  pages/        DashboardPage PeoplePage TimelinePage StubPage\n  data/         CaseDataContext bookmarks\n  routing/      useHashRoute\n  sandbox/",
+      "after": "react/\n  main.tsx\n  app/          App.tsx\n  shell/        Header NavBar Footer StubPage\n  features/\n    dashboard/         DashboardPage StatGrid CaseSummaryCard ReviewProgress\n                       RecentEvidenceList RecentTimelineList HowToUseCard bookmarks\n    people-locations/  PeoplePage PeopleLocationsView PersonCard LocationCard\n                       Card TabBar ResponsibilityList\n    timeline/          TimelinePage TimelineView TimelineItem TimelineToolbar\n  shared/\n    data/CaseDataContext.tsx   routing/useHashRoute.ts\n  sandbox/"
+    },
+    {
+      "id": "ex4-d6-q2-page",
+      "type": "app",
+      "title": "D6 - Q2 — On the page: local vs shared",
+      "narration": "Before the code: the cards here are feature-local; the data they display comes from the context that every view shares.",
+      "exercise": 4,
+      "demo": 6,
+      "highlight": ".people-grid",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d6-q2",
+      "type": "code",
+      "title": "D6 - Q2 — Where I drew the line",
+      "narration": "Rule: used by one feature stays in it; a second feature needing it promotes it. Feature-local example: Card.tsx in features/people-locations. It is generic (a children-based box) and tempting to put in shared, but only PersonCard and LocationCard use it, so it stays. Shared example: CaseDataContext.tsx in shared/data, because Dashboard, People & Locations and Timeline all call useCaseData(). The same applies to useHashRoute.ts (shell and Dashboard). Promoting early would create a shared/ dumping ground; waiting for the second real user keeps it honest (Demo 7 does exactly that with a Badge).",
+      "exercise": 4,
+      "demo": 6,
+      "file": "react/features/people-locations/Card.tsx vs react/shared/data/CaseDataContext.tsx",
+      "before": "(react/components/Card.tsx: flat folder, same level as Header and Footer)",
+      "after": "import type { ReactNode } from \"react\";\n\nexport type CardVariant = \"person\" | \"location\";\n\ninterface CardProps {\n  variant: CardVariant;\n  children: ReactNode;\n}\n\n// Composition via `children`: the card shell owns only the outer box (and the\n// variant class that styles it); what goes inside is decided by the caller.\n// A data prop would force this component to know about people AND locations.\nexport function Card({ variant, children }: CardProps) {\n  return <div className={`${variant}-card`}>{children}</div>;\n}"
     }
   ]
 }

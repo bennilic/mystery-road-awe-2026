@@ -1,4 +1,4 @@
-import { navigateTo, type ViewName } from "../routing/useHashRoute.ts";
+import { navigateTo, type ViewName } from "../../shared/routing/useHashRoute.ts";
 
 interface HowToItem {
   heading: string;

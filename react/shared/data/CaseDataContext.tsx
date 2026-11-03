@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { CaseInfo, Evidence, Location, Person, TimelineEvent } from "../../js/types.ts";
+import type { CaseInfo, Evidence, Location, Person, TimelineEvent } from "../../../js/types.ts";
 
 export interface CaseData {
   caseInfo: CaseInfo;

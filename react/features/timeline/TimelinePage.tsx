@@ -1,5 +1,5 @@
-import { useCaseData, type CaseData } from "../data/CaseDataContext.tsx";
-import { TimelineView } from "../components/TimelineView.tsx";
+import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
+import { TimelineView } from "./TimelineView.tsx";
 
 // Feature component: sorts the events, resolves location ids to labels and
 // builds the filter options from the case data.

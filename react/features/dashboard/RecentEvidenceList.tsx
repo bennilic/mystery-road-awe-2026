@@ -1,5 +1,5 @@
-import { getStatusBadgeClass } from "../../js/lookup.ts";
-import type { Evidence } from "../../js/types.ts";
+import { getStatusBadgeClass } from "../../../js/lookup.ts";
+import type { Evidence } from "../../../js/types.ts";
 
 export function RecentEvidenceList({ items }: { items: Evidence[] }) {
   return (

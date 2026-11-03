@@ -1,4 +1,4 @@
-import type { Person } from "../../js/types.ts";
+import type { Person } from "../../../js/types.ts";
 import { Card } from "./Card.tsx";
 import { ResponsibilityList } from "./ResponsibilityList.tsx";
 

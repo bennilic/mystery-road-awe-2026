@@ -1,5 +1,5 @@
 import { NavBar } from "./NavBar.tsx";
-import type { ViewName } from "../routing/useHashRoute.ts";
+import type { ViewName } from "../shared/routing/useHashRoute.ts";
 
 interface HeaderProps {
   currentView: ViewName;

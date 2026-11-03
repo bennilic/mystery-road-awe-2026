@@ -1,4 +1,4 @@
-import { STORAGE_KEY_BOOKMARKS } from "../../js/state.ts";
+import { STORAGE_KEY_BOOKMARKS } from "../../../js/state.ts";
 
 // Reads straight from localStorage (the vanilla app's source of truth for
 // bookmarks) instead of copying them into React state, so the Dashboard

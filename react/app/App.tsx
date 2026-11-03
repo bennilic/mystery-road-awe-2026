@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import { Header } from "./components/Header.tsx";
-import { Footer } from "./components/Footer.tsx";
-import { CaseDataProvider } from "./data/CaseDataContext.tsx";
-import { DashboardPage } from "./pages/DashboardPage.tsx";
-import { PeoplePage } from "./pages/PeoplePage.tsx";
-import { TimelinePage } from "./pages/TimelinePage.tsx";
-import { StubPage } from "./pages/StubPage.tsx";
-import { useHashRoute, type ViewName } from "./routing/useHashRoute.ts";
+import { Header } from "../shell/Header.tsx";
+import { Footer } from "../shell/Footer.tsx";
+import { CaseDataProvider } from "../shared/data/CaseDataContext.tsx";
+import { DashboardPage } from "../features/dashboard/DashboardPage.tsx";
+import { PeoplePage } from "../features/people-locations/PeoplePage.tsx";
+import { TimelinePage } from "../features/timeline/TimelinePage.tsx";
+import { StubPage } from "../shell/StubPage.tsx";
+import { useHashRoute, type ViewName } from "../shared/routing/useHashRoute.ts";
 
 // One entry per route. Typing the record as Record<ViewName, ...> makes the
 // compiler fail if a sixth view is added to ViewName without a page here.
