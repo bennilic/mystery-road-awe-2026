@@ -3,8 +3,6 @@ import { useSearchParams } from "react-router";
 import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
 import { OPEN_EVIDENCE_PARAM } from "../../shared/routing/paths.ts";
-import { readBookmarkIds, writeBookmarkIds } from "../../shared/storage/bookmarkStorage.ts";
-import { toggleBookmarkId } from "../../shared/bookmarks/toggleBookmarkId.ts";
 import { readNotes, writeNotes } from "../../shared/storage/noteStorage.ts";
 import { describeStorageFailure } from "../../shared/storage/describeStorageFailure.ts";
 import { EvidenceCard } from "./EvidenceCard.tsx";
@@ -12,10 +10,19 @@ import { EvidenceDetail } from "./EvidenceDetail.tsx";
 import { EvidenceToolbar, type FilterField } from "./EvidenceToolbar.tsx";
 import { filterAndSortEvidence, type SortOrder } from "./filterEvidence.ts";
 
-// Feature component: owns the Evidence page's state and wires events to it.
-function EvidenceContent({ data }: { data: CaseData }) {
+interface BookmarkProps {
+  bookmarkedIds: string[];
+  onToggleBookmark: (evidenceId: string) => void;
+}
+
+// Feature component: owns the Evidence page's own state (filters, notes, open item)
+// and wires events to it; bookmarks come from the app.
+function EvidenceContent({
+  data,
+  bookmarkedIds,
+  onToggleBookmark,
+}: BookmarkProps & { data: CaseData }) {
   const [searchParams] = useSearchParams();
-  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);
   const [notes, setNotes] = useState(readNotes);
   const [searchTerm, setSearchTerm] = useState("");
   const [type, setType] = useState("");
@@ -55,16 +62,6 @@ function EvidenceContent({ data }: { data: CaseData }) {
     setStatus("");
     setRelevance("");
     setSortOrder("date-desc");
-  }
-
-  function handleToggleBookmark(evidenceId: string) {
-    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);
-    setBookmarkedIds(nextIds);
-    try {
-      writeBookmarkIds(nextIds);
-    } catch (error) {
-      setStorageNotice(describeStorageFailure("Your bookmark", error));
-    }
   }
 
   function handleSaveNote(evidenceId: string, text: string) {
@@ -123,7 +120,7 @@ function EvidenceContent({ data }: { data: CaseData }) {
               item={item}
               isBookmarked={bookmarkedIds.includes(item.id)}
               onOpen={setSelectedEvidenceId}
-              onToggleBookmark={handleToggleBookmark}
+              onToggleBookmark={onToggleBookmark}
             />
           ))}
         </div>
@@ -142,11 +139,11 @@ function EvidenceContent({ data }: { data: CaseData }) {
   );
 }
 
-export function EvidencePage() {
+export function EvidencePage(props: BookmarkProps) {
   return (
     <section className="view active">
       <h2>Evidence Catalogue</h2>
-      <CaseDataGate>{(data) => <EvidenceContent data={data} />}</CaseDataGate>
+      <CaseDataGate>{(data) => <EvidenceContent data={data} {...props} />}</CaseDataGate>
     </section>
   );
 }

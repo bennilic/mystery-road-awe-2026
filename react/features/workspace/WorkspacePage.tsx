@@ -2,18 +2,16 @@ import { useState } from "react";
 import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
 import { selectBookmarkedEvidence } from "../../shared/bookmarks/selectBookmarkedEvidence.ts";
-import { readBookmarkIds } from "../../shared/storage/bookmarkStorage.ts";
 import { readNotes } from "../../shared/storage/noteStorage.ts";
 import { BookmarkedEvidenceList } from "./BookmarkedEvidenceList.tsx";
 import { HypothesisForm } from "./HypothesisForm.tsx";
 import { NotesList } from "./NotesList.tsx";
 
-function WorkspaceContent({ data }: { data: CaseData }) {
-  // Read once per visit (the page unmounts when you leave it).
-  const [bookmarkIds] = useState(readBookmarkIds);
+function WorkspaceContent({ data, bookmarkedIds }: { data: CaseData; bookmarkedIds: string[] }) {
+  // Notes are still read once per visit; they move up in Demo 6.
   const [notes] = useState(readNotes);
 
-  const bookmarkedItems = selectBookmarkedEvidence(data.evidence, bookmarkIds);
+  const bookmarkedItems = selectBookmarkedEvidence(data.evidence, bookmarkedIds);
 
   return (
     <>
@@ -35,11 +33,13 @@ function WorkspaceContent({ data }: { data: CaseData }) {
   );
 }
 
-export function WorkspacePage() {
+export function WorkspacePage({ bookmarkedIds }: { bookmarkedIds: string[] }) {
   return (
     <section className="view active">
       <h2>Investigator Workspace</h2>
-      <CaseDataGate>{(data) => <WorkspaceContent data={data} />}</CaseDataGate>
+      <CaseDataGate>
+        {(data) => <WorkspaceContent data={data} bookmarkedIds={bookmarkedIds} />}
+      </CaseDataGate>
     </section>
   );
 }

@@ -1,7 +1,5 @@
-import { useState } from "react";
 import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
 import { selectBookmarkedEvidence } from "../../shared/bookmarks/selectBookmarkedEvidence.ts";
-import { readBookmarkIds } from "../../shared/storage/bookmarkStorage.ts";
 import { HowToUseCard } from "./HowToUseCard.tsx";
 import { CaseSummaryCard } from "./CaseSummaryCard.tsx";
 import { StatGrid } from "./StatGrid.tsx";
@@ -11,15 +9,10 @@ import { RecentTimelineList } from "./RecentTimelineList.tsx";
 
 const RECENT_ITEM_COUNT = 5;
 
-function DashboardContent({ data }: { data: CaseData }) {
-  // Lazy initializer: runs once per mount. The page unmounts when the user
-  // navigates away, so coming back re-reads localStorage and can never show
-  // a stale bookmark count.
-  const [bookmarkIds] = useState(readBookmarkIds);
-
+function DashboardContent({ data, bookmarkedIds }: { data: CaseData; bookmarkedIds: string[] }) {
   // Derived values are computed during render from the data, not stored in
   // state — there is no second copy that could go out of sync.
-  const bookmarkCount = selectBookmarkedEvidence(data.evidence, bookmarkIds).length;
+  const bookmarkCount = selectBookmarkedEvidence(data.evidence, bookmarkedIds).length;
   const reviewedCount = data.evidence.filter(
     (item) => (item.status || "").toLowerCase() === "reviewed",
   ).length;
@@ -48,7 +41,7 @@ function DashboardContent({ data }: { data: CaseData }) {
   );
 }
 
-export function DashboardPage() {
+export function DashboardPage({ bookmarkedIds }: { bookmarkedIds: string[] }) {
   const caseData = useCaseData();
 
   return (
@@ -62,7 +55,9 @@ export function DashboardPage() {
           running and reload the page.
         </p>
       )}
-      {caseData.status === "ready" && <DashboardContent data={caseData.data} />}
+      {caseData.status === "ready" && (
+        <DashboardContent data={caseData.data} bookmarkedIds={bookmarkedIds} />
+      )}
     </section>
   );
 }

@@ -3604,6 +3604,99 @@
       "file": "react/features/dashboard/DashboardPage.tsx",
       "before": "// js/views/dashboard.ts (vanilla)\n  html += statCardHTML(state.bookmarks.length, \"Bookmarked\");\n  html += statCardHTML(reviewedCount, \"Reviewed\");\n  html += \"</div>\";\n",
       "after": "// react/features/dashboard/DashboardPage.tsx\n  const bookmarkCount = selectBookmarkedEvidence(data.evidence, bookmarkIds).length;"
+    },
+    {
+      "id": "ex5-d5-t1-page",
+      "type": "app",
+      "title": "D5 - T1 — On the page: three places that need the bookmarks",
+      "narration": "Before the code: the star on a card (Evidence), the Bookmarked number (Dashboard) and the Bookmarked Evidence list (Workspace) are three components under three different routes. They all show the same list of ids.",
+      "exercise": 5,
+      "demo": 5,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d5-t1",
+      "type": "code",
+      "title": "D5 - T1 — Bookmark state moved up to AppBody",
+      "narration": "The nearest component that contains all three readers/writers is the one that renders <Routes>: DashboardPage, EvidencePage and WorkspacePage are its children, nothing lower contains all three. I split App into App (provider) and AppBody and put useState(readBookmarkIds) plus the toggle there; the three pages now receive bookmarkedIds as a prop. Before this commit the Evidence page owned the state and the Dashboard and Workspace each read localStorage when they mounted: three readers of one stored value, kept consistent only because every page was destroyed on navigation and re-read storage. Now there is exactly one useState for bookmarks in the app, and localStorage is only written to (one place) and read once at start.",
+      "exercise": 5,
+      "demo": 5,
+      "file": "react/app/App.tsx",
+      "before": "  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\n  const [notes, setNotes] = useState(readNotes);\n  const [searchTerm, setSearchTerm] = useState(\"\");\n  const [type, setType] = useState(\"\");\n  const [personId, setPersonId] = useState(\"\");\n  const [locationId, setLocationId] = useState(\"\");\n  const [status, setStatus] = useState(\"\");\n  const [relevance, setRelevance] = useState(\"\");\n  const [sortOrder, setSortOrder] = useState<SortOrder>(\"date-desc\");\n  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(() =>\n  ...\n  function handleToggleBookmark(evidenceId: string) {\n    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);\n    setBookmarkedIds(nextIds);\n    try {\n      writeBookmarkIds(nextIds);\n    } catch (error) {\n      setStorageNotice(describeStorageFailure(\"Your bookmark\", error));\n    }\n  }",
+      "after": "// Lowest common ancestor of every component that reads or changes bookmarks:\n// the Dashboard, Evidence and Workspace pages are siblings under <Routes>, so\n// the bookmark state lives here, one level above all three.\nfunction AppBody() {\n  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\n  const [bookmarkNotice, setBookmarkNotice] = useState<string | null>(null);\n\n  function handleToggleBookmark(evidenceId: string) {\n    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);\n    setBookmarkedIds(nextIds);\n    try {\n      writeBookmarkIds(nextIds);\n    } catch (error) {\n      setBookmarkNotice(describeStorageFailure(\"Your bookmark\", error));\n    }\n  }\n\n  return (",
+      "line": 25
+    },
+    {
+      "id": "ex5-d5-t2-page",
+      "type": "app",
+      "title": "D5 - T2 — On the page: the Dashboard after bookmarking",
+      "narration": "Before the code: after starring two items on the Evidence page, this Dashboard (reached with the nav bar, no reload) shows 2 in Bookmarked.",
+      "exercise": 5,
+      "demo": 5,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d5-t2",
+      "type": "code",
+      "title": "D5 - T2 — Toggle in Evidence is reflected on the Dashboard on its next render",
+      "narration": "Verified with Playwright, using the nav bar only (no reload): Dashboard shows 0; on Evidence I star two cards; Dashboard shows 2; Workspace lists E03 and E14; back on Evidence I un-star one; Dashboard shows 1; localStorage holds [\"E03\"]; the Workspace 'Open' link then opens that item's detail. The reason it works is not remounting any more: the Dashboard's number is computed from the props AppBody passes, and AppBody re-renders when the state changes.",
+      "exercise": 5,
+      "demo": 5,
+      "file": "react/features/dashboard/DashboardPage.tsx",
+      "before": "// before: read from storage when the page mounts\nconst [bookmarkIds] = useState(readBookmarkIds);",
+      "after": "function DashboardContent({ data, bookmarkedIds }: { data: CaseData; bookmarkedIds: string[] }) {\n  // Derived values are computed during render from the data, not stored in\n  // state — there is no second copy that could go out of sync.\n  const bookmarkCount = selectBookmarkedEvidence(data.evidence, bookmarkedIds).length;\n  const reviewedCount = data.evidence.filter(\n    (item) => (item.status || \"\").toLowerCase() === \"reviewed\",\n  ).length;\n  const progressPercent =\n    data.evidence.length === 0 ? 0 : Math.round((reviewedCount / data.evidence.length) * 100);"
+    },
+    {
+      "id": "ex5-d5-q1-page",
+      "type": "app",
+      "title": "D5 - Q1 — On the page: one star, three consumers",
+      "narration": "Before the code: this card's star changes state that the Dashboard and Workspace also read.",
+      "exercise": 5,
+      "demo": 5,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d5-q1",
+      "type": "code",
+      "title": "D5 - Q1 — What lifting state up means, mechanically",
+      "narration": "Lifting state up is: delete the useState from the child, declare it in the closest common parent, pass the value down as a prop and (Demo 6) the way to change it as a callback. Where it lived: bookmarks were useState inside EvidenceContent (Demos 1 to 4), and the Dashboard and Workspace each held their own snapshot read from localStorage on mount. Where it lives now: useState in AppBody. Data flows down (bookmarkedIds as props), change requests flow up (a function prop that calls the setter). 'Nearest' matters: higher would re-render more of the tree than needed and expose the state to components that do not care; lower cannot reach all three consumers.",
+      "exercise": 5,
+      "demo": 5,
+      "file": "react/app/App.tsx",
+      "before": "  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\n  const [notes, setNotes] = useState(readNotes);\n  const [searchTerm, setSearchTerm] = useState(\"\");\n  const [type, setType] = useState(\"\");\n  const [personId, setPersonId] = useState(\"\");\n  const [locationId, setLocationId] = useState(\"\");\n  const [status, setStatus] = useState(\"\");\n  const [relevance, setRelevance] = useState(\"\");\n  const [sortOrder, setSortOrder] = useState<SortOrder>(\"date-desc\");\n  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(() =>\n  ...\n  function handleToggleBookmark(evidenceId: string) {\n    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);\n    setBookmarkedIds(nextIds);\n    try {\n      writeBookmarkIds(nextIds);\n    } catch (error) {\n      setStorageNotice(describeStorageFailure(\"Your bookmark\", error));\n    }\n  }",
+      "after": "// Lowest common ancestor of every component that reads or changes bookmarks:\n// the Dashboard, Evidence and Workspace pages are siblings under <Routes>, so\n// the bookmark state lives here, one level above all three.\nfunction AppBody() {\n  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\n  const [bookmarkNotice, setBookmarkNotice] = useState<string | null>(null);\n\n  function handleToggleBookmark(evidenceId: string) {\n    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);\n    setBookmarkedIds(nextIds);\n    try {\n      writeBookmarkIds(nextIds);\n    } catch (error) {\n      setBookmarkNotice(describeStorageFailure(\"Your bookmark\", error));\n    }\n  }\n\n  return ("
+    },
+    {
+      "id": "ex5-d5-q2-page",
+      "type": "app",
+      "title": "D5 - Q2 — On the page: the Dashboard number",
+      "narration": "Before the code: imagine this number and the star on the Evidence page each had their own copy.",
+      "exercise": 5,
+      "demo": 5,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d5-q2",
+      "type": "code",
+      "title": "D5 - Q2 — What breaks with a separate useState in Dashboard, Evidence and Workspace",
+      "narration": "Three independent copies of one fact. (1) Divergence: starring a card updates only Evidence's copy; Dashboard and Workspace keep the value they had, so any time two of them are on screen or kept mounted (a sidebar, tabs that stay mounted, a layout showing both) they disagree. (2) The only thing that hid this in Demos 1 to 4 was that each page was thrown away on navigation and re-read localStorage on mount, which makes localStorage the real source of truth and every useState a stale cache of it. (3) Each page needs its own write-through to storage; two components writing the full list can overwrite each other's change (last write wins, the second loses the first's bookmark). (4) Bugs get duplicated: the toggle logic, the storage error handling and any future rule would need three copies. This is the exact shape of the vanilla bug where the Dashboard count was stale after bookmarking.",
+      "exercise": 5,
+      "demo": 5,
+      "file": "react/app/App.tsx",
+      "before": "// three copies (Demos 1-4)\nEvidenceContent:  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\nDashboardContent: const [bookmarkIds] = useState(readBookmarkIds);\nWorkspaceContent: const [bookmarkIds] = useState(readBookmarkIds);",
+      "after": "  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\n// the pages only receive it\n<DashboardPage bookmarkedIds={bookmarkedIds} />"
     }
   ]
 }
