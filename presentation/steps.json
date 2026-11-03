@@ -3789,6 +3789,123 @@
       "file": "react/features/evidence/EvidencePage.tsx",
       "before": "// AppBody\nonToggleBookmark={handleToggleBookmark}\n// EvidencePage\nexport function EvidencePage(props) { ... <EvidenceContent data={data} {...props} />\n// EvidenceContent (pass-through)\n<EvidenceCard onToggleBookmark={onToggleBookmark} />\n// EvidenceCard (calls it)\nonClick={(event) => { event.stopPropagation(); onToggleBookmark(item.id); }}",
       "after": "interface EvidenceStateProps {\n  bookmarkedIds: string[];\n  onToggleBookmark: (evidenceId: string) => void;\n  notes: Record<string, string>;\n  onSaveNote: (evidenceId: string, text: string) => void;\n  reviewEdits: ReviewEditsByEvidenceId;\n  onChangeReview: (evidenceId: string, change: ReviewEdit) => void;\n}\n            <EvidenceCard\n              key={item.id}\n              item={item}\n              isBookmarked={bookmarkedIds.includes(item.id)}\n              onOpen={setSelectedEvidenceId}\n              onToggleBookmark={onToggleBookmark}\n            />\n          ))}"
+    },
+    {
+      "id": "ex5-d7-t1-page",
+      "type": "app",
+      "title": "D7 - T1 — On the page: seven filter values",
+      "narration": "Before the code: search, type, person, location, status, relevance and sort order. Together they are one thing, the 'evidence filters'.",
+      "exercise": 5,
+      "demo": 7,
+      "highlight": "#evidenceToolbar",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d7-t1",
+      "type": "code",
+      "title": "D7 - T1 — Seven useStates replaced by one useReducer",
+      "narration": "Before: seven useState pairs in EvidenceContent, a switch that picked the right setter for each field, and a handleClearFilters that called all seven setters. After: const [filters, dispatchFilters] = useReducer(evidenceFiltersReducer, INITIAL_EVIDENCE_FILTERS). The components below did not change in behaviour: the toolbar still gets the filters object and three callbacks, and the list is still derived from it. Verified with Playwright: 10 filter/sort combinations give the counts 18, 3, 3, 5, 9, 2 (status 'reviewed', one item was edited in that session), 18, 18, 2, 2, equal to the counts before the change, and setting all seven controls then pressing Clear returns every control to its default (empty, and date-desc for sort) and shows all 18 cards.",
+      "exercise": 5,
+      "demo": 7,
+      "file": "react/features/evidence/EvidencePage.tsx",
+      "before": "  const [searchTerm, setSearchTerm] = useState(\"\");\n  const [type, setType] = useState(\"\");\n  const [personId, setPersonId] = useState(\"\");\n  const [locationId, setLocationId] = useState(\"\");\n  const [status, setStatus] = useState(\"\");\n  const [relevance, setRelevance] = useState(\"\");\n  const [sortOrder, setSortOrder] = useState<SortOrder>(\"date-desc\");\n  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(() =>\n  ...\n  function handleFilterChange(field: FilterField, value: string) {\n    switch (field) {\n      case \"searchTerm\":\n        return setSearchTerm(value);\n      case \"type\":\n        return setType(value);\n      case \"personId\":\n        return setPersonId(value);\n      case \"locationId\":\n        return setLocationId(value);\n      case \"status\":\n        return setStatus(value);\n      case \"relevance\":\n        return setRelevance(value);\n    }\n  }\n\n  // One setter per field: forgetting one here leaves that filter active.\n  function handleClearFilters() {\n    setSearchTerm(\"\");\n    setType(\"\");\n    setPersonId(\"\");\n    setLocationId(\"\");\n    setStatus(\"\");\n    setRelevance(\"\");\n    setSortOrder(\"date-desc\");\n  }\n\n  // Review edits are layered over the loaded list on every render.\n  const evidence = applyReviewEdits(data.evidence, reviewEdits);\n\n  // Derived on every render from the full list and the filter state: there",
+      "after": "  const [filters, dispatchFilters] = useReducer(evidenceFiltersReducer, INITIAL_EVIDENCE_FILTERS);\n  ...\n      <EvidenceToolbar\n        filters={filters}\n        onFilterChange={(field, value) => dispatchFilters({ type: \"SET_FILTER\", field, value })}\n        onSortChange={(sortOrder) => dispatchFilters({ type: \"SET_SORT\", sortOrder })}\n        onClear={() => dispatchFilters({ type: \"CLEAR_FILTERS\" })}\n        typeOptions={[...new Set(data.evidence.map((item) => item.type.toLowerCase()))].map(\n          (type) => ({ value: type, label: type }),\n        )}",
+      "line": 39
+    },
+    {
+      "id": "ex5-d7-t2-page",
+      "type": "app",
+      "title": "D7 - T2 — On the page: three things the toolbar can do",
+      "narration": "Before the code: typing or choosing in any control, choosing a sort order and the Clear filters button are the three kinds of change.",
+      "exercise": 5,
+      "demo": 7,
+      "highlight": "#evidenceToolbar",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d7-t2",
+      "type": "code",
+      "title": "D7 - T2 — Three action types: SET_FILTER, SET_SORT, CLEAR_FILTERS",
+      "narration": "The actions are a discriminated union, so TypeScript knows which fields each variant has and checks that the reducer's switch handles all three (a missing case makes the function's return type invalid). SET_FILTER {field, value} covers the six text/dropdown filters, SET_SORT {sortOrder} is separate because the sort order is a closed union, not a free string, and CLEAR_FILTERS has no payload. The reducer is a pure function in its own file: no hooks, no DOM, returns a new object each time, so it can be called with any state and action to see what comes out.",
+      "exercise": 5,
+      "demo": 7,
+      "file": "react/features/evidence/evidenceFiltersReducer.ts",
+      "before": "// Demo 4: three kinds of change spread over handlers\nfunction handleFilterChange(field, value) { switch (field) { case 'searchTerm': return setSearchTerm(value); ... } }\nonSortChange={setSortOrder}\nonClear={handleClearFilters}",
+      "after": "export type EvidenceFiltersAction =\n  | { type: \"SET_FILTER\"; field: FilterField; value: string }\n  | { type: \"SET_SORT\"; sortOrder: SortOrder }\n  | { type: \"CLEAR_FILTERS\" };\n\n\nexport function evidenceFiltersReducer(\n  state: EvidenceFilters,\n  action: EvidenceFiltersAction,\n): EvidenceFilters {\n  switch (action.type) {\n    case \"SET_FILTER\":\n      return { ...state, [action.field]: action.value };\n    case \"SET_SORT\":\n      return { ...state, sortOrder: action.sortOrder };\n    case \"CLEAR_FILTERS\":\n      // One line resets every field, including any field added later.\n      return INITIAL_EVIDENCE_FILTERS;\n  }\n}",
+      "line": 6
+    },
+    {
+      "id": "ex5-d7-q1-page",
+      "type": "app",
+      "title": "D7 - Q1 — On the page: controls that belong together",
+      "narration": "Before the code: one object, many ways to change it.",
+      "exercise": 5,
+      "demo": 7,
+      "highlight": "#evidenceToolbar",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d7-q1",
+      "type": "code",
+      "title": "D7 - Q1 — Why evidence filters suit useReducer",
+      "narration": "They are one domain: seven values that are read together (the list is a function of all seven), changed by a small fixed set of events (set one, change sort, clear), and reset together. With useState each of those facts is spread over code: seven declarations, a switch that routes a field to its setter, a clear function that must list every setter, and a toolbar contract that grew with every filter. With useReducer the whole 'what can happen to filters' is one pure function: adding a filter means one field in the type and nothing else, because SET_FILTER and CLEAR_FILTERS work for it already. Easier after the switch: clear (one line), testing/reasoning (call the reducer with a state and an action), and a single readable list of the events. The hypothesis form (Demo 2 Q2) stays a useState object: it has no reset, no rules between fields and a single kind of change, 'field X is now Y', which updateField already expresses; a reducer would add ceremony there without removing any.",
+      "exercise": 5,
+      "demo": 7,
+      "file": "react/features/evidence/evidenceFiltersReducer.ts",
+      "before": "  const [searchTerm, setSearchTerm] = useState(\"\");\n  const [type, setType] = useState(\"\");\n  const [personId, setPersonId] = useState(\"\");\n  const [locationId, setLocationId] = useState(\"\");\n  const [status, setStatus] = useState(\"\");\n  const [relevance, setRelevance] = useState(\"\");\n  const [sortOrder, setSortOrder] = useState<SortOrder>(\"date-desc\");\n  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(() =>\n  ...\n  function handleFilterChange(field: FilterField, value: string) {\n    switch (field) {\n      case \"searchTerm\":\n        return setSearchTerm(value);\n      case \"type\":\n        return setType(value);\n      case \"personId\":\n        return setPersonId(value);\n      case \"locationId\":\n        return setLocationId(value);\n      case \"status\":\n        return setStatus(value);\n      case \"relevance\":\n        return setRelevance(value);\n    }\n  }\n\n  // One setter per field: forgetting one here leaves that filter active.\n  function handleClearFilters() {\n    setSearchTerm(\"\");\n    setType(\"\");\n    setPersonId(\"\");\n    setLocationId(\"\");\n    setStatus(\"\");\n    setRelevance(\"\");\n    setSortOrder(\"date-desc\");\n  }\n\n  // Review edits are layered over the loaded list on every render.\n  const evidence = applyReviewEdits(data.evidence, reviewEdits);\n\n  // Derived on every render from the full list and the filter state: there",
+      "after": "  const [filters, dispatchFilters] = useReducer(evidenceFiltersReducer, INITIAL_EVIDENCE_FILTERS);\n  ...\n      <EvidenceToolbar\n        filters={filters}\n        onFilterChange={(field, value) => dispatchFilters({ type: \"SET_FILTER\", field, value })}\n        onSortChange={(sortOrder) => dispatchFilters({ type: \"SET_SORT\", sortOrder })}\n        onClear={() => dispatchFilters({ type: \"CLEAR_FILTERS\" })}\n        typeOptions={[...new Set(data.evidence.map((item) => item.type.toLowerCase()))].map(\n          (type) => ({ value: type, label: type }),\n        )}"
+    },
+    {
+      "id": "ex5-d7-q2-page",
+      "type": "app",
+      "title": "D7 - Q2 — On the page: Clear filters",
+      "narration": "Before the code: this button must put seven controls back to their start values.",
+      "exercise": 5,
+      "demo": 7,
+      "highlight": "#clearFiltersBtn",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d7-q2",
+      "type": "code",
+      "title": "D7 - Q2 — CLEAR_FILTERS",
+      "narration": "case 'CLEAR_FILTERS': return INITIAL_EVIDENCE_FILTERS. The 'initial state' is defined once and the reducer returns it. With individual setters the reset is a list that has to be kept in sync by hand: when sortOrder or a new filter is added, forgetting one setter in handleClearFilters leaves that control set after Clear, and nothing fails to compile or run. With the reducer the reset has no list of fields at all, so a field added later is reset automatically, and because the new state is created from a single value the reset is atomic: React renders once with all fields reset, never with some cleared and some not. Verified: all seven controls set to non-default values, Clear pressed, every control back to its default and 18 cards shown.",
+      "exercise": 5,
+      "demo": 7,
+      "file": "react/features/evidence/evidenceFiltersReducer.ts",
+      "before": "  function handleClearFilters() {\n    setSearchTerm(\"\");\n    setType(\"\");\n    setPersonId(\"\");\n    setLocationId(\"\");\n    setStatus(\"\");\n    setRelevance(\"\");\n    setSortOrder(\"date-desc\");\n  }\n",
+      "after": "    case \"CLEAR_FILTERS\":\n      // One line resets every field, including any field added later.\n      return INITIAL_EVIDENCE_FILTERS;\n\nexport const INITIAL_EVIDENCE_FILTERS = { searchTerm: \"\", type: \"\", ..., sortOrder: \"date-desc\" };"
+    },
+    {
+      "id": "ex5-d7-q3-page",
+      "type": "app",
+      "title": "D7 - Q3 — On the page: a plain useState elsewhere in the app",
+      "narration": "Before the code: the bookmark state in the app is a plain useState holding an array, the simple case compared with the filters.",
+      "exercise": 5,
+      "demo": 7,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d7-q3",
+      "type": "code",
+      "title": "D7 - Q3 — useState is a special case of useReducer",
+      "narration": "Same idea, different packaging. Both hold a value across renders, both schedule a re-render when you dispatch/set, and both compare the new state to the old with Object.is. A reducer is (state, action) => nextState; useState is the case where the action IS the next state (or a function of the previous state) and the reducer is just 'return that'. React in fact implements useState with the same machinery as useReducer and a built-in reducer, basicStateReducer. The difference is where the update logic lives: useState puts it at every call site (setX(...)), useReducer puts it in one function you name and can read separately from the components that trigger it. Use useState when updates are 'replace the value'; reach for useReducer when there are several related fields or several kinds of change. Not fundamentally different, and you can rewrite one as the other.",
+      "exercise": 5,
+      "demo": 7,
+      "file": "react/features/evidence/evidenceFiltersReducer.ts",
+      "before": "// useState expressed as a reducer\nfunction setStateReducer<S>(state: S, action: S | ((previous: S) => S)): S {\n  return typeof action === \"function\" ? (action as (p: S) => S)(state) : action;\n}\nconst [value, setValue] = useReducer(setStateReducer, initialValue);",
+      "after": "const [value, setValue] = useState(initialValue);"
     }
   ]
 }

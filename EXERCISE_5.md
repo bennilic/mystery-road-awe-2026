@@ -28,7 +28,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 4 | Derived values vs. stored state | ☑ |
 | 5 | Lifting state to the nearest common owner | ☑ |
 | 6 | Passing callbacks downward | ☑ |
-| 7 | `useReducer` for the filter/search/sort state | ☐ |
+| 7 | `useReducer` for the filter/search/sort state | ☑ |
 | 8 | Context, and when not to use it | ☐ |
 | 9 | Diagnose & fix common state problems | ☐ |
 | 10 | Remove remaining direct DOM manipulation + wrap-up | ☐ |
@@ -129,14 +129,14 @@ inside it) down to the component that calls it. How many component layers does i
 
 **Tasks**
 
-- [ ] Identify the Evidence Catalogue's combined filter state (search term, type, person, location, status, relevance, and sort order — 7+ related values that often change together or need to be reset together) as a single non-trivial state domain, and replace its `useState` calls with a single `useReducer`.
-- [ ] Implement at least 3 distinct action types (e.g. `SET_FILTER`, `SET_SORT`, `CLEAR_FILTERS`).
+- [x] Identify the Evidence Catalogue's combined filter state (search term, type, person, location, status, relevance, and sort order — 7+ related values that often change together or need to be reset together) as a single non-trivial state domain, and replace its `useState` calls with a single `useReducer`.
+- [x] Implement at least 3 distinct action types (e.g. `SET_FILTER`, `SET_SORT`, `CLEAR_FILTERS`).
 
 **Questions** (depend on the tasks above)
 
-- [ ] Why is this particular piece of state ("evidence filters") a better fit for `useReducer` than for a pile of individual `useState` calls? What specifically got easier once you switched?
-- [ ] Show your `CLEAR_FILTERS` action. How does a reducer make "reset several related values at once, consistently" easier to get right than resetting them individually?
-- [ ] Is `useReducer` fundamentally different from `useState`, or is `useState` essentially a
+- [x] Why is this particular piece of state ("evidence filters") a better fit for `useReducer` than for a pile of individual `useState` calls? What specifically got easier once you switched?
+- [x] Show your `CLEAR_FILTERS` action. How does a reducer make "reset several related values at once, consistently" easier to get right than resetting them individually?
+- [x] Is `useReducer` fundamentally different from `useState`, or is `useState` essentially a
 special case of the same underlying idea? Justify your answer.
 
 ---

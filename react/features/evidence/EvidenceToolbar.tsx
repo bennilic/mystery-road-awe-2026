@@ -1,12 +1,10 @@
 import type { EvidenceFilters, SortOrder } from "./filterEvidence.ts";
+import type { FilterField } from "./evidenceFiltersReducer.ts";
 
 export interface FilterOption {
   value: string;
   label: string;
 }
-
-// The text/dropdown filters; the sort order has its own typed handler.
-export type FilterField = Exclude<keyof EvidenceFilters, "sortOrder">;
 
 interface FilterSelectProps {
   id: string;

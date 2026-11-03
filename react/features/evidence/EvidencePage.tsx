@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useReducer, useState } from "react";
 import { useSearchParams } from "react-router";
 import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
@@ -10,8 +10,9 @@ import {
 } from "../../shared/evidence/reviewEdits.ts";
 import { EvidenceCard } from "./EvidenceCard.tsx";
 import { EvidenceDetail } from "./EvidenceDetail.tsx";
-import { EvidenceToolbar, type FilterField } from "./EvidenceToolbar.tsx";
-import { filterAndSortEvidence, type SortOrder } from "./filterEvidence.ts";
+import { EvidenceToolbar } from "./EvidenceToolbar.tsx";
+import { evidenceFiltersReducer, INITIAL_EVIDENCE_FILTERS } from "./evidenceFiltersReducer.ts";
+import { filterAndSortEvidence } from "./filterEvidence.ts";
 
 // Everything the app owns and the Evidence page only reads or asks to change.
 interface EvidenceStateProps {
@@ -35,59 +36,17 @@ function EvidenceContent({
   onChangeReview,
 }: EvidenceStateProps & { data: CaseData }) {
   const [searchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [type, setType] = useState("");
-  const [personId, setPersonId] = useState("");
-  const [locationId, setLocationId] = useState("");
-  const [status, setStatus] = useState("");
-  const [relevance, setRelevance] = useState("");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("date-desc");
+  const [filters, dispatchFilters] = useReducer(evidenceFiltersReducer, INITIAL_EVIDENCE_FILTERS);
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(() =>
     searchParams.get(OPEN_EVIDENCE_PARAM),
   );
-
-  function handleFilterChange(field: FilterField, value: string) {
-    switch (field) {
-      case "searchTerm":
-        return setSearchTerm(value);
-      case "type":
-        return setType(value);
-      case "personId":
-        return setPersonId(value);
-      case "locationId":
-        return setLocationId(value);
-      case "status":
-        return setStatus(value);
-      case "relevance":
-        return setRelevance(value);
-    }
-  }
-
-  // One setter per field: forgetting one here leaves that filter active.
-  function handleClearFilters() {
-    setSearchTerm("");
-    setType("");
-    setPersonId("");
-    setLocationId("");
-    setStatus("");
-    setRelevance("");
-    setSortOrder("date-desc");
-  }
 
   // Review edits are layered over the loaded list on every render.
   const evidence = applyReviewEdits(data.evidence, reviewEdits);
 
   // Derived on every render from the full list and the filter state: there
   // is no "filtered list" state that could fall out of sync with them.
-  const visibleEvidence = filterAndSortEvidence(evidence, {
-    searchTerm,
-    type,
-    personId,
-    locationId,
-    status,
-    relevance,
-    sortOrder,
-  });
+  const visibleEvidence = filterAndSortEvidence(evidence, filters);
 
   const selectedItem = evidence.find((item) => item.id === selectedEvidenceId);
   const personName = (personId: string) =>
@@ -100,10 +59,10 @@ function EvidenceContent({
   return (
     <>
       <EvidenceToolbar
-        filters={{ searchTerm, type, personId, locationId, status, relevance, sortOrder }}
-        onFilterChange={handleFilterChange}
-        onSortChange={setSortOrder}
-        onClear={handleClearFilters}
+        filters={filters}
+        onFilterChange={(field, value) => dispatchFilters({ type: "SET_FILTER", field, value })}
+        onSortChange={(sortOrder) => dispatchFilters({ type: "SET_SORT", sortOrder })}
+        onClear={() => dispatchFilters({ type: "CLEAR_FILTERS" })}
         typeOptions={[...new Set(data.evidence.map((item) => item.type.toLowerCase()))].map(
           (type) => ({ value: type, label: type }),
         )}
