@@ -26,7 +26,7 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 | 6 | Live bookmark updates | ☑ |
 | 7 | Why bookmarks are easy to synchronize | ☑ |
 | 8 | Disconnect and reconnect | ☑ |
-| 9 | Validation and security boundaries | ☐ |
+| 9 | Validation and security boundaries | ☑ |
 | 10 | Data-flow explanation and limitations | ☐ |
 
 ---
@@ -165,13 +165,13 @@ type ServerMessage =
 
 ### Required task
 
-- [ ] Validate incoming messages on the server. Reject malformed JSON, unknown message types, and bookmark ids that do not exist in the case data. Demonstrate that invalid input produces an error response or is ignored without crashing the server.
+- [x] Validate incoming messages on the server. Reject malformed JSON, unknown message types, and bookmark ids that do not exist in the case data. Demonstrate that invalid input produces an error response or is ignored without crashing the server.
 
 ### Questions
 
-- [ ] Why can the server not trust TypeScript types or the browser UI to validate a message?
-- [ ] Without sign-in, what security boundary does validation still provide, and what does it not provide?
-- [ ] How could a malicious client impersonate a display name in the current design?
+- [x] Why can the server not trust TypeScript types or the browser UI to validate a message?
+- [x] Without sign-in, what security boundary does validation still provide, and what does it not provide?
+- [x] How could a malicious client impersonate a display name in the current design?
 
 ---
 

@@ -23,6 +23,8 @@ export interface WorkspaceSocket {
   status: ConnectionStatus;
   // Why the last connection ended; null while live.
   problem: string | null;
+  // What the server last refused and why; null once a later update succeeded.
+  serverError: string | null;
   // The name the server gave this connection; null until the welcome arrives.
   myName: string | null;
   // Everyone currently connected, as last reported by the server.
@@ -43,6 +45,7 @@ export interface WorkspaceSocket {
 export function useWorkspaceSocket(): WorkspaceSocket {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [problem, setProblem] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [myName, setMyName] = useState<string | null>(null);
   const [presenceNames, setPresenceNames] = useState<string[]>([]);
   const [sharedBookmarkIds, setSharedBookmarkIds] = useState<string[]>([]);
@@ -77,6 +80,10 @@ export function useWorkspaceSocket(): WorkspaceSocket {
           case "workspace-state":
           case "bookmarks-updated":
             setSharedBookmarkIds(message.bookmarks);
+            setServerError(null);
+            break;
+          case "error":
+            setServerError(message.message);
             break;
         }
       },
@@ -95,6 +102,7 @@ export function useWorkspaceSocket(): WorkspaceSocket {
   return {
     status,
     problem,
+    serverError,
     myName,
     presenceNames,
     sharedBookmarkIds,

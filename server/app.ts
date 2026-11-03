@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { loadEvidenceIds } from "./evidenceIds.ts";
 import { attachRealtime, type LogLine } from "./realtime.ts";
 
 // Dev-only, read-only backend for Exercise 6. It serves the five files in
@@ -108,6 +109,6 @@ export function createBackend(options: ServerOptions): Server {
       sendJson(response, 500, { error: `The backend could not read the data file: ${reason}` });
     });
   });
-  attachRealtime(httpServer, options.log ?? (() => {}));
+  attachRealtime(httpServer, options.log ?? (() => {}), loadEvidenceIds(options.dataDirectory));
   return httpServer;
 }

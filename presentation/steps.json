@@ -6146,6 +6146,102 @@
       "before": "    socket.addEventListener(\"open\", () => {\n      log(\"open\");\n      if (!isCurrent()) return;\n      this.hasRetried = false;\n      this.options.onStatusChange(\"live\", null);\n      this.options.onOpen(isReconnect);\n    });\n    socket.addEventListener(\"message\", (event: MessageEvent<string>) => {\n      log(\"message\", event.data);\n      if (isCurrent()) this.options.onMessage(event.data);\n    });\n    socket.addEventListener(\"error\", (event) => log(\"error\", event));\n    socket.addEventListener(\"close\", (event) => {\n      log(\"close\", { code: event.code, reason: event.reason, wasClean: event.wasClean });\n      if (isCurrent()) this.handleLoss(event.code);\n    });\n  }",
       "after": "// heartbeat (not built): silence becomes an event\nsetInterval(() => {\n  if (Date.now() - lastPongAt > 2 * PING_INTERVAL_MS) socket.close(4001, \"no pong\");\n  else socket.send(JSON.stringify({ type: \"ping\" }));\n}, PING_INTERVAL_MS);",
       "line": 67
+    },
+    {
+      "id": "ex7-d9-t1-page",
+      "type": "app",
+      "title": "D9 - T1 — Server-side validation of every incoming message (page)",
+      "narration": "Before the code: the badge in the header is where a refused message shows up. The normal page can never send invalid input, so I sent it by hand from the page's own socket.",
+      "exercise": 7,
+      "demo": 9,
+      "highlight": "#liveStatusBadge",
+      "waitFor": "#liveStatusBadge",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d9-t1",
+      "type": "code",
+      "title": "D9 - T1 — Server-side validation of every incoming message",
+      "narration": "Every frame goes through validateClientMessage before it can touch state: valid JSON, a JSON object, a known type, a string evidenceId, and an evidenceId that exists in public/data/evidence.json (read once at startup by loadEvidenceIds). It never throws and returns either the typed message or a reason. A rejected message gets { type: \"error\", message } back, is logged, and changes nothing; the connection stays open. Frames over 16 KiB close only that connection (code 1009); binary frames are refused. Verified in the browser by sending four bad frames on the real page socket: broken JSON, an unknown type, evidenceId E999, evidenceId 42. Each produced the matching refusal in the badge (\"The message is not valid JSON.\", \"Unknown message type \\\"delete-everything\\\".\", \"There is no evidence with the id \\\"E999\\\".\", ...), no star changed, the server process kept running (same PID), the server log shows four [realtime] rejected lines, and the next real click on a star worked and cleared the message. Covered by 14 unit tests of the validator (12 table-driven rejection cases) and two integration tests (invalid frames then valid use on the same connection and a new one; oversize frame). The error message type is my addition to the spec's list, the only way to answer invalid input.",
+      "exercise": 7,
+      "demo": 9,
+      "file": "server/validateClientMessage.ts",
+      "before": "      // A cast, not a check: Demo 9 adds the real validation. Until then a\n      // broken frame is only kept from crashing the server.\n      message = JSON.parse(data.toString()) as ClientMessage;",
+      "after": "export function validateClientMessage(\n  rawText: string,\n  knownEvidenceIds: ReadonlySet<string>,\n): ValidationResult {\n  let parsed: unknown;\n  try {\n    parsed = JSON.parse(rawText);\n  } catch {\n    return invalid(\"The message is not valid JSON.\");\n  }\n  if (typeof parsed !== \"object\" || parsed === null || Array.isArray(parsed)) {\n    return invalid('The message must be a JSON object with a string property \"type\".');\n  }\n  const candidate = parsed as Record<string, unknown>;\n\n  switch (candidate.type) {\n    case \"request-state\":\n      return { isValid: true, message: { type: \"request-state\" } };\n    case \"toggle-bookmark\": {\n      const evidenceId = candidate.evidenceId;\n      if (typeof evidenceId !== \"string\") {\n        return invalid('toggle-bookmark needs a string property \"evidenceId\".');\n      }\n      if (!knownEvidenceIds.has(evidenceId)) {\n        return invalid(`There is no evidence with the id ${describeValue(evidenceId)}.`);\n      }\n      return { isValid: true, message: { type: \"toggle-bookmark\", evidenceId } };\n    }\n    default:\n      return invalid(`Unknown message type ${describeValue(candidate.type)}.`);\n  }\n}",
+      "line": 25
+    },
+    {
+      "id": "ex7-d9-q1-page",
+      "type": "app",
+      "title": "D9 - Q1 — Why the server cannot trust types or the UI (page)",
+      "narration": "Before the code: the star buttons only send valid messages, but the page is not the only possible sender.",
+      "exercise": 7,
+      "demo": 9,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".bookmark-btn",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d9-q1",
+      "type": "code",
+      "title": "D9 - Q1 — Why the server cannot trust types or the UI",
+      "narration": "TypeScript types are erased at compile time: at runtime JSON.parse returns whatever bytes arrived, and a cast (as ClientMessage) only silences the compiler. And the UI is just one client: anyone can use DevTools, a script, curl or a modified or outdated copy of the app to open the same URL and send any frame. I did exactly that: from the real page's socket I sent E999 and a numeric id, which the UI would never produce, and without validation the first would have put a non-existent id into the shared set and broadcast it to everyone. A disabled button or a typed function signature is a convenience for honest clients, not a security control; the check has to happen where the data enters the trusted side, on the server.",
+      "exercise": 7,
+      "demo": 9,
+      "file": "server/realtime.ts",
+      "before": "      message = JSON.parse(data.toString()) as ClientMessage; // trusts the sender",
+      "after": "    socket.on(\"message\", (data, isBinary) => {\n      const result = isBinary\n        ? ({ isValid: false, reason: \"Only text messages are supported.\" } as const)\n        : validateClientMessage(data.toString(), knownEvidenceIds);\n      if (!result.isValid) {\n        // Refused, not fatal: tell the sender why, keep the connection and the state.\n        log(`[realtime] rejected message from ${name}: ${result.reason}`);\n        session.send(socket, { type: \"error\", message: result.reason });\n        return;\n      }",
+      "line": 42
+    },
+    {
+      "id": "ex7-d9-q2-page",
+      "type": "app",
+      "title": "D9 - Q2 — What validation gives without sign-in, and what it does not (page)",
+      "narration": "Before the code: this shows what the server accepts today; anyone who can reach the port is still allowed to try.",
+      "exercise": 7,
+      "demo": 9,
+      "highlight": "#liveStatusBadge",
+      "waitFor": "#liveStatusBadge",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d9-q2",
+      "type": "code",
+      "title": "D9 - Q2 — What validation gives without sign-in, and what it does not",
+      "narration": "It still gives: robustness (garbage cannot crash the server or corrupt the state), integrity of the shared data (only real evidence ids can ever be in the set, so it cannot be filled with invented ids or grow without bound), a bounded frame size, and clear errors. It does not give: identity (who is sending: there is no sign-in, every connection is anonymous), authorization (any valid connection may toggle any bookmark and see everyone), confidentiality (plain ws://; production needs wss://), abuse protection (a valid toggle can be sent thousands of times a second: no rate limit), or protection of who may connect at all (the server does not check the Origin header, so a web page on any other site could open this socket from a visitor's browser). Validation makes the allowed inputs well-formed; it does not decide who is allowed.",
+      "exercise": 7,
+      "demo": 9,
+      "file": "server/realtime.ts",
+      "before": "const socketServer = new WebSocketServer({ server: httpServer, path: SOCKET_PATH });",
+      "after": "const MAX_MESSAGE_BYTES = 16 * 1024;\n\nexport function attachRealtime(\n  httpServer: Server,\n  log: LogLine,\n  knownEvidenceIds: ReadonlySet<string>,\n): WebSocketServer {\n  const socketServer = new WebSocketServer({\n    server: httpServer,\n    path: SOCKET_PATH,\n    maxPayload: MAX_MESSAGE_BYTES,\n  });",
+      "line": 20
+    },
+    {
+      "id": "ex7-d9-q3-page",
+      "type": "app",
+      "title": "D9 - Q3 — How a client could impersonate a display name (page)",
+      "narration": "Before the code: the chip with the bold name is the only identity there is; everybody sees only what the server says about it.",
+      "exercise": 7,
+      "demo": 9,
+      "highlight": "#livePresence",
+      "waitFor": "#livePresence",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d9-q3",
+      "type": "code",
+      "title": "D9 - Q3 — How a client could impersonate a display name",
+      "narration": "Honest answer for the current design: a client cannot choose or send its own name, because the server assigns it (createDisplayName) and no message carries one, so it cannot simply claim to be Investigator-42. But the name proves nothing: there is no sign-in, the number is one of ~90 random values, a name is released when its holder disconnects, and a reconnect gets a new one. An attacker can therefore open and close connections until the server hands out the name it wants (the other holder must have left; two live connections never share a name), and a user who reconnects can end up with someone else's former name. If the app ever added a \"rename\" message, nothing would stop a client from picking another person's name, because the server would have only the unauthenticated claim to go on. Real identity needs authentication (a signed-in session or token checked during the handshake) and the server attaching the authenticated user to the connection.",
+      "exercise": 7,
+      "demo": 9,
+      "file": "server/displayName.ts",
+      "before": "// (names are assigned by the server; clients cannot send one)",
+      "after": "// Picks \"Investigator-42\"-style names. A name that is already taken is never\n// handed out twice, otherwise the presence list could not tell two tabs apart.\nexport function createDisplayName(\n  takenNames: ReadonlySet<string>,\n  random: () => number = Math.random,\n): string {\n  const startNumber = FIRST_RANDOM_NUMBER + Math.floor(random() * RANDOM_NUMBER_COUNT);\n  // Count upwards from the random start: it always ends, because only finitely many names are taken.\n  for (let number = startNumber; ; number++) {\n    const name = `${NAME_PREFIX}-${number}`;\n    if (!takenNames.has(name)) return name;\n  }\n}",
+      "line": 5
     }
   ]
 }

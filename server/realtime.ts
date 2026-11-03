@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
 import { WebSocketServer } from "ws";
-import type { ClientMessage } from "../protocol/workspaceProtocol.ts";
+import { validateClientMessage } from "./validateClientMessage.ts";
 import { WorkspaceSession } from "./workspaceSession.ts";
 
 // Exercise 7: the WebSocket side of the dev backend. It shares the HTTP
@@ -16,8 +16,19 @@ function assertNever(message: never): never {
   throw new Error(`Unhandled message: ${JSON.stringify(message)}`);
 }
 
-export function attachRealtime(httpServer: Server, log: LogLine): WebSocketServer {
-  const socketServer = new WebSocketServer({ server: httpServer, path: SOCKET_PATH });
+// The largest frame the server accepts; the largest real message is a few hundred bytes.
+const MAX_MESSAGE_BYTES = 16 * 1024;
+
+export function attachRealtime(
+  httpServer: Server,
+  log: LogLine,
+  knownEvidenceIds: ReadonlySet<string>,
+): WebSocketServer {
+  const socketServer = new WebSocketServer({
+    server: httpServer,
+    path: SOCKET_PATH,
+    maxPayload: MAX_MESSAGE_BYTES,
+  });
   // The server is the authoritative state: one session, held in memory only.
   const session = new WorkspaceSession();
 
@@ -28,16 +39,17 @@ export function attachRealtime(httpServer: Server, log: LogLine): WebSocketServe
     session.send(socket, { type: "workspace-state", bookmarks: session.bookmarks });
     session.broadcast({ type: "presence-updated", names: session.names });
 
-    socket.on("message", (data) => {
-      let message: ClientMessage;
-      try {
-        // A cast, not a check: Demo 9 adds the real validation. Until then a
-        // broken frame is only kept from crashing the server.
-        message = JSON.parse(data.toString()) as ClientMessage;
-      } catch (error) {
-        log(`[realtime] ignored unreadable message from ${name}: ${String(error)}`);
+    socket.on("message", (data, isBinary) => {
+      const result = isBinary
+        ? ({ isValid: false, reason: "Only text messages are supported." } as const)
+        : validateClientMessage(data.toString(), knownEvidenceIds);
+      if (!result.isValid) {
+        // Refused, not fatal: tell the sender why, keep the connection and the state.
+        log(`[realtime] rejected message from ${name}: ${result.reason}`);
+        session.send(socket, { type: "error", message: result.reason });
         return;
       }
+      const message = result.message;
       log(`[realtime] message from ${name}: ${message.type}`);
       switch (message.type) {
         case "toggle-bookmark":

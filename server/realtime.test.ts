@@ -142,20 +142,51 @@ test("presence lists every open connection and drops a closed one", async () => 
   });
 });
 
-test("typed client messages are logged by type and a broken frame does not crash the server", async () => {
+test("invalid input is answered with an error, changes nothing and does not stop the server", async () => {
   await withBackend(async (socketUrl, log) => {
     const { socket, messages } = await connect(socketUrl);
+    const errorsIn = () => messages.filter((m) => (m as { type: string }).type === "error");
+    const invalidFrames = [
+      "this is not json",
+      JSON.stringify({ type: "delete-everything" }),
+      JSON.stringify({ type: "toggle-bookmark", evidenceId: "E999" }),
+      JSON.stringify({ type: "toggle-bookmark", evidenceId: 7 }),
+      JSON.stringify([1, 2, 3]),
+    ];
+    for (const frame of invalidFrames) socket.send(frame);
+    socket.send(Buffer.from([1, 2, 3]));
+    await waitUntil(() => errorsIn().length >= invalidFrames.length + 1);
+
+    assert.equal(errorsIn().length, invalidFrames.length + 1);
+    assert.match((errorsIn()[0] as { message: string }).message, /not valid JSON/);
+    assert.equal(lastBookmarks(messages), undefined, "no bookmark was changed");
+    assert.ok(log.some((line) => line.includes("rejected message")));
+
+    // Same connection still works, and so does a new one.
     const request: ClientMessage = { type: "request-state" };
     socket.send(JSON.stringify(request));
-    socket.send("this is not json");
-    await waitUntil(() => log.some((line) => line.includes("ignored unreadable")));
-    assert.ok(log.some((line) => line.endsWith(": request-state")));
-    // Still serving: a new connection is welcomed.
+    socket.send(JSON.stringify({ type: "toggle-bookmark", evidenceId: "E01" }));
+    await waitUntil(() => lastBookmarks(messages) !== undefined);
+    assert.deepEqual(lastBookmarks(messages), ["E01"]);
     const second = await connect(socketUrl);
     await waitUntil(() => second.messages.length >= 1);
     assert.equal((second.messages[0] as { type: string }).type, "welcome");
-    assert.ok(messages.length >= 1);
     socket.close();
+    second.socket.close();
+  });
+});
+
+test("a frame over the size limit closes that connection (1009) but not the server", async () => {
+  await withBackend(async (socketUrl) => {
+    const { socket } = await connect(socketUrl);
+    const closeCode = new Promise<number>((resolve) =>
+      socket.once("close", (code) => resolve(code)),
+    );
+    socket.send("x".repeat(64 * 1024));
+    assert.equal(await closeCode, 1009);
+    const second = await connect(socketUrl);
+    await waitUntil(() => second.messages.length >= 1);
+    assert.equal((second.messages[0] as { type: string }).type, "welcome");
     second.socket.close();
   });
 });

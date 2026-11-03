@@ -11,7 +11,7 @@ const STATUS_LABELS: Record<ConnectionStatus, string> = {
 // Visible on every page: the shared bookmarks are only as current as this
 // connection. While it is down the stars are disabled and show the last known state.
 export function LiveStatus() {
-  const { status, problem, reconnect } = useLiveWorkspace();
+  const { status, problem, serverError, reconnect } = useLiveWorkspace();
   const isDown = status === "reconnecting" || status === "disconnected";
   return (
     <div className={`live-status live-status-${status}`} role="status" id="liveStatusBadge">
@@ -23,6 +23,12 @@ export function LiveStatus() {
           is back.
           {status === "disconnected" &&
             " Check that the backend is running (npm run server), then press Reconnect."}
+        </span>
+      )}
+      {serverError && (
+        <span className="live-status-detail" role="alert" id="liveServerError">
+          {" "}
+          The server refused a message: {serverError} Reload the page if bookmarks keep failing.
         </span>
       )}
       {status === "disconnected" && (

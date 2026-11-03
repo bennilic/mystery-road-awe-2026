@@ -13,4 +13,7 @@ export type ServerMessage =
   | { type: "welcome"; name: string }
   | { type: "workspace-state"; bookmarks: string[] }
   | { type: "bookmarks-updated"; bookmarks: string[] }
-  | { type: "presence-updated"; names: string[] };
+  | { type: "presence-updated"; names: string[] }
+  // Answer to a message the server refused; says what was wrong. Not in the
+  // exercise's minimum list: Demo 9 needs some way to answer invalid input.
+  | { type: "error"; message: string };
