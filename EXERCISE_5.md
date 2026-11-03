@@ -29,7 +29,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 5 | Lifting state to the nearest common owner | ☑ |
 | 6 | Passing callbacks downward | ☑ |
 | 7 | `useReducer` for the filter/search/sort state | ☑ |
-| 8 | Context, and when not to use it | ☐ |
+| 8 | Context, and when not to use it | ☑ |
 | 9 | Diagnose & fix common state problems | ☐ |
 | 10 | Remove remaining direct DOM manipulation + wrap-up | ☐ |
 
@@ -145,16 +145,16 @@ special case of the same underlying idea? Justify your answer.
 
 **Tasks**
 
-- [ ] Pick one piece of state from this exercise (bookmark state is a strong candidate, given Demo 6's prop-drilling question) and actually implement it via React Context, replacing the prop-drilled version.
-- [ ] Explain a short, honest decision: for *this specific app*, at its *current* size, is Context actually the right call for this state, or is prop-drilling (or lifting state, without
+- [x] Pick one piece of state from this exercise (bookmark state is a strong candidate, given Demo 6's prop-drilling question) and actually implement it via React Context, replacing the prop-drilled version.
+- [x] Explain a short, honest decision: for *this specific app*, at its *current* size, is Context actually the right call for this state, or is prop-drilling (or lifting state, without
 Context) good enough? Be ready to defend whichever answer you land on.
 
 **Questions** (depend on the tasks above)
 
-- [ ] What problem does Context actually solve? What does it *not* solve (people sometimes expect it to behave like global state management. Where does that expectation break down)?
-- [ ] Revisit Demo 6's callback-depth question. Was prop drilling there actually a real problem
+- [x] What problem does Context actually solve? What does it *not* solve (people sometimes expect it to behave like global state management. Where does that expectation break down)?
+- [x] Revisit Demo 6's callback-depth question. Was prop drilling there actually a real problem
 (annoying, error-prone, worth solving) or a manageable one? What's your threshold for reaching for Context instead of just drilling one more level?
-- [ ] "Unnecessary global state" is explicitly named as a common problem. Could using Context here be an example of that, even though Context isn't technically the same as a global variable?
+- [x] "Unnecessary global state" is explicitly named as a common problem. Could using Context here be an example of that, even though Context isn't technically the same as a global variable?
 
 ---
 

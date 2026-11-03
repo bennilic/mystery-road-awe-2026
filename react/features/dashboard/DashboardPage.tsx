@@ -1,4 +1,5 @@
 import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
+import { useBookmarks } from "../../shared/bookmarks/BookmarksContext.tsx";
 import { selectBookmarkedEvidence } from "../../shared/bookmarks/selectBookmarkedEvidence.ts";
 import {
   applyReviewEdits,
@@ -14,15 +15,11 @@ import { RecentTimelineList } from "./RecentTimelineList.tsx";
 const RECENT_ITEM_COUNT = 5;
 
 interface DashboardStateProps {
-  bookmarkedIds: string[];
   reviewEdits: ReviewEditsByEvidenceId;
 }
 
-function DashboardContent({
-  data,
-  bookmarkedIds,
-  reviewEdits,
-}: DashboardStateProps & { data: CaseData }) {
+function DashboardContent({ data, reviewEdits }: DashboardStateProps & { data: CaseData }) {
+  const { bookmarkedIds } = useBookmarks();
   // Review edits layered over the loaded list, so "Reviewed" and the badges follow the detail panel.
   const evidence = applyReviewEdits(data.evidence, reviewEdits);
   // Derived values are computed during render from the data, not stored in

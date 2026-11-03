@@ -14,10 +14,8 @@ import { EvidenceToolbar } from "./EvidenceToolbar.tsx";
 import { evidenceFiltersReducer, INITIAL_EVIDENCE_FILTERS } from "./evidenceFiltersReducer.ts";
 import { filterAndSortEvidence } from "./filterEvidence.ts";
 
-// Everything the app owns and the Evidence page only reads or asks to change.
+// The notes and review edits the app owns and the Evidence page only reads or asks to change.
 interface EvidenceStateProps {
-  bookmarkedIds: string[];
-  onToggleBookmark: (evidenceId: string) => void;
   notes: Record<string, string>;
   onSaveNote: (evidenceId: string, text: string) => void;
   reviewEdits: ReviewEditsByEvidenceId;
@@ -28,8 +26,6 @@ interface EvidenceStateProps {
 // and wires events to it; bookmarks come from the app.
 function EvidenceContent({
   data,
-  bookmarkedIds,
-  onToggleBookmark,
   notes,
   onSaveNote,
   reviewEdits,
@@ -76,13 +72,7 @@ function EvidenceContent({
         <div id="evidenceList" className="evidence-grid">
           {visibleEvidence.length === 0 && <p>No evidence matches the current filters.</p>}
           {visibleEvidence.map((item) => (
-            <EvidenceCard
-              key={item.id}
-              item={item}
-              isBookmarked={bookmarkedIds.includes(item.id)}
-              onOpen={setSelectedEvidenceId}
-              onToggleBookmark={onToggleBookmark}
-            />
+            <EvidenceCard key={item.id} item={item} onOpen={setSelectedEvidenceId} />
           ))}
         </div>
       </div>

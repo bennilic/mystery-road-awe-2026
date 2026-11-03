@@ -1,16 +1,20 @@
 import { formatDate } from "../../../js/lookup.ts";
+import { useBookmarks } from "../../shared/bookmarks/BookmarksContext.tsx";
 import { Badge } from "../../shared/components/Badge.tsx";
 import { relevanceVariant, statusVariant } from "../../shared/components/evidenceBadges.ts";
 import type { Evidence } from "../../../js/types.ts";
 
 interface EvidenceCardProps {
   item: Evidence;
-  isBookmarked: boolean;
   onOpen: (evidenceId: string) => void;
-  onToggleBookmark: (evidenceId: string) => void;
 }
 
-export function EvidenceCard({ item, isBookmarked, onOpen, onToggleBookmark }: EvidenceCardProps) {
+export function EvidenceCard({ item, onOpen }: EvidenceCardProps) {
+  // Read straight from Context: EvidencePage and EvidenceContent no longer
+  // carry the bookmark props just to hand them to this component.
+  const { bookmarkedIds, toggleBookmark } = useBookmarks();
+  const isBookmarked = bookmarkedIds.includes(item.id);
+
   return (
     // React attaches this handler itself; there is no inline HTML attribute string
     // and no listener on a parent container to dispatch by event.target.
@@ -23,7 +27,7 @@ export function EvidenceCard({ item, isBookmarked, onOpen, onToggleBookmark }: E
           // The button sits inside the clickable card: without this the same
           // click would also open the detail panel.
           event.stopPropagation();
-          onToggleBookmark(item.id);
+          toggleBookmark(item.id);
         }}
       >
         <span className="bookmark-icon">{isBookmarked ? "★" : "☆"}</span>

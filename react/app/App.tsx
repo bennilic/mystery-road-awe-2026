@@ -3,8 +3,7 @@ import { Navigate, Route, Routes } from "react-router";
 import { Header } from "../shell/Header.tsx";
 import { Footer } from "../shell/Footer.tsx";
 import { CaseDataProvider } from "../shared/data/CaseDataContext.tsx";
-import { toggleBookmarkId } from "../shared/bookmarks/toggleBookmarkId.ts";
-import { readBookmarkIds, writeBookmarkIds } from "../shared/storage/bookmarkStorage.ts";
+import { BookmarkStorageNotice, BookmarksProvider } from "../shared/bookmarks/BookmarksContext.tsx";
 import { readNotes, writeNotes } from "../shared/storage/noteStorage.ts";
 import type { ReviewEdit, ReviewEditsByEvidenceId } from "../shared/evidence/reviewEdits.ts";
 import { describeStorageFailure } from "../shared/storage/describeStorageFailure.ts";
@@ -19,30 +18,20 @@ import { TimelinePage } from "../features/timeline/TimelinePage.tsx";
 export function App() {
   return (
     <CaseDataProvider>
-      <AppBody />
+      <BookmarksProvider>
+        <AppBody />
+      </BookmarksProvider>
     </CaseDataProvider>
   );
 }
 
-// Lowest common ancestor of every component that reads or changes bookmarks:
-// the Dashboard, Evidence and Workspace pages are siblings under <Routes>, so
-// the bookmark state lives here, one level above all three.
+// Owns the state that is still passed down as props: notes and review edits.
+// Bookmarks moved into BookmarksProvider (Demo 8).
 function AppBody() {
-  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);
   const [notes, setNotes] = useState(readNotes);
   // In memory only, like the vanilla app: review edits are lost on reload.
   const [reviewEdits, setReviewEdits] = useState<ReviewEditsByEvidenceId>({});
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
-
-  function handleToggleBookmark(evidenceId: string) {
-    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);
-    setBookmarkedIds(nextIds);
-    try {
-      writeBookmarkIds(nextIds);
-    } catch (error) {
-      setStorageNotice(describeStorageFailure("Your bookmark", error));
-    }
-  }
 
   function handleSaveNote(evidenceId: string, text: string) {
     const nextNotes = { ...notes, [evidenceId]: text };
@@ -66,18 +55,14 @@ function AppBody() {
       <Header />
       <main id="app" className="app-main">
         {storageNotice && <p role="alert">{storageNotice}</p>}
+        <BookmarkStorageNotice />
         <Routes>
           <Route path="/" element={<Navigate to={PATHS.dashboard} replace />} />
-          <Route
-            path={PATHS.dashboard}
-            element={<DashboardPage bookmarkedIds={bookmarkedIds} reviewEdits={reviewEdits} />}
-          />
+          <Route path={PATHS.dashboard} element={<DashboardPage reviewEdits={reviewEdits} />} />
           <Route
             path={PATHS.evidence}
             element={
               <EvidencePage
-                bookmarkedIds={bookmarkedIds}
-                onToggleBookmark={handleToggleBookmark}
                 notes={notes}
                 onSaveNote={handleSaveNote}
                 reviewEdits={reviewEdits}
@@ -90,10 +75,7 @@ function AppBody() {
           <Route path={`${PATHS.people}/:personId`} element={<PersonDetailPage />} />
           <Route path={PATHS.locations} element={<PeoplePage tab="locations" />} />
           <Route path={PATHS.timeline} element={<TimelinePage />} />
-          <Route
-            path={PATHS.workspace}
-            element={<WorkspacePage bookmarkedIds={bookmarkedIds} notes={notes} />}
-          />
+          <Route path={PATHS.workspace} element={<WorkspacePage notes={notes} />} />
           {/* Old Exercise 3 hashes (#people) keep working as bookmarks. */}
           <Route path="/people" element={<Navigate to={PATHS.people} replace />} />
           {/* Anything else: same fallback as the vanilla handleHashChange(), but explicit. */}

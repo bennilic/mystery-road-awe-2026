@@ -1,20 +1,17 @@
 import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
+import { useBookmarks } from "../../shared/bookmarks/BookmarksContext.tsx";
 import { selectBookmarkedEvidence } from "../../shared/bookmarks/selectBookmarkedEvidence.ts";
 import { BookmarkedEvidenceList } from "./BookmarkedEvidenceList.tsx";
 import { HypothesisForm } from "./HypothesisForm.tsx";
 import { NotesList } from "./NotesList.tsx";
 
 interface WorkspaceStateProps {
-  bookmarkedIds: string[];
   notes: Record<string, string>;
 }
 
-function WorkspaceContent({
-  data,
-  bookmarkedIds,
-  notes,
-}: WorkspaceStateProps & { data: CaseData }) {
+function WorkspaceContent({ data, notes }: WorkspaceStateProps & { data: CaseData }) {
+  const { bookmarkedIds } = useBookmarks();
   const bookmarkedItems = selectBookmarkedEvidence(data.evidence, bookmarkedIds);
 
   return (

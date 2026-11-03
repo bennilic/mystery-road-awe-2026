@@ -3906,6 +3906,121 @@
       "file": "react/features/evidence/evidenceFiltersReducer.ts",
       "before": "// useState expressed as a reducer\nfunction setStateReducer<S>(state: S, action: S | ((previous: S) => S)): S {\n  return typeof action === \"function\" ? (action as (p: S) => S)(state) : action;\n}\nconst [value, setValue] = useReducer(setStateReducer, initialValue);",
       "after": "const [value, setValue] = useState(initialValue);"
+    },
+    {
+      "id": "ex5-d8-t1-page",
+      "type": "app",
+      "title": "D8 - T1 — On the page: the star no longer gets bookmark props",
+      "narration": "Before the code: the star in each card now reads the bookmarks from Context. EvidencePage and EvidenceContent, which only passed the props through, have lost them.",
+      "exercise": 5,
+      "demo": 8,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d8-t1",
+      "type": "code",
+      "title": "D8 - T1 — Bookmarks via React Context instead of props",
+      "narration": "BookmarksProvider holds the same useState and toggle as before (moved out of AppBody) and puts {bookmarkedIds, toggleBookmark, storageNotice} in a Context. useBookmarks() reads it. EvidenceCard, DashboardPage and WorkspacePage call the hook; the bookmark props are gone from AppBody, EvidencePage and EvidenceContent (EvidencePage and EvidenceContent lose two props each, EvidenceCard loses two, Dashboard and Workspace lose one each). The behaviour is identical, verified again with the Demo 5 script: Dashboard 0 -> 2 after two stars, Workspace lists E03 and E14, un-starring gives 1, localStorage holds [\"E03\"] and survives a reload; and with localStorage.setItem forced to throw, the star still toggles and the page shows 'Your bookmark could not be saved to this browser (QuotaExceededError). ...'. Notes and review edits are deliberately still props (see T2).",
+      "exercise": 5,
+      "demo": 8,
+      "file": "react/shared/bookmarks/BookmarksContext.tsx",
+      "before": "interface EvidenceStateProps {\n  bookmarkedIds: string[];\n  onToggleBookmark: (evidenceId: string) => void;\n  notes: Record<string, string>;\n  onSaveNote: (evidenceId: string, text: string) => void;\n  reviewEdits: ReviewEditsByEvidenceId;\n  onChangeReview: (evidenceId: string, change: ReviewEdit) => void;\n}\n\ninterface EvidenceCardProps {\n  item: Evidence;\n  isBookmarked: boolean;\n  onOpen: (evidenceId: string) => void;\n  onToggleBookmark: (evidenceId: string) => void;\n}",
+      "after": "import { createContext, useContext, useState, type ReactNode } from \"react\";\nimport { readBookmarkIds, writeBookmarkIds } from \"../storage/bookmarkStorage.ts\";\nimport { describeStorageFailure } from \"../storage/describeStorageFailure.ts\";\nimport { toggleBookmarkId } from \"./toggleBookmarkId.ts\";\n\ninterface BookmarksValue {\n  bookmarkedIds: string[];\n  toggleBookmark: (evidenceId: string) => void;\n  // Set when the browser refused to save; the bookmark stays toggled on screen.\n  storageNotice: string | null;\n}\n\nconst BookmarksContext = createContext<BookmarksValue | null>(null);\n\n// The state is still an ordinary useState; Context only carries it (and its\n// updater) to any descendant without passing props through the layers between.\nexport function BookmarksProvider({ children }: { children: ReactNode }) {\n  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\n  const [storageNotice, setStorageNotice] = useState<string | null>(null);\n\n  function toggleBookmark(evidenceId: string) {\n    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);\n    setBookmarkedIds(nextIds);\n    try {\n      writeBookmarkIds(nextIds);\n    } catch (error) {\n      setStorageNotice(describeStorageFailure(\"Your bookmark\", error));\n    }\n  }\n\n  return (\n    <BookmarksContext.Provider value={{ bookmarkedIds, toggleBookmark, storageNotice }}>\n      {children}\n    </BookmarksContext.Provider>\n  );\n}\n\nexport function useBookmarks(): BookmarksValue {\n  const value = useContext(BookmarksContext);\n  if (!value) throw new Error(\"useBookmarks() must be used inside <BookmarksProvider>.\");\n  return value;\n}\n\nexport function BookmarkStorageNotice() {\n  const { storageNotice } = useBookmarks();"
+    },
+    {
+      "id": "ex5-d8-t2-page",
+      "type": "app",
+      "title": "D8 - T2 — On the page: the whole Evidence page",
+      "narration": "Before the code: the decision. Is Context the right call here?",
+      "exercise": 5,
+      "demo": 8,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d8-t2",
+      "type": "code",
+      "title": "D8 - T2 — Decision: Context for bookmarks, props for the rest",
+      "narration": "Honest answer for this app at this size: both would be fine; I chose Context for bookmarks only. For: bookmarks have three consumers in three unrelated subtrees (card star, Dashboard stat, Workspace list) and the card star is four levels under the owner, two of them pure pass-through components; the value changes rarely and every consumer wants all of it. Against Context everywhere: notes (two consumers, three levels) and review edits (Dashboard and Evidence) have shallow, easy-to-follow paths; hiding them behind a hook would make it harder to see who depends on what, and a single combined context would re-render every consumer whenever any of them changed. Lifted state with props (Demo 5/6) was good enough for the current code, so this is a judgement call, not a necessity. The cost I accept: EvidenceCard is no longer a pure props-in/markup-out component, it needs a BookmarksProvider above it to render at all (useBookmarks throws a clear error if it is missing).",
+      "exercise": 5,
+      "demo": 8,
+      "file": "react/app/App.tsx",
+      "before": "// Demo 6: AppBody owned bookmarks, notes and review edits; all passed as props\n  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\n  const [notes, setNotes] = useState(readNotes);\n  // In memory only, like the vanilla app: review edits are lost on reload.\n              <EvidencePage\n                bookmarkedIds={bookmarkedIds}\n                onToggleBookmark={handleToggleBookmark}\n                notes={notes}\n                onSaveNote={handleSaveNote}\n                reviewEdits={reviewEdits}\n                onChangeReview={handleChangeReview}\n              />",
+      "after": "export function App() {\n  return (\n    <CaseDataProvider>\n      <BookmarksProvider>\n        <AppBody />\n      </BookmarksProvider>\n    </CaseDataProvider>\n  );\n}\n\n// notes and review edits stay props:\n              <EvidencePage\n                notes={notes}\n                onSaveNote={handleSaveNote}\n                reviewEdits={reviewEdits}\n                onChangeReview={handleChangeReview}\n              />"
+    },
+    {
+      "id": "ex5-d8-q1-page",
+      "type": "app",
+      "title": "D8 - Q1 — On the page: one value, many readers",
+      "narration": "Before the code: the Dashboard stat, the card stars and the Workspace list all read the bookmark list.",
+      "exercise": 5,
+      "demo": 8,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d8-q1",
+      "type": "code",
+      "title": "D8 - Q1 — What Context solves, and what it does not",
+      "narration": "Solves: prop drilling. A value provided high in the tree can be read by any descendant with useContext, without every component in between declaring and forwarding a prop. Does NOT: (1) it is not state; the state is still useState/useReducer in the provider, Context just transports the value; (2) it is not a store: no selectors, so every consumer re-renders whenever the provided value changes, even if it only uses one field (here that is fine, a combined notes+bookmarks context would re-render the Dashboard on every note save); (3) no built-in persistence, devtools, middleware or derived/cached values; (4) it only reaches descendants of the provider, so it is not 'global'; (5) it makes data flow implicit: a component's inputs are no longer visible in its props. The expectation that it behaves like Redux/Zustand breaks at (2) and (3): it solves delivery, not state management.",
+      "exercise": 5,
+      "demo": 8,
+      "file": "react/shared/bookmarks/BookmarksContext.tsx",
+      "before": "// reads need props from every parent\nfunction EvidenceCard({ item, isBookmarked, onOpen, onToggleBookmark }) { ... }",
+      "after": "// reads from the nearest provider\nfunction EvidenceCard({ item, onOpen }) {\n  const { bookmarkedIds, toggleBookmark } = useBookmarks();\n  ..."
+    },
+    {
+      "id": "ex5-d8-q2-page",
+      "type": "app",
+      "title": "D8 - Q2 — On the page: the card star again",
+      "narration": "Before the code: the path the callback took in Demo 6.",
+      "exercise": 5,
+      "demo": 8,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d8-q2",
+      "type": "code",
+      "title": "D8 - Q2 — Was the drilling in Demo 6 a real problem?",
+      "narration": "Manageable, not a real problem, which is why I answered 'not yet' in Demo 6. It was two pass-through hops with identical prop names and compile-time checking. It became annoying when I looked at the whole picture: bookmarks plus notes plus review edits made EvidencePage take six props it never used. My threshold: reach for Context when (a) a value passes through three or more components that do not use it, or (b) three or more unrelated places read it, or (c) the prop list of an intermediate component is mostly pass-through. Below that, drill: it is explicit, greppable and each component is trivially testable. Bookmarks met (b) clearly and (a) borderline (two pass-throughs), notes meet neither, so notes stayed props. One more level of drilling alone would not have moved me; the third unrelated reader did.",
+      "exercise": 5,
+      "demo": 8,
+      "file": "react/features/evidence/EvidencePage.tsx",
+      "before": "interface EvidenceStateProps {\n  bookmarkedIds: string[];\n  onToggleBookmark: (evidenceId: string) => void;\n  notes: Record<string, string>;\n  onSaveNote: (evidenceId: string, text: string) => void;\n  reviewEdits: ReviewEditsByEvidenceId;\n  onChangeReview: (evidenceId: string, change: ReviewEdit) => void;\n}\n",
+      "after": "interface EvidenceStateProps {\n  notes: Record<string, string>;\n  onSaveNote: (evidenceId: string, text: string) => void;\n  reviewEdits: ReviewEditsByEvidenceId;\n  onChangeReview: (evidenceId: string, change: ReviewEdit) => void;\n}"
+    },
+    {
+      "id": "ex5-d8-q3-page",
+      "type": "app",
+      "title": "D8 - Q3 — On the page: three pages sharing bookmarks",
+      "narration": "Before the code: the question is whether this shared state deserves to be reachable from the whole app.",
+      "exercise": 5,
+      "demo": 8,
+      "highlight": ".workspace-grid",
+      "waitFor": "#bookmarksList",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d8-q3",
+      "type": "code",
+      "title": "D8 - Q3 — Could this Context be unnecessary global state?",
+      "narration": "Partly, and it is worth saying so. A Context is not a global variable (it is scoped to a provider, you can have two with different values, and tests can supply their own), but it shares the risk of global state: any component below can now read it and, via toggleBookmark, change it, so 'who depends on this' is no longer visible in the props. The test for 'unnecessary': does more than one distant part of the app really need it? For bookmarks, yes: three routes show it. If only EvidenceContent used it, a Context would be unnecessary and the state should live in that component. I also kept the Context narrow (bookmarks only, not an 'AppStateContext') so unrelated updates do not re-render its consumers and the dependency stays obvious from the hook name. If bookmarks later turned out to be needed only on the Evidence page, I would move them back down.",
+      "exercise": 5,
+      "demo": 8,
+      "file": "react/shared/bookmarks/BookmarksContext.tsx",
+      "before": "// one broad context (not used): any change re-renders every consumer\nconst AppStateContext = createContext<{ bookmarks, notes, reviewEdits, filters, ... }>(null);",
+      "after": "const BookmarksContext = createContext<BookmarksValue | null>(null);\n// narrow: only what the three bookmark readers need"
     }
   ]
 }
