@@ -58,6 +58,23 @@ Simulating real-world conditions (query parameters on any endpoint):
 the port (then change the proxy target in `vite.config.js` too). `npm test` runs the backend's
 tests. The vanilla `index.html` app is unchanged and still reads the static files.
 
+## Live Workspace (Exercise 7, dev only)
+
+Bookmarks are shared between browser tabs in real time over a WebSocket on the same backend
+(`ws://127.0.0.1:3001/ws`; Vite proxies `/ws`). Start `npm run server` and `npm run dev`, open the
+React app (`react.html`) in two tabs, and bookmark an evidence item in one: it appears in the other
+without a reload. Each tab gets a random name (`Investigator-42`), shown with everyone connected
+in the Workspace. The header shows `Live`, `Reconnecting…` or `Disconnected`; after a loss the
+app retries once after two seconds and asks for the current state, then offers a Reconnect button.
+
+The messages are defined once in `protocol/workspaceProtocol.ts`, shared by server and browser. The
+server validates every incoming message, keeps the shared set in memory only (a restart empties
+it), and only evidence ids from `public/data/evidence.json` are accepted. Because the server is the
+source of truth, bookmarks in the React app are **no longer saved in the browser**; the vanilla
+`index.html` app still uses `localStorage`. Like the Exercise 6 API this is not part of the GitHub
+Pages deploy. See `docs/exercise-7/` for the comparison with `fetch()`, the data-flow diagram and
+the limitations.
+
 ## Features
 
 - **Dashboard** — case summary and key statistics calculated from the loaded case data.

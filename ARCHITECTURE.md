@@ -42,7 +42,7 @@ react/
 
 | State | Owner | Reaches consumers by |
 |-------|-------|----------------------|
-| Bookmark ids | `BookmarksProvider` (`useState`) | Context (`useBookmarks`) |
+| Bookmark ids | the server (Exercise 7); the tab keeps only the last received copy in `useWorkspaceSocket` | Context (`useBookmarks`) |
 | Notes, review edits | `AppBody` in `app/App.tsx` (`useState`) | props + callbacks |
 | Evidence filters/sort | `EvidenceContent` (`useReducer`) | props to the toolbar |
 | Hypothesis form | `HypothesisForm` (`useState` object) | local |
@@ -63,6 +63,22 @@ backend (dev only)   ->  GET /api/<resource>                 server/app.ts, read
 ```
 
 Backend urls or response shapes change: edit `caseApi.ts` (and the types in `js/types.ts`); the hook and components do not change.
+
+### Live layer (Exercise 7)
+
+```
+protocol/workspaceProtocol.ts      ClientMessage / ServerMessage, imported by BOTH sides (types only)
+server/realtime.ts                 WebSocket upgrade on /ws; per message: validate -> session -> broadcast
+server/validateClientMessage.ts    the only place raw frames become ClientMessage (never throws)
+server/workspaceSession.ts         connections + the in-memory bookmark Set; the only broadcast loop
+react/shared/live/ReconnectingSocket.ts   WebSocket + status + one retry (no React, unit-tested)
+react/shared/live/useWorkspaceSocket.ts   React state from ServerMessages; sendMessage; reconnect
+react/shared/live/LiveWorkspaceContext.tsx  one socket for the whole app
+react/shared/bookmarks/BookmarksContext.tsx useBookmarks(): the server's set, no local copy
+```
+
+Bookmark ids are no longer owned by a React `useState` with `localStorage` (the state table above
+described Exercise 5): the server owns them and every tab renders the latest set it was sent.
 
 ### Rule: shared vs. feature-local
 

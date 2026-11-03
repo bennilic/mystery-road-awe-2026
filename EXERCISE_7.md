@@ -27,7 +27,7 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 | 7 | Why bookmarks are easy to synchronize | ☑ |
 | 8 | Disconnect and reconnect | ☑ |
 | 9 | Validation and security boundaries | ☑ |
-| 10 | Data-flow explanation and limitations | ☐ |
+| 10 | Data-flow explanation and limitations | ☑ |
 
 ---
 
@@ -179,7 +179,7 @@ type ServerMessage =
 
 ### Required task
 
-- [ ] Illustrate the complete flow for one bookmark change:
+- [x] Illustrate the complete flow for one bookmark change:
 
 ```text
 button click
@@ -190,21 +190,21 @@ button click
 → updated bookmark UI
 ```
 
-- [ ] Explain the limitations of the exercise.
+- [x] Explain the limitations of the exercise.
 
 ### Questions
 
-- [ ] Pick one step in the diagram and explain what would break if it silently stopped happening and how you would notice.
-- [ ] Which parts of the design would need to change for a production multiuser application, and which parts could remain?
+- [x] Pick one step in the diagram and explain what would break if it silently stopped happening and how you would notice.
+- [x] Which parts of the design would need to change for a production multiuser application, and which parts could remain?
 
 ---
 
 ## Optional extension questions
 
-- [ ] How would you add live notes with an editing indicator but without building a merge algorithm?
-- [ ] How would last-write-wins with a warning work for notes, and why might it be unsuitable for a long document?
-- [ ] How could you add optimistic UI while still reconciling with the server's response?
-- [ ] Why can messages be duplicated or appear stale across reconnects even though TCP preserves order within one connection?
+- [x] How would you add live notes with an editing indicator but without building a merge algorithm?
+- [x] How would last-write-wins with a warning work for notes, and why might it be unsuitable for a long document?
+- [x] How could you add optimistic UI while still reconciling with the server's response?
+- [x] Why can messages be duplicated or appear stale across reconnects even though TCP preserves order within one connection?
 
 ## Optional extensions
 
