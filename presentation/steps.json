@@ -5226,6 +5226,134 @@
       "before": "// static file: data is there on the first render\nconst data = staticImport;",
       "after": "// real server: every consumer must live with three outcomes\ntype FetchState<T> =\n  | { status: \"loading\" }\n  | { status: \"error\"; message: string }\n  | { status: \"ready\"; data: T };",
       "line": 3
+    },
+    {
+      "id": "exercise-7-intro",
+      "type": "app",
+      "title": "Exercise 7 — WebSockets & Multiuser Applications",
+      "narration": "Section marker: from here on the deck is Exercise 7. Until now the app only pulled data: every view asked the Node API with fetch() and learned about changes by asking again. This exercise adds one small real-time feature on top: several browser tabs share the bookmarks of one investigation Workspace and see each other's changes without reloading. It compares request-response with WebSockets, builds the minimal connection lifecycle, gives each connection a name and a presence list, defines a small typed message protocol shared by browser and server, keeps the shared bookmark set in server memory behind a small session object, broadcasts every change, handles disconnect and reconnect, validates every incoming message, and closes with the data-flow picture and the honest limitations.",
+      "exercise": 7,
+      "demo": -1
+    },
+    {
+      "id": "ex7-d1-t1-page",
+      "type": "app",
+      "title": "D1 - T1 — fetch() vs. WebSocket comparison (page)",
+      "narration": "Before the code: the Evidence list on screen was delivered by exactly one fetch(\"api/evidence\"): one request, one response. Nothing in this page can change unless the browser asks again. The comparison on the next slide sets that against a WebSocket.",
+      "exercise": 7,
+      "demo": 1,
+      "highlight": ".evidence-card",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d1-t1",
+      "type": "code",
+      "title": "D1 - T1 — fetch() vs. WebSocket comparison",
+      "narration": "Comparison of the Exercise 6 fetch() and a WebSocket along the three required points. Who can send: with fetch only the client starts an exchange and the server answers once; with a WebSocket both sides can send at any time once it is open. How long it lives: a fetch is one request and its response (no conversation state afterwards); a WebSocket lives from the handshake until someone closes it or the network breaks. How the client learns of a server-side change: with fetch only by asking again (reload, retry, polling); with a WebSocket the server pushes a message and the client reacts in its message handler. Why this matters for this exercise: bookmarks can be changed by another tab at any moment, and a pull-only protocol cannot tell this tab. The full table (including cost and failure modes) is in docs/exercise-7/01-http-vs-websocket.md.",
+      "exercise": 7,
+      "demo": 1,
+      "file": "docs/exercise-7/01-http-vs-websocket.md",
+      "before": "// Exercise 6: pull. The client asks, the server answers once.\nconst response = await fetch(\"api/evidence\", { signal });\nconst evidence = await response.json();\n// ...the server cannot tell us when evidence changes later.",
+      "after": "// Exercise 7: push. One open connection, both sides can send.\nconst socket = new WebSocket(\"/ws\");\nsocket.addEventListener(\"message\", (event) => {\n  // runs whenever the SERVER decides to send\n});\nsocket.send(JSON.stringify({ type: \"request-state\" }));",
+      "line": 1
+    },
+    {
+      "id": "ex7-d1-q1-page",
+      "type": "app",
+      "title": "D1 - Q1 — Why polling is less suitable for live bookmarks (page)",
+      "narration": "Before the code: the star on each card is the shared state. A bookmark set in another tab should show up here.",
+      "exercise": 7,
+      "demo": 1,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".bookmark-btn",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d1-q1",
+      "type": "code",
+      "title": "D1 - Q1 — Why polling is less suitable for live bookmarks",
+      "narration": "Polling means asking \"anything new?\" every N seconds. If N is large, a colleague's bookmark shows up seconds late; if N is small, almost every request answers \"nothing changed\" yet still costs a full HTTP exchange (headers, routing, a response) per tab per interval, and the server does that work for every idle tab. The bookmark set is tiny and changes rarely and unpredictably, which is the worst case for polling: either slow or wasteful. A WebSocket sends one small frame only when a bookmark actually changes, and it arrives at once. Cost grows with changes, not with time times tabs.",
+      "exercise": 7,
+      "demo": 1,
+      "file": "docs/exercise-7/01-http-vs-websocket.md",
+      "before": "// polling: cost grows with time x tabs, even when nothing changes\nsetInterval(async () => {\n  const response = await fetch(\"api/bookmarks\");\n  setBookmarkedIds(await response.json());\n}, 1000);",
+      "after": "// websocket: cost grows with changes only\nsocket.addEventListener(\"message\", (event) => {\n  const message = JSON.parse(event.data);\n  if (message.type === \"bookmarks-updated\") setBookmarkedIds(message.bookmarks);\n});",
+      "line": 1
+    },
+    {
+      "id": "ex7-d1-q2-page",
+      "type": "app",
+      "title": "D1 - Q2 — Why REST endpoints stay (page)",
+      "narration": "Before the code: everything on this card (title, summary, type, tags) came from /api/evidence over HTTP and stays that way.",
+      "exercise": 7,
+      "demo": 1,
+      "highlight": ".evidence-card",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d1-q2",
+      "type": "code",
+      "title": "D1 - Q2 — Why REST endpoints stay",
+      "narration": "The case data is large, read-only, requested once and described by URLs: exactly what request-response is good at. HTTP gives status codes, caching, AbortController cancellation, the Vite proxy and easy debugging with curl or the Network panel for free. The WebSocket carries only the small, fast-changing shared state (bookmark ids and presence). Also, a bookmark id such as E03 is meaningful only against the evidence delivered by REST, so the socket complements REST instead of replacing it. Moving everything to the socket would throw away caching and tooling and would force me to reinvent request/response matching on top of it.",
+      "exercise": 7,
+      "demo": 1,
+      "file": "docs/exercise-7/01-http-vs-websocket.md",
+      "before": "// data the page is built from: REST, loaded once\nfetchEvidence(simulation, signal)  // GET api/evidence",
+      "after": "// live shared state only: WebSocket\nsocket.send(JSON.stringify({ type: \"toggle-bookmark\", evidenceId: \"E03\" }));",
+      "line": 1
+    },
+    {
+      "id": "ex7-d1-q3-page",
+      "type": "app",
+      "title": "D1 - Q3 — When polling is reasonable (page)",
+      "narration": "Before the code: the Dashboard review progress is the kind of number that changes rarely.",
+      "exercise": 7,
+      "demo": 1,
+      "highlight": "section.view",
+      "waitFor": "section.view",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d1-q3",
+      "type": "code",
+      "title": "D1 - Q3 — When polling is reasonable",
+      "narration": "Polling is the right tool when updates are rare or a delay of seconds is acceptable (a build status page, a dashboard refreshing every minute), when the infrastructure cannot hold long-lived connections (some proxies, serverless platforms, corporate firewalls), when there are very few clients, or when simplicity beats latency: polling is stateless on the server and needs no reconnect or presence logic at all. It is also the fallback many libraries use when a WebSocket cannot be established. For live bookmarks it loses, but for \"how many items are reviewed\" a refresh every 30 seconds would be fine.",
+      "exercise": 7,
+      "demo": 1,
+      "file": "docs/exercise-7/01-http-vs-websocket.md",
+      "before": "// no connection state to manage, trivial to reason about\nsetInterval(refresh, 30_000);",
+      "after": "// needs connect, reconnect, presence, validation, shutdown\nconst socket = new WebSocket(\"/ws\");",
+      "line": 1
+    },
+    {
+      "id": "ex7-d1-q4-page",
+      "type": "app",
+      "title": "D1 - Q4 — When Server-Sent Events fit better (page)",
+      "narration": "Before the code: imagine the Dashboard's recent-timeline list updating by itself; that is one-way data.",
+      "exercise": 7,
+      "demo": 1,
+      "highlight": "section.view",
+      "waitFor": "section.view",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d1-q4",
+      "type": "code",
+      "title": "D1 - Q4 — When Server-Sent Events fit better",
+      "narration": "Server-Sent Events (EventSource) are a one-way stream from server to client over plain HTTP. They are better when the client only listens (live log, notifications, progress of a long job, price ticker): the browser reconnects automatically, resumes with Last-Event-ID, and it works through ordinary HTTP infrastructure. A WebSocket is better when the client also sends frequently and with low latency, like bookmark toggles here, because SSE would need a separate POST request per toggle. The bookmarks need both directions, so WebSocket is the better fit here; a read-only activity feed would be an SSE case.",
+      "exercise": 7,
+      "demo": 1,
+      "file": "docs/exercise-7/01-http-vs-websocket.md",
+      "before": "// SSE: server -> client only; client actions need separate POST requests\nconst events = new EventSource(\"/events\");\nawait fetch(\"/toggle\", { method: \"POST\", body });",
+      "after": "// WebSocket: one channel, both directions\nsocket.send(JSON.stringify({ type: \"toggle-bookmark\", evidenceId }));\nsocket.onmessage = (event) => apply(JSON.parse(event.data));",
+      "line": 1
     }
   ]
 }
