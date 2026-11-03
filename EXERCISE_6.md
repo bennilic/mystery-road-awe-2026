@@ -32,7 +32,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 6 | Loading, error, and empty states | ☑ |
 | 7 | Request races & cancellation | ☑ |
 | 8 | Extract a reusable custom hook | ☑ |
-| 9 | Separate UI, application logic, and API access | ☐ |
+| 9 | Separate UI, application logic, and API access | ☑ |
 | 10 | Data-flow wrap-up & a written UX decision | ☐ |
 ---
 
@@ -169,13 +169,13 @@ what happens if you do nothing special about it. Does the UI ever show a result 
 
 **Tasks**
 
-- [ ] Organize your data-fetching code into distinct layers: a thin API-access layer (raw `fetch` calls, knows the backend's URLs/shapes and nothing else), your custom hook(s) from Demo 8 (application logic: loading/error/cancellation), and your components (UI only, no direct `fetch` calls anywhere in a component).
-- [ ] Confirm no component in the app calls `fetch` directly anymore.
+- [x] Organize your data-fetching code into distinct layers: a thin API-access layer (raw `fetch` calls, knows the backend's URLs/shapes and nothing else), your custom hook(s) from Demo 8 (application logic: loading/error/cancellation), and your components (UI only, no direct `fetch` calls anywhere in a component).
+- [x] Confirm no component in the app calls `fetch` directly anymore.
 
 **Questions** (depend on the tasks above)
 
-- [ ] If your backend's endpoint URLs or response shape changed tomorrow, how many files would you need to touch, and which ones? Would any component need to change?
-- [ ] What's the argument *against* this separation for a small app like this one? E.g. when would the extra layering be overkill rather than helpful? Do you think it's justified here?
+- [x] If your backend's endpoint URLs or response shape changed tomorrow, how many files would you need to touch, and which ones? Would any component need to change?
+- [x] What's the argument *against* this separation for a small app like this one? E.g. when would the extra layering be overkill rather than helpful? Do you think it's justified here?
 
 ---
 

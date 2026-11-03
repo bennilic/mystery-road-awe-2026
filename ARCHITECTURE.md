@@ -27,12 +27,14 @@ react/
     workspace/                  (Exercise 5) bookmarks list, notes list, hypothesis form
       WorkspacePage.tsx (feature)  BookmarkedEvidenceList.tsx  NotesList.tsx  HypothesisForm.tsx
   shared/                       used by more than one feature
-    data/CaseDataContext.tsx  CaseDataGate.tsx
+    api/                        (Exercise 6) caseApi.ts (urls, raw fetch, shapes)  simulation.ts (dev ?delay/?fail/?empty)
+    data/CaseDataContext.tsx  CaseDataGate.tsx  useAsyncResource.ts (loading/error/abort hook)
     routing/paths.ts
     bookmarks/                  BookmarksContext.tsx  toggleBookmarkId.ts  selectBookmarkedEvidence.ts
     evidence/reviewEdits.ts
     storage/                    localStorage readers/writers (bookmarks, notes, hypothesis)
     components/                 Badge.tsx  evidenceBadges.ts
+  shell/DevPanel.tsx            (Exercise 6) dev-only controls for the backend simulation
   sandbox/                      throwaway teaching demos, not part of the app
 ```
 
@@ -50,6 +52,17 @@ react/
 Domain types and helpers (`js/types.ts`, `js/lookup.ts`) are still imported from the vanilla
 `js/` folder, because the vanilla app keeps running next to the React one (`index.html` vs
 `react.html`).
+
+### Data access layers (Exercise 6)
+
+```
+component (UI only)  ->  useCaseData() / CaseDataGate        react/shared/data/CaseDataContext.tsx, CaseDataGate.tsx
+application logic    ->  useAsyncResource(load, key)         react/shared/data/useAsyncResource.ts
+API access           ->  fetchEvidence(...), fetchJson       react/shared/api/caseApi.ts   (the only file that calls fetch)
+backend (dev only)   ->  GET /api/<resource>                 server/app.ts, reads public/data/*.json
+```
+
+Backend urls or response shapes change: edit `caseApi.ts` (and the types in `js/types.ts`); the hook and components do not change.
 
 ### Rule: shared vs. feature-local
 

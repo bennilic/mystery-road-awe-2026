@@ -1,11 +1,14 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { NO_SIMULATION, type Simulation } from "../api/simulation.ts";
 import {
-  NO_SIMULATION,
-  simulationQuery,
-  type ResourceName,
-  type Simulation,
-} from "./simulation.ts";
-import { useFetch, type FetchResult } from "./useFetch.ts";
+  fetchCaseInfo,
+  fetchEvidence,
+  fetchLocations,
+  fetchPeople,
+  fetchTimeline,
+  requestKey,
+} from "../api/caseApi.ts";
+import { useAsyncResource, type FetchResult } from "./useAsyncResource.ts";
 import type { CaseInfo, Evidence, Location, Person, TimelineEvent } from "../../../js/types.ts";
 
 export interface CaseData {
@@ -62,12 +65,6 @@ function combineStates(
   ) {
     return { status: "loading" };
   }
-  if (!caseInfo.state.data.caseId) {
-    return {
-      status: "error",
-      message: "api/case answered HTTP 200 but its body is not a case (no caseId)",
-    };
-  }
   return {
     status: "ready",
     requestId: caseInfo.attempt,
@@ -82,18 +79,32 @@ function combineStates(
 }
 
 // Exercise 6: the five resources come from the dev backend (server/, reached
-// through the Vite proxy at /api/...). All loading, error and cancellation
-// logic lives in useFetch; what stays here is what is specific to this app:
-// which urls, the simulation settings and how the five results combine.
+// through the Vite proxy at /api/...). Three layers: caseApi.ts (urls and
+// response shapes, raw fetch), useAsyncResource (loading, error, cancellation)
+// and the components (UI only). What stays here is what is specific to this
+// app: which resources, the simulation settings and how the five results combine.
 export function CaseDataProvider({ children }: { children: ReactNode }) {
   const [simulation, setSimulation] = useState<Simulation>(NO_SIMULATION);
-  const url = (resource: ResourceName) => `api/${resource}${simulationQuery(resource, simulation)}`;
-
-  const caseInfo = useFetch<CaseInfo>(url("case"));
-  const evidence = useFetch<Evidence[]>(url("evidence"));
-  const people = useFetch<Person[]>(url("people"));
-  const locations = useFetch<Location[]>(url("locations"));
-  const timeline = useFetch<TimelineEvent[]>(url("timeline"));
+  const caseInfo = useAsyncResource(
+    (signal) => fetchCaseInfo(simulation, signal),
+    requestKey("case", simulation),
+  );
+  const evidence = useAsyncResource(
+    (signal) => fetchEvidence(simulation, signal),
+    requestKey("evidence", simulation),
+  );
+  const people = useAsyncResource(
+    (signal) => fetchPeople(simulation, signal),
+    requestKey("people", simulation),
+  );
+  const locations = useAsyncResource(
+    (signal) => fetchLocations(simulation, signal),
+    requestKey("locations", simulation),
+  );
+  const timeline = useAsyncResource(
+    (signal) => fetchTimeline(simulation, signal),
+    requestKey("timeline", simulation),
+  );
 
   // combineStates builds new objects, so memoise it: the context value then
   // only changes when one of the five results changes.

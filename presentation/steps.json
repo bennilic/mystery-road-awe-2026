@@ -5035,6 +5035,101 @@
       "before": "  // one Promise.all over five fetches, one state, one request id",
       "after": "  const caseInfo = useFetch<CaseInfo>(url(\"case\"));\n  const evidence = useFetch<Evidence[]>(url(\"evidence\"));\n  const people = useFetch<Person[]>(url(\"people\"));\n  const locations = useFetch<Location[]>(url(\"locations\"));\n  const timeline = useFetch<TimelineEvent[]>(url(\"timeline\"));\n  const state = useMemo(() => combineStates(caseInfo, evidence, people, locations, timeline), [...]);",
       "line": 92
+    },
+    {
+      "id": "ex6-d9-t1-page",
+      "type": "app",
+      "title": "D9 - T1 — On the page: one screen, three layers behind it",
+      "narration": "Before the code: this Dashboard is the UI layer. Behind it: useCaseData() (application logic), useAsyncResource (loading, error, cancellation) and caseApi.ts (urls and shapes). Everything above behaves exactly as before; verified with the same Playwright scenarios as Demos 6 to 8: five requests per reload, loading, error, empty, the race and the case-shape error.",
+      "exercise": 6,
+      "demo": 9,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d9-t1",
+      "type": "code",
+      "title": "D9 - T1 — API-access layer, hook, components",
+      "narration": "Before this step the hook still knew about urls (useFetch(url)) and contained the raw fetch. Now react/shared/api/caseApi.ts is the only file that calls fetch: resourceUrl, fetchJson (network failure vs HTTP status vs abort) and one typed function per resource (fetchEvidence and so on), plus the shape check of /api/case. useAsyncResource(load, loadKey) takes a function that returns a promise and knows nothing about HTTP; it owns loading/error/ready, the AbortController and reload. Components only call useCaseData() or sit inside CaseDataGate. The provider wires them together: (signal) => fetchEvidence(simulation, signal).",
+      "exercise": 6,
+      "demo": 9,
+      "file": "react/shared/api/caseApi.ts",
+      "before": "async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> { ... }  // react/shared/data/useFetch.ts\n  const evidence = useFetch<Evidence[]>(url(\"evidence\"));  // hook knows the url",
+      "after": "export async function fetchCaseInfo(simulation: Simulation, signal: AbortSignal): Promise<CaseInfo> { /* url, fetchJson, shape check */ }\nexport function fetchEvidence(simulation: Simulation, signal: AbortSignal): Promise<Evidence[]> {\n  return fetchJson<Evidence[]>(resourceUrl(\"evidence\", simulation), signal);\n}\n// hook: useAsyncResource((signal) => fetchEvidence(simulation, signal), requestKey(\"evidence\", simulation))",
+      "line": 36
+    },
+    {
+      "id": "ex6-d9-t2-page",
+      "type": "app",
+      "title": "D9 - T2 — On the page: every view, none of them fetches",
+      "narration": "Before the code: Dashboard, Evidence, People, Timeline and Workspace render from useCaseData() inside CaseDataGate.",
+      "exercise": 6,
+      "demo": 9,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d9-t2",
+      "type": "code",
+      "title": "D9 - T2 — No component calls fetch",
+      "narration": "Checked with grep over react/ for fetch( : exactly one hit, react/shared/api/caseApi.ts. The Exercise 4 key sandbox (a throwaway page, not a component) used to fetch data/people.json itself; it now goes through fetchPeople as well, so the grep is clean, and the sandbox still renders its six rows. The vanilla js/ app is separate and untouched.",
+      "exercise": 6,
+      "demo": 9,
+      "file": "react/sandbox/keysMain.tsx",
+      "before": "  const response = await fetch(\"data/people.json\");\n  if (!response.ok) {\n    throw new Error(`data/people.json answered HTTP ${response.status} ${response.statusText}`);\n  }\n  let people = (await response.json()) as Person[];",
+      "after": "  // Goes through the API layer like the app does (Demo 9): no raw fetch outside it.\n  let people = await fetchPeople(NO_SIMULATION, new AbortController().signal);",
+      "line": 13
+    },
+    {
+      "id": "ex6-d9-q1-page",
+      "type": "app",
+      "title": "D9 - Q1 — On the page: what a change would have to reach",
+      "narration": "Before the code: if /api/evidence moved or its shape changed, this evidence list would still be fed by the same call.",
+      "exercise": 6,
+      "demo": 9,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d9-q1",
+      "type": "code",
+      "title": "D9 - Q1 — How many files would a backend change touch",
+      "narration": "Urls: one file, caseApi.ts (resourceUrl and the query parameters in simulation.ts only if the dev controls change); the hook and all components keep working because they only know fetchEvidence(...). Shape: if a field is renamed or nested differently, I adapt it in caseApi.ts so the rest still receives the shape it knows (one file, plus the type in js/types.ts if the app type itself must change). Only if the app type changes (a field the UI really uses disappears) do components change, and then the TypeScript compiler lists every place. Before D9 the same url change would have meant editing the hook or provider, and with scattered fetch calls in components, every one of them. No component needs to change for a pure url or transport change.",
+      "exercise": 6,
+      "demo": 9,
+      "file": "react/shared/api/caseApi.ts",
+      "before": "// url change: edit every fetch call site\nfetchJson<Evidence[]>(\"api/evidence\")  // in the hook / provider",
+      "after": "function resourceUrl(resource: ResourceName, simulation: Simulation): string {\n  return `api/${resource}${simulationQuery(resource, simulation)}`; // the one place\n}",
+      "line": 10
+    },
+    {
+      "id": "ex6-d9-q2-page",
+      "type": "app",
+      "title": "D9 - Q2 — On the page: a small app",
+      "narration": "Before the code: six pages, five endpoints, one developer. Is three layers worth it?",
+      "exercise": 6,
+      "demo": 9,
+      "highlight": ".main-nav",
+      "waitFor": ".main-nav",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d9-q2",
+      "type": "code",
+      "title": "D9 - Q2 — The argument against, and my verdict",
+      "narration": "Against: for a five-endpoint, one-developer, coursework-size app, three layers mean more files and more indirection than the problem needs: to follow one request you open caseApi.ts, useAsyncResource.ts, CaseDataContext.tsx and the gate; each layer has one or two functions, and a plain useEffect with fetch in the provider (Demo 5 to 7) was about 25 lines and enough. It is overkill when the same call is made in one place and will never change, when the backend is trivial and owned by the same person, or for a prototype that will be thrown away. For: the layers cost little here and already paid off in this exercise: the hook was extracted once and reused five times, the race fix lives in exactly one place, error messages come from one fetchJson, and the grep for raw fetch is a one-line check. My verdict: justified, but only barely; I would not add a fourth layer (repositories, stores, a data-fetching library) until a second consumer needs it. If this app stayed this size I would keep the API file and the hook and drop nothing else.",
+      "exercise": 6,
+      "demo": 9,
+      "file": "react/shared/data/useAsyncResource.ts",
+      "before": "// one effect, one fetch, in the provider\nuseEffect(() => { fetch(url).then(...) }, []);",
+      "after": "export function useAsyncResource<T>(\n  load: (signal: AbortSignal) => Promise<T>,\n  loadKey: string,\n): FetchResult<T> { /* status, effect, abort, reload */ }",
+      "line": 19
     }
   ]
 }

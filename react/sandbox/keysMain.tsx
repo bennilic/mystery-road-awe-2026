@@ -1,6 +1,7 @@
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import type { Person } from "../../js/types.ts";
+import { fetchPeople } from "../shared/api/caseApi.ts";
+import { NO_SIMULATION } from "../shared/api/simulation.ts";
 import { KeyedPersonList } from "./KeyedPersonList.tsx";
 
 const rootElement = document.getElementById("sandboxRoot");
@@ -10,11 +11,8 @@ if (!rootElement) {
 const root = createRoot(rootElement);
 
 async function start(): Promise<void> {
-  const response = await fetch("data/people.json");
-  if (!response.ok) {
-    throw new Error(`data/people.json answered HTTP ${response.status} ${response.statusText}`);
-  }
-  let people = (await response.json()) as Person[];
+  // Goes through the API layer like the app does (Demo 9): no raw fetch outside it.
+  let people = await fetchPeople(NO_SIMULATION, new AbortController().signal);
   // flushSync: render synchronously so the input exists before we type into it.
   flushSync(() => root.render(<KeyedPersonList people={people} />));
 
@@ -34,5 +32,5 @@ async function start(): Promise<void> {
 }
 
 start().catch((error: unknown) => {
-  rootElement.textContent = `Sandbox could not start: ${error instanceof Error ? error.message : String(error)}. Check that the dev server is running.`;
+  rootElement.textContent = `Sandbox could not start: ${error instanceof Error ? error.message : String(error)}. Check that the backend is running (npm run server).`;
 });

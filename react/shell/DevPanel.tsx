@@ -5,7 +5,7 @@ import {
   type ResourceName,
   type Simulation,
   type SimulationOutcome,
-} from "../shared/data/simulation.ts";
+} from "../shared/api/simulation.ts";
 
 const TARGETS: ReadonlyArray<Simulation["target"]> = [
   "evidence",
