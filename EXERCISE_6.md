@@ -28,7 +28,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 2 | `useEffect` mental model & dependency arrays | ☑ |
 | 3 | Cleanup: timers & subscriptions | ☑ |
 | 4 | Build the read-only Node backend | ☑ |
-| 5 | Consume the backend from React | ☐ |
+| 5 | Consume the backend from React | ☑ |
 | 6 | Loading, error, and empty states | ☐ |
 | 7 | Request races & cancellation | ☐ |
 | 8 | Extract a reusable custom hook | ☐ |
@@ -109,13 +109,13 @@ as the corresponding `data/*.json` file does today.
 
 **Tasks**
 
-- [ ] Replace at least one view's data source (previously the static `data/*.json` fetch/import) with a real `fetch()` call to your new backend, wired up inside a `useEffect`.
-- [ ] Do the same for the rest of the app's data sources, so the whole app now reads from your backend rather than static files.
+- [x] Replace at least one view's data source (previously the static `data/*.json` fetch/import) with a real `fetch()` call to your new backend, wired up inside a `useEffect`.
+- [x] Do the same for the rest of the app's data sources, so the whole app now reads from your backend rather than static files.
 
 **Questions** (depend on the tasks above)
 
-- [ ] Walk through exactly what happens, in order, from the component mounting to the data actually being available to render: what does the effect do, when does it run, and what causes the component to re-render once the data arrives?
-- [ ] What's different about your component now compared to before (when data came from a static
+- [x] Walk through exactly what happens, in order, from the component mounting to the data actually being available to render: what does the effect do, when does it run, and what causes the component to re-render once the data arrives?
+- [x] What's different about your component now compared to before (when data came from a static
 import/fetch of a local file). Specifically in terms of what state it needs to track that it
 didn't need before?
 

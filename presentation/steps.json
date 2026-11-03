@@ -4653,6 +4653,100 @@
       "file": "vite.config.js",
       "before": "// browser at :8080 -> fetch(\"http://127.0.0.1:3001/api/case\")  -> blocked (no Access-Control-Allow-Origin)",
       "after": "// browser at :8080 -> fetch(\"/api/case\") -> Vite proxy -> :3001   (same origin for the browser)\nserver: { proxy: { \"/api\": \"http://127.0.0.1:3001\" } },"
+    },
+    {
+      "id": "ex6-d5-t1-page",
+      "type": "app",
+      "title": "D5 - T1 — On the page: the Dashboard, now fed by /api",
+      "narration": "Before the code: these stat cards are computed from the evidence, people and locations that arrive from the backend. Network log: requests go to /api/case, /api/evidence, /api/people, /api/locations, /api/timeline and none to /data/*.json.",
+      "exercise": 6,
+      "demo": 5,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d5-t1",
+      "type": "code",
+      "title": "D5 - T1 — fetch() to the backend inside a useEffect",
+      "narration": "The view data lives in one provider that every page reads, so switching \"at least one view\" to the backend means switching that provider: the Dashboard, Evidence, Timeline, People and Workspace all moved in the same edit. The request is started in useEffect with an empty dependency array because fetching is a side effect and must not run during render; the effect has no cleanup yet (that is Demo 7). fetchJson also distinguishes \"no answer at all\" (fetch rejects, e.g. server down) from \"answer with an error status\" (response.ok is false), because fetch does not reject on 404 or 500. Verified with Playwright: 5 requests to /api/* per mount (10 in development, Strict Mode mounts twice) and Dashboard shows 18 evidence items, 6 people, 6 locations.",
+      "exercise": 6,
+      "demo": 5,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "  useEffect(() => {\n    // `cancelled` stops a late response from updating an unmounted provider\n    let cancelled = false;\n    loadCaseData().then(\n      (data) => { if (!cancelled) setState({ status: \"ready\", data }); },\n      /* ... */\n    );\n    return () => { cancelled = true; };\n  }, []);\n// loadCaseData fetched \"data/case.json\" ... \"data/timeline.json\"",
+      "after": "  useEffect(() => {\n    loadCaseData().then(\n      (data) => setState({ status: \"ready\", data }),\n      (error: unknown) => {\n        const reason = error instanceof Error ? error.message : String(error);\n        setState({ status: \"error\", message: reason });\n      },\n    );\n  }, []);\n// loadCaseData fetches \"api/case\" ... \"api/timeline\"",
+      "line": 65
+    },
+    {
+      "id": "ex6-d5-t2-page",
+      "type": "app",
+      "title": "D5 - T2 — On the page: the other views",
+      "narration": "Before the code: Evidence, Timeline, People and Workspace read the same provider, so they now show backend data too (18 evidence cards, 15 timeline events, 6 people verified).",
+      "exercise": 6,
+      "demo": 5,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d5-t2",
+      "type": "code",
+      "title": "D5 - T2 — No static data fetch left in the React app",
+      "narration": "All five paths changed from data/*.json to api/*. A grep for \"data/\" fetches in react/ finds none in the app (only the throwaway Exercise 4 key sandbox, react/sandbox/keysMain.tsx, still reads people.json); the vanilla index.html app is out of scope for this exercise and still reads the static files. Failure now has a real path: with the backend stopped, the page shows \"The case file could not be loaded (api/case answered HTTP 502 Bad Gateway). Check that the backend is running (npm run server) and reload the page.\" which names what failed, why, and what to do.",
+      "exercise": 6,
+      "demo": 5,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "    fetchJson<CaseInfo>(\"data/case.json\"),\n    fetchJson<Evidence[]>(\"data/evidence.json\"),\n    fetchJson<Person[]>(\"data/people.json\"),\n    fetchJson<Location[]>(\"data/locations.json\"),\n    fetchJson<TimelineEvent[]>(\"data/timeline.json\"),",
+      "after": "    fetchJson<CaseInfo>(\"api/case\"),\n    fetchJson<Evidence[]>(\"api/evidence\"),\n    fetchJson<Person[]>(\"api/people\"),\n    fetchJson<Location[]>(\"api/locations\"),\n    fetchJson<TimelineEvent[]>(\"api/timeline\"),",
+      "line": 36
+    },
+    {
+      "id": "ex6-d5-q1-page",
+      "type": "app",
+      "title": "D5 - Q1 — On the page: the moment before and after the data arrives",
+      "narration": "Before the code: first paint shows only the loading message, and a moment later the real content replaces it.",
+      "exercise": 6,
+      "demo": 5,
+      "highlight": "main",
+      "waitFor": ".stat-card",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d5-q1",
+      "type": "code",
+      "title": "D5 - Q1 — From mounting to data on screen",
+      "narration": "1. CaseDataProvider renders for the first time with state {status: \"loading\"}, so the gate shows \"Loading case file\". 2. React commits that to the DOM. 3. Only now the effect runs (after commit, [] means once per mount): it calls loadCaseData(), which starts five fetch() calls with Promise.all and returns immediately. Render is not blocked. 4. Later the responses arrive; the .then callback runs outside React rendering and calls setState({status: \"ready\", data}). 5. setState tells React the provider's state changed, so React renders it again, the context value is a new object, every consumer of useCaseData re-renders and the gate now passes data to the page. 6. React commits the new DOM. The re-render is caused by the state update, not by the fetch itself. In development Strict Mode runs steps 3 to 4 twice.",
+      "exercise": 6,
+      "demo": 5,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "// data was available on the first render: a static import / local file",
+      "after": "useEffect(() => {\n  loadCaseData().then((data) => setState({ status: \"ready\", data })); // setState -> re-render\n}, []);",
+      "line": 94
+    },
+    {
+      "id": "ex6-d5-q2-page",
+      "type": "app",
+      "title": "D5 - Q2 — On the page: states that a file import never needed",
+      "narration": "Before the code: this page can now be in a state of waiting, and in a state of failure.",
+      "exercise": 6,
+      "demo": 5,
+      "highlight": "main",
+      "waitFor": ".stat-card",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d5-q2",
+      "type": "code",
+      "title": "D5 - Q2 — New state the component must track",
+      "narration": "With a static import the data existed synchronously on the first render, so a component only needed the data. Now there are three situations at once and the component must know which one it is in: loading (nothing yet), error (something went wrong, plus the message), ready (the data). I keep that in one state value shaped as a discriminated union, {status: \"loading\"} | {status: \"error\", message} | {status: \"ready\", data}, so impossible combinations such as \"ready without data\" cannot be represented. Also new: the effect that starts the request and updates state later, and the fact that every consumer must handle data being absent in its first render (the CaseDataGate does that so pages do not have to).",
+      "exercise": 6,
+      "demo": 5,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "// before: data present on the first render\nconst data = await loadAll(); // or an import; no waiting state",
+      "after": "type CaseDataState =\n  | { status: \"loading\" }\n  | { status: \"error\"; message: string }\n  | { status: \"ready\"; data: CaseData };",
+      "line": 12
     }
   ]
 }

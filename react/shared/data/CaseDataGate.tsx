@@ -11,8 +11,8 @@ export function CaseDataGate({ children }: { children: (data: CaseData) => React
   if (caseData.status === "error") {
     return (
       <p role="alert">
-        The case file could not be loaded ({caseData.message}). Check that the dev server is running
-        and reload the page.
+        The case file could not be loaded ({caseData.message}). Check that the backend is running
+        (npm run server) and reload the page.
       </p>
     );
   }

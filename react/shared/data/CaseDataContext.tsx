@@ -17,7 +17,14 @@ type CaseDataState =
 const CaseDataContext = createContext<CaseDataState | null>(null);
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (error) {
+    // fetch only rejects when no HTTP answer arrived at all (server down, network cut).
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`${url} could not be reached (${reason})`);
+  }
   if (!response.ok) {
     throw new Error(`${url} answered HTTP ${response.status} ${response.statusText}`);
   }
@@ -26,11 +33,11 @@ async function fetchJson<T>(url: string): Promise<T> {
 
 async function loadCaseData(): Promise<CaseData> {
   const [caseInfo, evidence, people, locations, timeline] = await Promise.all([
-    fetchJson<CaseInfo>("data/case.json"),
-    fetchJson<Evidence[]>("data/evidence.json"),
-    fetchJson<Person[]>("data/people.json"),
-    fetchJson<Location[]>("data/locations.json"),
-    fetchJson<TimelineEvent[]>("data/timeline.json"),
+    fetchJson<CaseInfo>("api/case"),
+    fetchJson<Evidence[]>("api/evidence"),
+    fetchJson<Person[]>("api/people"),
+    fetchJson<Location[]>("api/locations"),
+    fetchJson<TimelineEvent[]>("api/timeline"),
   ]);
   return { caseInfo, evidence: normalizePersonIds(evidence, people), people, locations, timeline };
 }
@@ -46,33 +53,23 @@ function normalizePersonIds(evidence: Evidence[], people: Person[]): Evidence[] 
   }));
 }
 
-// PLACEHOLDER ARCHITECTURE (Exercise 3): loads the same five data/*.json
-// files the vanilla app loads, once, and hands them down through context.
-// It deliberately does NOT reuse js/dataLoading.ts — that module writes into
-// the mutable `state` singleton and pokes the DOM (loading overlay,
-// dropdowns), neither of which a React tree should depend on. Exercises 4/5
-// are expected to replace this with proper state management once more than
-// one view needs to *write* shared data (bookmarks, notes, hypothesis).
+// Exercise 6: the five resources now come from the dev backend (server/,
+// reached through the Vite proxy at /api/...) instead of static files. The
+// fetch runs in an effect because it is a side effect (Demo 1): render only
+// describes the current state ("loading", "error" or "ready"), and the effect
+// starts the request after the first commit and later calls setState with the
+// outcome, which makes React render again.
 export function CaseDataProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<CaseDataState>({ status: "loading" });
 
   useEffect(() => {
-    // `cancelled` stops a late response from updating an unmounted provider
-    // (StrictMode mounts effects twice in development).
-    let cancelled = false;
     loadCaseData().then(
-      (data) => {
-        if (!cancelled) setState({ status: "ready", data });
-      },
+      (data) => setState({ status: "ready", data }),
       (error: unknown) => {
-        if (cancelled) return;
         const reason = error instanceof Error ? error.message : String(error);
         setState({ status: "error", message: reason });
       },
     );
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   return <CaseDataContext.Provider value={state}>{children}</CaseDataContext.Provider>;
