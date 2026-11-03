@@ -4843,6 +4843,102 @@
       "before": "// vanilla\nfetch(url).then((res) => res.json()).then((data) => {\n  render(data);\n  hideLoading(); // success path only: a failure leaves the spinner on screen\n});",
       "after": "loadCaseData(request.simulation).then(\n  (data) => setState({ status: \"ready\", data, requestId: request.id }),\n  (error: unknown) => setState({ status: \"error\", message: error instanceof Error ? error.message : String(error) }),\n); // both outcomes leave \"loading\"; the UI is a function of status",
       "line": 91
+    },
+    {
+      "id": "ex6-d7-t1-page",
+      "type": "app",
+      "title": "D7 - T1 — On the page: two reloads in a row",
+      "narration": "Before the code: the race, built with the dev panel. Step 1: delay 4000, outcome normal, Reload (request #2, slow, would deliver all evidence). Step 2 immediately: delay 0, outcome empty, Reload (request #3, fast). Pre-fix commit is 8edf897.",
+      "exercise": 6,
+      "demo": 7,
+      "highlight": "#devPanel",
+      "waitFor": "#devPanel",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d7-t1",
+      "type": "code",
+      "title": "D7 - T1 — The race without any guard (pre-fix state, commit 8edf897)",
+      "narration": "Observed before the fix with Playwright: after the second click the page showed the empty state, \"Showing: request #3\". About four seconds later the page changed to the full evidence list with \"Showing: request #2\". So the UI did show a result from the older request after the newer one had already been displayed, and it stayed there: the final screen is wrong (the newest request said empty). Nothing in the code is \"wrong\" line by line; each response simply calls setState when it arrives.",
+      "exercise": 6,
+      "demo": 7,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "  useEffect(() => {\n    setState({ status: \"loading\" });\n    const controller = new AbortController();\n    loadCaseData(request.simulation, controller.signal).then(\n      (data) => {\n        if (controller.signal.aborted) return;\n        setState({ status: \"ready\", data, requestId: request.id });\n      },\n      (error: unknown) => {\n        if (controller.signal.aborted) return;\n        const reason = error instanceof Error ? error.message : String(error);\n        setState({ status: \"error\", message: reason });\n      },\n    );\n    return () => controller.abort();\n  }, [request]);",
+      "after": "  useEffect(() => {\n    setState({ status: \"loading\" });\n    loadCaseData(request.simulation).then(\n      (data) => setState({ status: \"ready\", data, requestId: request.id }),\n      (error: unknown) => {\n        const reason = error instanceof Error ? error.message : String(error);\n        setState({ status: \"error\", message: reason });\n      },\n    );\n  }, [request]);\n// Observed (Playwright): slow normal (#2, 4000 ms) then fast empty (#3)\n//   t=0.5 s: empty state, \"Showing: request #3\"\n//   t=5 s:   evidence list,  \"Showing: request #2\"  <- stale response overwrote #3",
+      "line": 92
+    },
+    {
+      "id": "ex6-d7-t2-page",
+      "type": "app",
+      "title": "D7 - T2 — On the page: the same two clicks after the fix",
+      "narration": "Before the code: same sequence, and now the page stays on the empty state of request #3 even after four seconds.",
+      "exercise": 6,
+      "demo": 7,
+      "highlight": "#devPanel",
+      "waitFor": "#devPanel",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d7-t2",
+      "type": "code",
+      "title": "D7 - T2 — AbortController per request, aborted in the effect cleanup",
+      "narration": "Every run of the effect creates its own AbortController and passes its signal to every fetch. The cleanup returned by the effect calls abort(). When a newer request replaces the old one (the effect dependency [request] changed) React runs the old cleanup first, which cancels the slow request in the browser (the network log shows net::ERR_ABORTED for /api/evidence?delay=4000) and its rejection is ignored because signal.aborted is true. I also check signal.aborted in the success callback, in case the response arrived in the same moment. Verified: slow normal then fast empty ends on empty / request #3 and stays so after 4.5 s; slow fail then fast normal ends on ready / request #5 and the old error never appears.",
+      "exercise": 6,
+      "demo": 7,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "  useEffect(() => {\n    setState({ status: \"loading\" });\n    loadCaseData(request.simulation).then(\n      (data) => setState({ status: \"ready\", data, requestId: request.id }),\n      (error: unknown) => {\n        const reason = error instanceof Error ? error.message : String(error);\n        setState({ status: \"error\", message: reason });\n      },\n    );\n  }, [request]);",
+      "after": "  useEffect(() => {\n    setState({ status: \"loading\" });\n    const controller = new AbortController();\n    loadCaseData(request.simulation, controller.signal).then(\n      (data) => {\n        if (controller.signal.aborted) return;\n        setState({ status: \"ready\", data, requestId: request.id });\n      },\n      (error: unknown) => {\n        if (controller.signal.aborted) return;\n        const reason = error instanceof Error ? error.message : String(error);\n        setState({ status: \"error\", message: reason });\n      },\n    );\n    return () => controller.abort();\n  }, [request]);",
+      "line": 92
+    },
+    {
+      "id": "ex6-d7-q1-page",
+      "type": "app",
+      "title": "D7 - Q1 — On the page: the request counter",
+      "narration": "Before the code: the Showing field records which request the visible data came from, which makes the race visible: #3 then #2 is the bug.",
+      "exercise": 6,
+      "demo": 7,
+      "highlight": "#devPanel",
+      "waitFor": "#devPanel",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d7-q1",
+      "type": "code",
+      "title": "D7 - Q1 — The exact sequence that lets the stale result win",
+      "narration": "1. Click A at t=0: request #2 starts, takes 4000 ms. 2. Click B at t=1 s: request #3 starts, takes 0 ms. 3. #3 answers at about t=1 s: setState(empty, #3), the screen shows empty. 4. #2 finally answers at t=4 s: its callback still runs and calls setState(ready, #2). 5. The screen shows data from request #2: last response wins, not last request. Responses are not ordered like requests, because latency varies per request; the code that called setState has no idea its request was already superseded. Before the fix: empty/#3 then ready/#2; after: stays empty/#3.",
+      "exercise": 6,
+      "demo": 7,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "  useEffect(() => {\n    setState({ status: \"loading\" });\n    loadCaseData(request.simulation).then(\n      (data) => setState({ status: \"ready\", data, requestId: request.id }),\n      (error: unknown) => {\n        const reason = error instanceof Error ? error.message : String(error);\n        setState({ status: \"error\", message: reason });\n      },\n    );\n  }, [request]);",
+      "after": "  useEffect(() => {\n    setState({ status: \"loading\" });\n    const controller = new AbortController();\n    loadCaseData(request.simulation, controller.signal).then(\n      (data) => {\n        if (controller.signal.aborted) return;\n        setState({ status: \"ready\", data, requestId: request.id });\n      },\n      (error: unknown) => {\n        if (controller.signal.aborted) return;\n        const reason = error instanceof Error ? error.message : String(error);\n        setState({ status: \"error\", message: reason });\n      },\n    );\n    return () => controller.abort();\n  }, [request]);",
+      "line": 92
+    },
+    {
+      "id": "ex6-d7-q2-page",
+      "type": "app",
+      "title": "D7 - Q2 — On the page: switching request while one is in flight",
+      "narration": "Before the code: pressing Reload while loading replaces the in-flight request.",
+      "exercise": 6,
+      "demo": 7,
+      "highlight": "#devPanel",
+      "waitFor": "#devPanel",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d7-q2",
+      "type": "code",
+      "title": "D7 - Q2 — Cleanup and abort are the same thing here",
+      "narration": "They are connected, not separate: abort() is what the cleanup function does. React decides when to run the cleanup (before the effect re-runs because [request] changed, on unmount, and in Strict Mode dev); my cleanup, return () => controller.abort(), decides what happens then. abort() makes the browser cancel the request and makes the pending fetch promise reject with an AbortError. That rejection arrives in my error callback, which must not show it as an error, so the callback first checks controller.signal.aborted and returns. So three pieces: effect creates the controller, cleanup aborts it, the callbacks ignore anything from an aborted controller. Without the cleanup nothing would ever abort a superseded request; without the aborted check the abort would flash an error box.",
+      "exercise": 6,
+      "demo": 7,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "  }, [request]);  // nothing cancels the previous request",
+      "after": "    return () => controller.abort(); // React calls this before the next run and on unmount\n  }, [request]);",
+      "line": 108
     }
   ]
 }

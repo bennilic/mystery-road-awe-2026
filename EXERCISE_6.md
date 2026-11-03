@@ -30,7 +30,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 4 | Build the read-only Node backend | ☑ |
 | 5 | Consume the backend from React | ☑ |
 | 6 | Loading, error, and empty states | ☑ |
-| 7 | Request races & cancellation | ☐ |
+| 7 | Request races & cancellation | ☑ |
 | 8 | Extract a reusable custom hook | ☐ |
 | 9 | Separate UI, application logic, and API access | ☐ |
 | 10 | Data-flow wrap-up & a written UX decision | ☐ |
@@ -140,15 +140,15 @@ harder to make (or show that it doesn't, and fix it).
 
 **Tasks**
 
-- [ ] Using your backend's artificial-delay control, construct a request race: trigger a request, then trigger another one (for the same data) before the first resolves, and observe
+- [x] Using your backend's artificial-delay control, construct a request race: trigger a request, then trigger another one (for the same data) before the first resolves, and observe
 what happens if you do nothing special about it. Does the UI ever show a result from the
 *older* request after a newer one already resolved?
-- [ ] Fix it using `AbortController` (or a request-id/"ignore stale response" guard, your choice), so the UI can never show a stale result.
+- [x] Fix it using `AbortController` (or a request-id/"ignore stale response" guard, your choice), so the UI can never show a stale result.
 
 **Questions** (depend on the tasks above)
 
-- [ ] Reproduce the race live (with artificial delay dialed up) before your fix, then show the fix preventing it. What exact sequence of events causes the stale result to win without the fix?
-- [ ] `AbortController` cancels the *request*. Does the effect's cleanup function run separately, or is aborting the fetch itself what you're doing inside the cleanup? Explain how the two connect in your implementation.
+- [x] Reproduce the race live (with artificial delay dialed up) before your fix, then show the fix preventing it. What exact sequence of events causes the stale result to win without the fix?
+- [x] `AbortController` cancels the *request*. Does the effect's cleanup function run separately, or is aborting the fetch itself what you're doing inside the cleanup? Explain how the two connect in your implementation.
 
 ---
 

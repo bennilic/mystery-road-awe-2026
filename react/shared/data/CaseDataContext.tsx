@@ -35,11 +35,13 @@ interface CaseDataContextValue {
 
 const CaseDataContext = createContext<CaseDataContextValue | null>(null);
 
-async function fetchJson<T>(url: string): Promise<T> {
+async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(url);
+    response = await fetch(url, { signal });
   } catch (error) {
+    // An abort is not a failure to report: the caller cancelled on purpose.
+    if (signal.aborted) throw error;
     // fetch only rejects when no HTTP answer arrived at all (server down, network cut).
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(`${url} could not be reached (${reason})`);
@@ -50,14 +52,14 @@ async function fetchJson<T>(url: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-async function loadCaseData(simulation: Simulation): Promise<CaseData> {
+async function loadCaseData(simulation: Simulation, signal: AbortSignal): Promise<CaseData> {
   const url = (resource: ResourceName) => `api/${resource}${simulationQuery(resource, simulation)}`;
   const [caseInfo, evidence, people, locations, timeline] = await Promise.all([
-    fetchJson<CaseInfo>(url("case")),
-    fetchJson<Evidence[]>(url("evidence")),
-    fetchJson<Person[]>(url("people")),
-    fetchJson<Location[]>(url("locations")),
-    fetchJson<TimelineEvent[]>(url("timeline")),
+    fetchJson<CaseInfo>(url("case"), signal),
+    fetchJson<Evidence[]>(url("evidence"), signal),
+    fetchJson<Person[]>(url("people"), signal),
+    fetchJson<Location[]>(url("locations"), signal),
+    fetchJson<TimelineEvent[]>(url("timeline"), signal),
   ]);
   if (!caseInfo.caseId) {
     throw new Error("api/case answered HTTP 200 but its body is not a case (no caseId)");
@@ -88,13 +90,22 @@ export function CaseDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setState({ status: "loading" });
-    loadCaseData(request.simulation).then(
-      (data) => setState({ status: "ready", data, requestId: request.id }),
+    // One controller per request. When a newer request replaces this one (or
+    // the provider unmounts), React runs the cleanup below, which aborts this
+    // request, so its late answer can never overwrite newer data.
+    const controller = new AbortController();
+    loadCaseData(request.simulation, controller.signal).then(
+      (data) => {
+        if (controller.signal.aborted) return;
+        setState({ status: "ready", data, requestId: request.id });
+      },
       (error: unknown) => {
+        if (controller.signal.aborted) return;
         const reason = error instanceof Error ? error.message : String(error);
         setState({ status: "error", message: reason });
       },
     );
+    return () => controller.abort();
   }, [request]);
 
   const reload = useCallback((simulation?: Simulation) => {
