@@ -2,6 +2,7 @@ import { useCaseData, type CaseData } from "../data/CaseDataContext.tsx";
 import { PersonCard } from "../components/PersonCard.tsx";
 import { LocationCard } from "../components/LocationCard.tsx";
 import { TabBar, type PeopleTab } from "../components/TabBar.tsx";
+import type { Evidence, Person } from "../../js/types.ts";
 import { evidenceMentionsPerson } from "../../js/lookup.ts";
 
 // Reading a query parameter ONCE to decide what to show initially is allowed
@@ -11,12 +12,17 @@ function readInitialTab(): PeopleTab {
   return requested === "locations" ? "locations" : "people";
 }
 
-// Demo 2 still shows ONE card per list (mapping whole collections is Demo 3),
-// but the empty states are real.
+// E04 stores "Nova Byte" (a display name) in personIds instead of the id; the
+// vanilla app repairs that once at load time (normalizePersonIds). The React
+// provider does not, so the count accepts either to stay identical.
+function countEvidenceForPerson(evidence: Evidence[], person: Person): number {
+  return evidence.filter(
+    (item) => evidenceMentionsPerson(item, person) || item.personIds.includes(person.name),
+  ).length;
+}
+
 function PeopleContent({ data }: { data: CaseData }) {
   const activeTab = readInitialTab();
-  const firstPerson = data.people[0];
-  const firstLocation = data.locations[0];
 
   return (
     <>
@@ -25,19 +31,20 @@ function PeopleContent({ data }: { data: CaseData }) {
         <div className="people-grid">
           {/* `.length === 0` is a boolean, so `&&` can never print a stray 0 */}
           {data.people.length === 0 && <p>No people are on file for this case.</p>}
-          {firstPerson && (
+          {data.people.map((person) => (
             <PersonCard
-              person={firstPerson}
-              relatedEvidenceCount={
-                data.evidence.filter((item) => evidenceMentionsPerson(item, firstPerson)).length
-              }
+              key={person.id}
+              person={person}
+              relatedEvidenceCount={countEvidenceForPerson(data.evidence, person)}
             />
-          )}
+          ))}
         </div>
       ) : (
         <div className="locations-grid">
           {data.locations.length === 0 && <p>No locations are on file for this case.</p>}
-          {firstLocation && <LocationCard location={firstLocation} />}
+          {data.locations.map((location) => (
+            <LocationCard key={location.id} location={location} />
+          ))}
         </div>
       )}
     </>

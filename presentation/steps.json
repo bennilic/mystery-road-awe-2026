@@ -2449,6 +2449,78 @@
       "before": "<ul>{responsibilities.map(/* ... */)}</ul>  // empty array still renders an empty <ul>",
       "after": "interface ResponsibilityListProps {\n  responsibilities: string[];\n}\n\nexport function ResponsibilityList({ responsibilities }: ResponsibilityListProps) {\n  // Early return of null: render nothing at all, not an empty <ul> that would\n  // still add list margins and an empty list to the DOM.\n  if (responsibilities.length === 0) return null;\n\n  return (\n    <ul>\n      {responsibilities.map((responsibility) => (\n        <li key={responsibility}>{responsibility}</li>\n      ))}\n    </ul>\n  );\n}",
       "line": 1
+    },
+    {
+      "id": "ex4-d3-t1-people-page",
+      "type": "app",
+      "title": "D3 - T1 — On the page: the people list",
+      "narration": "Before the code: all six people, each one a PersonCard produced by one .map() call.",
+      "exercise": 4,
+      "demo": 3,
+      "highlight": ".people-grid",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d3-t1-people",
+      "type": "code",
+      "title": "D3 - T1 — People and locations as mapped collections",
+      "narration": "The page maps data.people to PersonCard elements with key={person.id}, and data.locations to LocationCard elements with key={location.id}. Why map: the number of cards is data, not markup, so the JSX describes \"one card per person\" and React produces six. This replaces the for loop that appended HTML strings. The relatedEvidenceCount is computed per person while mapping (it accepts the display name for E04, mirroring the vanilla load-time repair). I compared the rendered text of both lists with the vanilla app in the browser: identical, and no key warning in the console.",
+      "exercise": 4,
+      "demo": 3,
+      "file": "react/pages/PeoplePage.tsx",
+      "before": "import { useCaseData, type CaseData } from \"../data/CaseDataContext.tsx\";\nimport { PersonCard } from \"../components/PersonCard.tsx\";\nimport { LocationCard } from \"../components/LocationCard.tsx\";\nimport { TabBar, type PeopleTab } from \"../components/TabBar.tsx\";\nimport { evidenceMentionsPerson } from \"../../js/lookup.ts\";\n\n// Reading a query parameter ONCE to decide what to show initially is allowed\n// in this exercise; the tab becomes a real route in Demo 8.\nfunction readInitialTab(): PeopleTab {\n  const requested = new URLSearchParams(window.location.search).get(\"tab\");\n  return requested === \"locations\" ? \"locations\" : \"people\";\n}\n\n// Demo 2 still shows ONE card per list (mapping whole collections is Demo 3),\n// but the empty states are real.\nfunction PeopleContent({ data }: { data: CaseData }) {\n  const activeTab = readInitialTab();\n  const firstPerson = data.people[0];\n  const firstLocation = data.locations[0];\n\n  return (\n    <>\n      <TabBar activeTab={activeTab} />\n      {activeTab === \"people\" ? (\n        <div className=\"people-grid\">\n          {/* `.length === 0` is a boolean, so `&&` can never print a stray 0 */}\n          {data.people.length === 0 && <p>No people are on file for this case.</p>}\n          {firstPerson && (\n            <PersonCard\n              person={firstPerson}\n              relatedEvidenceCount={\n                data.evidence.filter((item) => evidenceMentionsPerson(item, firstPerson)).length\n              }\n            />\n          )}\n        </div>\n      ) : (\n        <div className=\"locations-grid\">\n          {data.locations.length === 0 && <p>No locations are on file for this case.</p>}\n          {firstLocation && <LocationCard location={firstLocation} />}\n        </div>\n      )}\n    </>\n  );\n}\n\nexport function PeoplePage() {\n  const caseData = useCaseData();\n\n  return (\n    <section className=\"view active\">\n      <h2>People &amp; Locations</h2>\n      {caseData.status === \"loading\" && <p>Loading case file&hellip;</p>}\n      {caseData.status === \"error\" && (\n        <p role=\"alert\">\n          The case file could not be loaded ({caseData.message}). Check that the dev server is\n          running and reload the page.\n        </p>\n      )}\n      {caseData.status === \"ready\" && <PeopleContent data={caseData.data} />}\n    </section>\n  );\n}",
+      "after": "import { useCaseData, type CaseData } from \"../data/CaseDataContext.tsx\";\nimport { PersonCard } from \"../components/PersonCard.tsx\";\nimport { LocationCard } from \"../components/LocationCard.tsx\";\nimport { TabBar, type PeopleTab } from \"../components/TabBar.tsx\";\nimport type { Evidence, Person } from \"../../js/types.ts\";\nimport { evidenceMentionsPerson } from \"../../js/lookup.ts\";\n\n// Reading a query parameter ONCE to decide what to show initially is allowed\n// in this exercise; the tab becomes a real route in Demo 8.\nfunction readInitialTab(): PeopleTab {\n  const requested = new URLSearchParams(window.location.search).get(\"tab\");\n  return requested === \"locations\" ? \"locations\" : \"people\";\n}\n\n// E04 stores \"Nova Byte\" (a display name) in personIds instead of the id; the\n// vanilla app repairs that once at load time (normalizePersonIds). The React\n// provider does not, so the count accepts either to stay identical.\nfunction countEvidenceForPerson(evidence: Evidence[], person: Person): number {\n  return evidence.filter(\n    (item) => evidenceMentionsPerson(item, person) || item.personIds.includes(person.name),\n  ).length;\n}\n\nfunction PeopleContent({ data }: { data: CaseData }) {\n  const activeTab = readInitialTab();\n\n  return (\n    <>\n      <TabBar activeTab={activeTab} />\n      {activeTab === \"people\" ? (\n        <div className=\"people-grid\">\n          {/* `.length === 0` is a boolean, so `&&` can never print a stray 0 */}\n          {data.people.length === 0 && <p>No people are on file for this case.</p>}\n          {data.people.map((person) => (\n            <PersonCard\n              key={person.id}\n              person={person}\n              relatedEvidenceCount={countEvidenceForPerson(data.evidence, person)}\n            />\n          ))}\n        </div>\n      ) : (\n        <div className=\"locations-grid\">\n          {data.locations.length === 0 && <p>No locations are on file for this case.</p>}\n          {data.locations.map((location) => (\n            <LocationCard key={location.id} location={location} />\n          ))}\n        </div>\n      )}\n    </>\n  );\n}\n\nexport function PeoplePage() {\n  const caseData = useCaseData();\n\n  return (\n    <section className=\"view active\">\n      <h2>People &amp; Locations</h2>\n      {caseData.status === \"loading\" && <p>Loading case file&hellip;</p>}\n      {caseData.status === \"error\" && (\n        <p role=\"alert\">\n          The case file could not be loaded ({caseData.message}). Check that the dev server is\n          running and reload the page.\n        </p>\n      )}\n      {caseData.status === \"ready\" && <PeopleContent data={caseData.data} />}\n    </section>\n  );\n}",
+      "line": 26
+    },
+    {
+      "id": "ex4-d3-t1-timeline-page",
+      "type": "app",
+      "title": "D3 - T1 — On the page: the timeline list",
+      "narration": "Before the code: 15 timeline events, oldest first, each a TimelineItem; the filter bar above is visually complete but intentionally not wired up.",
+      "exercise": 4,
+      "demo": 3,
+      "highlight": ".timeline-container",
+      "waitFor": ".timeline-event",
+      "view": "timeline",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d3-t1-timeline",
+      "type": "code",
+      "title": "D3 - T1 — Timeline events as a mapped collection",
+      "narration": "TimelinePage sorts a copy of the events by time (derived during render, no state) and maps each to a TimelineItem with key={event.id}. Nested lists carry keys too: evidence buttons use key={evidenceId} and the toolbar options key={option.value}. A lookup (CERTAINTY_BADGE_CLASS) picks the badge variant. The text of all 15 events, locations and badges matches the vanilla timeline exactly, and the four filter dropdowns have the same option counts (2, 7, 7, 12).",
+      "exercise": 4,
+      "demo": 3,
+      "file": "react/pages/TimelinePage.tsx",
+      "before": "// vanilla: js/views/timeline.ts renderTimeline()\nlet html = \"\";\nfor (const item of events) {\n  html += '<div class=\"timeline-event certainty-' + item.certainty + '\">';\n  // ... more string concatenation ...\n}\ncontainer.innerHTML = html;",
+      "after": "import { useCaseData, type CaseData } from \"../data/CaseDataContext.tsx\";\nimport { TimelineItem } from \"../components/TimelineItem.tsx\";\nimport { TimelineToolbar } from \"../components/TimelineToolbar.tsx\";\n\nfunction TimelineContent({ data }: { data: CaseData }) {\n  // Derived during render, never stored: oldest first, same as the vanilla default.\n  const events = [...data.timeline].sort(\n    (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),\n  );\n  const eventTypes = [...new Set(data.timeline.map((event) => event.type))];\n\n  const locationLabel = (locationId: string): string => {\n    const location = data.locations.find((candidate) => candidate.id === locationId);\n    return location ? `${location.id} - ${location.name}` : locationId;\n  };\n\n  return (\n    <>\n      <TimelineToolbar\n        personOptions={data.people.map((person) => ({ value: person.id, label: person.name }))}\n        locationOptions={data.locations.map((location) => ({\n          value: location.id,\n          label: location.id,\n        }))}\n        typeOptions={eventTypes.map((type) => ({ value: type, label: type }))}\n      />\n      <div className=\"timeline-container\">\n        {events.length === 0 && <p>No timeline events match the current filters.</p>}\n        {events.map((event) => (\n          <TimelineItem\n            key={event.id}\n            event={event}\n            locationLabels={event.locationIds.map(locationLabel)}\n          />\n        ))}\n      </div>\n    </>\n  );\n}\n\nexport function TimelinePage() {\n  const caseData = useCaseData();\n\n  return (\n    <section className=\"view active\">\n      <h2>Investigation Timeline</h2>\n      {caseData.status === \"loading\" && <p>Loading case file&hellip;</p>}\n      {caseData.status === \"error\" && (\n        <p role=\"alert\">\n          The case file could not be loaded ({caseData.message}). Check that the dev server is\n          running and reload the page.\n        </p>\n      )}\n      {caseData.status === \"ready\" && <TimelineContent data={caseData.data} />}\n    </section>\n  );\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d3-q1-page",
+      "type": "app",
+      "title": "D3 - Q1 — On the page: list identity",
+      "narration": "Before the code: each card on this page has an identity (the person id). The key is how React remembers that identity across renders.",
+      "exercise": 4,
+      "demo": 3,
+      "highlight": ".people-grid",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d3-q1",
+      "type": "code",
+      "title": "D3 - Q1 — What React uses key for",
+      "narration": "key tells React which element in the new list corresponds to which element in the previous render. During reconciliation, React compares the children of the same parent by key: same key means the same component instance, so it is kept (with its DOM node and any internal state) and just updated; a new key means mount, a missing key means unmount; a moved key means the node is moved instead of rebuilt. Without keys React falls back to position, which is only correct if the list never reorders. The key is not passed to the component as a prop (props.key is undefined), and it only needs to be unique among siblings, not globally.",
+      "exercise": 4,
+      "demo": 3,
+      "file": "react/pages/PeoplePage.tsx",
+      "before": "{data.people.map((person) => (\n  <PersonCard person={person} ... />   // no key: React warns and matches by position\n))}",
+      "after": "{data.people.map((person) => (\n  <PersonCard key={person.id} person={person} ... />\n))}",
+      "line": 33
     }
   ]
 }

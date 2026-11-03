@@ -4,6 +4,7 @@ import { Footer } from "./components/Footer.tsx";
 import { CaseDataProvider } from "./data/CaseDataContext.tsx";
 import { DashboardPage } from "./pages/DashboardPage.tsx";
 import { PeoplePage } from "./pages/PeoplePage.tsx";
+import { TimelinePage } from "./pages/TimelinePage.tsx";
 import { StubPage } from "./pages/StubPage.tsx";
 import { useHashRoute, type ViewName } from "./routing/useHashRoute.ts";
 
@@ -13,7 +14,7 @@ const PAGES: Record<ViewName, () => ReactNode> = {
   dashboard: () => <DashboardPage />,
   evidence: () => <StubPage title="Evidence Catalogue" migratedInExercise={4} />,
   people: () => <PeoplePage />,
-  timeline: () => <StubPage title="Investigation Timeline" migratedInExercise={5} />,
+  timeline: () => <TimelinePage />,
   workspace: () => <StubPage title="Investigator Workspace" migratedInExercise={5} />,
 };
 
