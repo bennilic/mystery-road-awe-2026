@@ -30,7 +30,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 6 | Passing callbacks downward | ☑ |
 | 7 | `useReducer` for the filter/search/sort state | ☑ |
 | 8 | Context, and when not to use it | ☑ |
-| 9 | Diagnose & fix common state problems | ☐ |
+| 9 | Diagnose & fix common state problems | ☑ |
 | 10 | Remove remaining direct DOM manipulation + wrap-up | ☐ |
 
 ---
@@ -162,14 +162,14 @@ Context) good enough? Be ready to defend whichever answer you land on.
 
 **Tasks**
 
-- [ ] Review your own Evidence/Workspace/Dashboard code specifically for: duplicated state (the same fact represented in two places), stale state (a value that doesn't update when it should), excessive prop drilling, unnecessary global state, and any remaining direct mutation.
-- [ ] Find and fix at least 2 real instances (they can be ones you introduced yourself while
+- [x] Review your own Evidence/Workspace/Dashboard code specifically for: duplicated state (the same fact represented in two places), stale state (a value that doesn't update when it should), excessive prop drilling, unnecessary global state, and any remaining direct mutation.
+- [x] Find and fix at least 2 real instances (they can be ones you introduced yourself while
 building this exercise, that's normal and expected, not a failure).
 
 **Questions** (depend on the tasks above)
 
-- [ ] For each of the 2 issues you fixed: which of the five named categories did it fall into, and how did you notice it (a visible bug, a code-review-style re-read, React DevTools, something else)?
-- [ ] Of the five named problems (duplicated state, stale state, prop drilling, unnecessary global state, mutation), which one is this app's history (Exercise 1's bugs) most clearly an example of? Explain the connection directly.
+- [x] For each of the 2 issues you fixed: which of the five named categories did it fall into, and how did you notice it (a visible bug, a code-review-style re-read, React DevTools, something else)?
+- [x] Of the five named problems (duplicated state, stale state, prop drilling, unnecessary global state, mutation), which one is this app's history (Exercise 1's bugs) most clearly an example of? Explain the connection directly.
 
 ---
 

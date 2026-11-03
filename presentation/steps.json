@@ -4021,6 +4021,121 @@
       "file": "react/shared/bookmarks/BookmarksContext.tsx",
       "before": "// one broad context (not used): any change re-renders every consumer\nconst AppStateContext = createContext<{ bookmarks, notes, reviewEdits, filters, ... }>(null);",
       "after": "const BookmarksContext = createContext<BookmarksValue | null>(null);\n// narrow: only what the three bookmark readers need"
+    },
+    {
+      "id": "ex5-d9-t1-page",
+      "type": "app",
+      "title": "D9 - T1 — On the page: the views reviewed",
+      "narration": "Before the code: I re-read the Evidence, Workspace and Dashboard code against the five named problems, and then drove the flows that cross views.",
+      "exercise": 5,
+      "demo": 9,
+      "highlight": ".evidence-detail",
+      "waitFor": ".evidence-detail",
+      "view": "/evidence?open=E01",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d9-t1",
+      "type": "code",
+      "title": "D9 - T1 — Review results for the five problem categories",
+      "narration": "Duplicated state: one real instance (the open evidence id existed in the URL and again in useState). Stale state: one real instance (the storage-failure notice was set on failure and never cleared). Excessive prop drilling: notes and review edits go AppBody -> EvidencePage -> EvidenceContent -> EvidenceDetail (two pass-through hops) and the Dashboard gets reviewEdits directly; below my Demo 8 threshold, left as is. Unnecessary global state: BookmarksContext is narrow and has three real consumers (Demo 8 Q3), left as is. Direct mutation: grep for push/splice/pop/shift/unshift/reverse/sort/Object.assign/delete over react/ (outside the sandbox) finds only .sort on the fresh array that filter() returns, and .reverse() on slice() copies; no state array or object is edited in place. The two fixes are on the next slides.",
+      "exercise": 5,
+      "demo": 9,
+      "file": "react/features/evidence/EvidencePage.tsx",
+      "before": "$ grep -rnE \"\\.(push|splice|pop|shift|unshift|reverse|sort)\\(|Object\\.assign|delete \" react --include=*.ts --include=*.tsx (outside sandbox)\n(nothing that touches state)",
+      "after": "filterEvidence.ts:50      .sort(...)           // on the array returned by filter()\nDashboardPage.tsx:34    slice(-5).reverse()  // on a slice() copy\nDashboardPage.tsx:35    slice(-5).reverse()\nTimelinePage.tsx:25     [...visibleEvents].sort(...)\n// no push / splice / Object.assign / delete on state"
+    },
+    {
+      "id": "ex5-d9-t2a-page",
+      "type": "app",
+      "title": "D9 - T2 (1/2) — On the page: ?open=E05 in the address, E01 in the panel",
+      "narration": "Before the code: this is the bug as reproduced before the fix: with E01 open, the address was changed to ?open=E05 and the panel still showed E01; clicking another card left the address on E05.",
+      "exercise": 5,
+      "demo": 9,
+      "highlight": ".evidence-detail",
+      "waitFor": ".evidence-detail",
+      "view": "/evidence?open=E05",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d9-t2a",
+      "type": "code",
+      "title": "D9 - T2 (1/2) — Fix: duplicated state, the open item is read from the URL only",
+      "narration": "Category: duplicated state, which also made it stale. selectedEvidenceId was copied from ?open= once (useState(() => searchParams.get(...))) and then changed by clicks, so two sources existed. Reproduced before the fix: open ?open=E01, change the hash to ?open=E05 -> panel still E01; click a card -> panel E13 but address still ?open=E05; a reload or a shared link then showed a different item than the one on screen. How I noticed it: a code-review style re-read ('where else does this value live?') and then driving the flow by hand. Fix: no useState; selectedEvidenceId = searchParams.get('open') on every render, opening a card calls setSearchParams, Close clears it. After: address change updates the panel (E05), clicking a card writes ?open=E13 and shows E13, Back returns to E05, Close removes the parameter, Workspace 'Open' opens E03, an unknown id shows a message instead of nothing.",
+      "exercise": 5,
+      "demo": 9,
+      "file": "react/features/evidence/EvidencePage.tsx",
+      "before": "  const [searchParams] = useSearchParams();\n  const [filters, dispatchFilters] = useReducer(evidenceFiltersReducer, INITIAL_EVIDENCE_FILTERS);\n  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(() =>\n    searchParams.get(OPEN_EVIDENCE_PARAM),\n  ...\n            <EvidenceCard key={item.id} item={item} onOpen={setSelectedEvidenceId} />",
+      "after": "  const [searchParams, setSearchParams] = useSearchParams();\n  const [filters, dispatchFilters] = useReducer(evidenceFiltersReducer, INITIAL_EVIDENCE_FILTERS);\n  // The open item lives in the URL only (?open=E01), read here on every render.\n  // Copying it into useState gave two sources of truth that drifted apart.\n  const selectedEvidenceId = searchParams.get(OPEN_EVIDENCE_PARAM);\n\n  ...\n            <EvidenceCard"
+    },
+    {
+      "id": "ex5-d9-t2b-page",
+      "type": "app",
+      "title": "D9 - T2 (2/2) — On the page: a storage failure notice",
+      "narration": "Before the code: the bookmark and note save failures show a message here (forced in the test by making localStorage.setItem throw).",
+      "exercise": 5,
+      "demo": 9,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d9-t2b",
+      "type": "code",
+      "title": "D9 - T2 (2/2) — Fix: stale state, the failure notice is cleared by the next successful save",
+      "narration": "Category: stale state. The notice state was set in the catch block and nothing ever cleared it, so after one failed save the page kept saying 'could not be saved' even after later saves worked (reproduced: setItem forced to throw -> notice appears; setItem restored -> next star saved correctly, localStorage updated, notice still on screen). Noticed by re-reading the catch blocks and asking 'what resets this?', then confirmed by forcing the failure. Fix: setStorageNotice(null) after a successful write, in the bookmark provider and in the notes handler. After: notice appears (1) then is gone after the next successful save (0).",
+      "exercise": 5,
+      "demo": 9,
+      "file": "react/shared/bookmarks/BookmarksContext.tsx",
+      "before": "      writeBookmarkIds(nextIds);\n    } catch (error) {\n      setStorageNotice(describeStorageFailure(\"Your bookmark\", error));\n    }\n  }",
+      "after": "      writeBookmarkIds(nextIds);\n      // A later successful save means the earlier failure no longer applies.\n      setStorageNotice(null);\n    } catch (error) {\n      setStorageNotice(describeStorageFailure(\"Your bookmark\", error));\n    }"
+    },
+    {
+      "id": "ex5-d9-q1-page",
+      "type": "app",
+      "title": "D9 - Q1 — On the page: where the two bugs show",
+      "narration": "Before the code: the panel and address, and the alert at the top.",
+      "exercise": 5,
+      "demo": 9,
+      "highlight": ".evidence-detail",
+      "waitFor": ".evidence-detail",
+      "view": "/evidence?open=E01",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d9-q1",
+      "type": "code",
+      "title": "D9 - Q1 — Categories and how each was noticed",
+      "narration": "Fix 1, the open evidence id: duplicated state (the same fact in the URL and in useState), which showed up as stale state in the UI. Noticed by a code-review re-read of every useState initialised from props/URL, then reproduced in the browser. Fix 2, the failure notice: stale state (a value that does not update when it should). Noticed by a code-review re-read of every catch block and asking what resets the state it sets; confirmed by forcing localStorage.setItem to throw with Playwright. Neither was visible in normal use (both need an unusual sequence), which is why a deliberate review was needed; React DevTools was not needed, the Playwright reproductions did the job of showing the state and the screen disagreeing.",
+      "exercise": 5,
+      "demo": 9,
+      "file": "react/features/evidence/EvidencePage.tsx",
+      "before": "// duplicated: URL and useState\nconst [selectedEvidenceId, setSelectedEvidenceId] = useState(() => searchParams.get(\"open\"));\n// stale: set on failure, never reset\nsetStorageNotice(describeStorageFailure(\"Your bookmark\", error));",
+      "after": "// one source of truth\nconst selectedEvidenceId = searchParams.get(OPEN_EVIDENCE_PARAM);\n// reset on success\nsetStorageNotice(null);"
+    },
+    {
+      "id": "ex5-d9-q2-page",
+      "type": "app",
+      "title": "D9 - Q2 — On the page: the vanilla evidence list",
+      "narration": "Before the code: the vanilla catalogue where Exercise 1's bugs lived.",
+      "exercise": 5,
+      "demo": 9,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "evidence",
+      "page": "index.html"
+    },
+    {
+      "id": "ex5-d9-q2",
+      "type": "code",
+      "title": "D9 - Q2 — Exercise 1 was mostly duplicated state",
+      "narration": "Of the five, Exercise 1's bugs are most clearly duplicated state. The vanilla app kept the same fact in several places and relied on hand-written code to keep them equal: bookmarks as the state.bookmarks id list AND an ev.bookmarked flag on each evidence object; the evidence list as allEvidence AND filteredEvidence (which was even the same reference, so sorting one changed the other); the open item as selectedEvidence AND the DOM; the dashboard count as state.bookmarks AND text drawn into the DOM once. Each copy needs an update at every change, and the bugs are exactly the missed updates: a Dashboard count that was stale (stale state is the symptom of duplication), a master list that lost its order (the aliased array is a duplicate that was not a duplicate). Mutation is the mechanism in the sort bug, but the reason it hurt was that two names pointed at one list that were supposed to be two. In React the fix is the same everywhere: store the minimum (ids, filters, notes) and derive the rest, which Demos 4 and 5 did, and which Fix 1 above applied to the URL.",
+      "exercise": 5,
+      "demo": 9,
+      "file": "react/features/evidence/EvidencePage.tsx",
+      "before": "// vanilla: the same fact, kept in sync by hand\nstate.bookmarks.push(evidenceId);   // id list\nev.bookmarked = true;               // flag on the object\nstate.filteredEvidence = state.allEvidence;  // same array\nstate.selectedEvidence = ev;        // and again in the DOM",
+      "after": "  const bookmarkCount = selectBookmarkedEvidence(evidence, bookmarkedIds).length;\n  const visibleEvidence = filterAndSortEvidence(evidence, filters);\n// derived, never stored"
     }
   ]
 }

@@ -23,6 +23,8 @@ export function BookmarksProvider({ children }: { children: ReactNode }) {
     setBookmarkedIds(nextIds);
     try {
       writeBookmarkIds(nextIds);
+      // A later successful save means the earlier failure no longer applies.
+      setStorageNotice(null);
     } catch (error) {
       setStorageNotice(describeStorageFailure("Your bookmark", error));
     }

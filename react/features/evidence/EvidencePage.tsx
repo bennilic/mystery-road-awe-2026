@@ -1,4 +1,4 @@
-import { useReducer, useState } from "react";
+import { useReducer } from "react";
 import { useSearchParams } from "react-router";
 import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
@@ -31,11 +31,11 @@ function EvidenceContent({
   reviewEdits,
   onChangeReview,
 }: EvidenceStateProps & { data: CaseData }) {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [filters, dispatchFilters] = useReducer(evidenceFiltersReducer, INITIAL_EVIDENCE_FILTERS);
-  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(() =>
-    searchParams.get(OPEN_EVIDENCE_PARAM),
-  );
+  // The open item lives in the URL only (?open=E01), read here on every render.
+  // Copying it into useState gave two sources of truth that drifted apart.
+  const selectedEvidenceId = searchParams.get(OPEN_EVIDENCE_PARAM);
 
   // Review edits are layered over the loaded list on every render.
   const evidence = applyReviewEdits(data.evidence, reviewEdits);
@@ -72,17 +72,27 @@ function EvidenceContent({
         <div id="evidenceList" className="evidence-grid">
           {visibleEvidence.length === 0 && <p>No evidence matches the current filters.</p>}
           {visibleEvidence.map((item) => (
-            <EvidenceCard key={item.id} item={item} onOpen={setSelectedEvidenceId} />
+            <EvidenceCard
+              key={item.id}
+              item={item}
+              onOpen={(evidenceId) => setSearchParams({ [OPEN_EVIDENCE_PARAM]: evidenceId })}
+            />
           ))}
         </div>
       </div>
+      {selectedEvidenceId && !selectedItem && (
+        <p role="status">
+          There is no evidence item with the id &quot;{selectedEvidenceId}&quot;. Pick a card from
+          the list above.
+        </p>
+      )}
       {selectedItem && (
         <EvidenceDetail
           item={selectedItem}
           personNames={selectedItem.personIds.map(personName)}
           locationLabels={selectedItem.locationIds.map(locationLabel)}
           savedNote={notes[selectedItem.id] ?? ""}
-          onClose={() => setSelectedEvidenceId(null)}
+          onClose={() => setSearchParams({})}
           onSaveNote={onSaveNote}
           onChangeReview={onChangeReview}
         />

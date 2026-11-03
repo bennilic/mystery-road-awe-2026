@@ -38,6 +38,7 @@ function AppBody() {
     setNotes(nextNotes);
     try {
       writeNotes(nextNotes);
+      setStorageNotice(null);
     } catch (error) {
       setStorageNotice(describeStorageFailure("Your note", error));
     }
