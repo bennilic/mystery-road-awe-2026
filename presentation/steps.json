@@ -2353,6 +2353,102 @@
       "before": "export function renderPeople(): void {\n  const container = el<HTMLElement>(\"peoplePanel\")!;\n  let html = \"\";\n  for (const person of state.allPeople) {\n    const count = countEvidenceForPerson(person);\n\n    html += '<div class=\"person-card\">';\n    html += '<div class=\"person-card-header\">';\n    html +=\n      '<img class=\"person-avatar\" src=\"' +\n      person.avatar +\n      '\" alt=\"Portrait of ' +\n      person.name +\n      '\">';\n    html +=\n      \"<div><h3>\" + person.name + '</h3><div class=\"person-role\">' + person.role + \"</div></div>\";\n    html += \"</div>\";\n    html += \"<p><strong>Speciality:</strong> \" + person.speciality + \"</p>\";\n    html += \"<ul>\";\n    for (const responsibility of person.responsibilities) {\n      html += \"<li>\" + responsibility + \"</li>\";\n    }\n    html += \"</ul>\";\n    html += '<div class=\"person-statement\">&ldquo;' + person.statement + \"&rdquo;</div>\";\n    html += \"<p>\" + count + \" related evidence item\" + (count === 1 ? \"\" : \"s\") + \" &mdash; \";\n    html +=\n      '<button type=\"button\" class=\"evidence-count-link\" data-person-id=\"' +\n      person.id +\n      '\">view</button></p>';\n    html += \"</div>\";",
       "after": "import type { Person } from \"../../js/types.ts\";\nimport { Card } from \"./Card.tsx\";\n\ninterface PersonCardProps {\n  person: Person;\n  relatedEvidenceCount: number;\n}\n\nexport function PersonCard({ person, relatedEvidenceCount }: PersonCardProps) {\n  return (\n    <Card variant=\"person\">\n      <div className=\"person-card-header\">\n        <img className=\"person-avatar\" src={person.avatar} alt={`Portrait of ${person.name}`} />\n        <div>\n          <h3>{person.name}</h3>\n          <div className=\"person-role\">{person.role}</div>\n        </div>\n      </div>\n      <p>\n        <strong>Speciality:</strong> {person.speciality}\n      </p>\n      <ul>\n        {person.responsibilities.map((responsibility) => (\n          <li key={responsibility}>{responsibility}</li>\n        ))}\n      </ul>\n      <div className=\"person-statement\">&ldquo;{person.statement}&rdquo;</div>\n      <p>\n        {relatedEvidenceCount} related evidence item{relatedEvidenceCount === 1 ? \"\" : \"s\"}\n      </p>\n    </Card>\n  );\n}",
       "line": 1
+    },
+    {
+      "id": "ex4-d2-t1-page",
+      "type": "app",
+      "title": "D2 - T1 — On the page: the active tab",
+      "narration": "Before the code: the filled \"People\" button is the active tab. Opening react.html?tab=locations#people highlights Locations instead and shows the location card; that is the same component with a different prop.",
+      "exercise": 4,
+      "demo": 2,
+      "highlight": ".tab-bar",
+      "waitFor": ".tab-btn",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d2-t1",
+      "type": "code",
+      "title": "D2 - T1 — State-dependent style and empty states",
+      "narration": "Two real cases. (1) TabBar derives the class of each button from the activeTab prop: \"tab-btn active\" or \"tab-btn\". (2) Empty states: if data.people or data.locations were empty, the panel says so instead of showing a blank box, which is what the vanilla app did for the timeline (\"No timeline events match\"). I verified the active-tab styling live in the browser for both ?tab values; the empty-state branch cannot trigger with the real data, so it is only covered by the type check and reading the code. The tab is chosen by a query parameter read once at render time, which the exercise allows; it becomes a real route in Demo 8.",
+      "exercise": 4,
+      "demo": 2,
+      "file": "react/components/TabBar.tsx + react/pages/PeoplePage.tsx",
+      "before": "// vanilla: imperative class toggling in switchPeopleTab\nif (tab === \"people\") {\n  peoplePanel.classList.remove(\"hidden\");\n  locationsPanel.classList.add(\"hidden\");\n  peopleTabBtn.classList.add(\"active\");\n  locationsTabBtn.classList.remove(\"active\");\n} else { /* ...mirror image... */ }",
+      "after": "export type PeopleTab = \"people\" | \"locations\";\n\n// Lookup technique: label text is data keyed by the tab id, so adding a third\n// tab is one new entry (and the Record type forces it) instead of another branch.\nconst TAB_LABELS: Record<PeopleTab, string> = {\n  people: \"People\",\n  locations: \"Locations\",\n};\n\ninterface TabBarProps {\n  activeTab: PeopleTab;\n}\n\n// Visually complete, deliberately not interactive: switching tabs becomes a\n// real route in Demo 8, not a click handler with state.\nexport function TabBar({ activeTab }: TabBarProps) {\n  const tabs: PeopleTab[] = [\"people\", \"locations\"];\n\n  return (\n    <div className=\"tab-bar\">\n      {tabs.map((tab) => (\n        <button\n          key={tab}\n          type=\"button\"\n          // Ternary: exactly two outcomes (active or not) for one attribute.\n          className={tab === activeTab ? \"tab-btn active\" : \"tab-btn\"}\n        >\n          {TAB_LABELS[tab]}\n        </button>\n      ))}\n    </div>\n  );\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d2-t2-page",
+      "type": "app",
+      "title": "D2 - T2 — On the page: four techniques",
+      "narration": "Before the code: the tab bar (lookup for labels, ternary for the class), the list panel below it (ternary between people and locations, && for empty state) and the card (early return null for an empty responsibility list).",
+      "exercise": 4,
+      "demo": 2,
+      "highlight": ".tab-bar",
+      "waitFor": ".tab-btn",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d2-t2",
+      "type": "code",
+      "title": "D2 - T2 — Which conditional technique where, and why",
+      "narration": "Ternary: when there are exactly two outcomes that both render something, e.g. active/inactive class, or people panel vs locations panel. &&: when the \"else\" is nothing, e.g. the empty-state message. Early return null: when a component has nothing to show, so it bails out at the top (ResponsibilityList) and the body stays unconditional. Lookup object: when the condition is a key into a fixed set, e.g. TAB_LABELS[tab]; a Record<PeopleTab, string> makes the compiler demand an entry for any new tab, which an if/else chain would not. I avoided nested ternaries, they are the thing that makes JSX unreadable.",
+      "exercise": 4,
+      "demo": 2,
+      "file": "react/pages/PeoplePage.tsx",
+      "before": "import { useCaseData, type CaseData } from \"../data/CaseDataContext.tsx\";\nimport { PersonCard } from \"../components/PersonCard.tsx\";\nimport { LocationCard } from \"../components/LocationCard.tsx\";\nimport { evidenceMentionsPerson } from \"../../js/lookup.ts\";\n\n// Demo 1 only proves the component API with ONE card of each kind; mapping\n// whole collections is Demo 3.\nfunction PeopleContent({ data }: { data: CaseData }) {\n  const firstPerson = data.people[0];\n  const firstLocation = data.locations[0];\n  if (!firstPerson || !firstLocation) return null;\n\n  const relatedEvidenceCount = data.evidence.filter((item) =>\n    evidenceMentionsPerson(item, firstPerson),\n  ).length;\n\n  return (\n    <>\n      <div className=\"people-grid\">\n        <PersonCard person={firstPerson} relatedEvidenceCount={relatedEvidenceCount} />\n      </div>\n      <div className=\"locations-grid\">\n        <LocationCard location={firstLocation} />\n      </div>\n    </>\n  );\n}\n\nexport function PeoplePage() {\n  const caseData = useCaseData();\n\n  return (\n    <section className=\"view active\">\n      <h2>People &amp; Locations</h2>\n      {caseData.status === \"loading\" && <p>Loading case file&hellip;</p>}\n      {caseData.status === \"error\" && (\n        <p role=\"alert\">\n          The case file could not be loaded ({caseData.message}). Check that the dev server is\n          running and reload the page.\n        </p>\n      )}\n      {caseData.status === \"ready\" && <PeopleContent data={caseData.data} />}\n    </section>\n  );\n}",
+      "after": "import { useCaseData, type CaseData } from \"../data/CaseDataContext.tsx\";\nimport { PersonCard } from \"../components/PersonCard.tsx\";\nimport { LocationCard } from \"../components/LocationCard.tsx\";\nimport { TabBar, type PeopleTab } from \"../components/TabBar.tsx\";\nimport { evidenceMentionsPerson } from \"../../js/lookup.ts\";\n\n// Reading a query parameter ONCE to decide what to show initially is allowed\n// in this exercise; the tab becomes a real route in Demo 8.\nfunction readInitialTab(): PeopleTab {\n  const requested = new URLSearchParams(window.location.search).get(\"tab\");\n  return requested === \"locations\" ? \"locations\" : \"people\";\n}\n\n// Demo 2 still shows ONE card per list (mapping whole collections is Demo 3),\n// but the empty states are real.\nfunction PeopleContent({ data }: { data: CaseData }) {\n  const activeTab = readInitialTab();\n  const firstPerson = data.people[0];\n  const firstLocation = data.locations[0];\n\n  return (\n    <>\n      <TabBar activeTab={activeTab} />\n      {activeTab === \"people\" ? (\n        <div className=\"people-grid\">\n          {/* `.length === 0` is a boolean, so `&&` can never print a stray 0 */}\n          {data.people.length === 0 && <p>No people are on file for this case.</p>}\n          {firstPerson && (\n            <PersonCard\n              person={firstPerson}\n              relatedEvidenceCount={\n                data.evidence.filter((item) => evidenceMentionsPerson(item, firstPerson)).length\n              }\n            />\n          )}\n        </div>\n      ) : (\n        <div className=\"locations-grid\">\n          {data.locations.length === 0 && <p>No locations are on file for this case.</p>}\n          {firstLocation && <LocationCard location={firstLocation} />}\n        </div>\n      )}\n    </>\n  );\n}\n\nexport function PeoplePage() {\n  const caseData = useCaseData();\n\n  return (\n    <section className=\"view active\">\n      <h2>People &amp; Locations</h2>\n      {caseData.status === \"loading\" && <p>Loading case file&hellip;</p>}\n      {caseData.status === \"error\" && (\n        <p role=\"alert\">\n          The case file could not be loaded ({caseData.message}). Check that the dev server is\n          running and reload the page.\n        </p>\n      )}\n      {caseData.status === \"ready\" && <PeopleContent data={caseData.data} />}\n    </section>\n  );\n}",
+      "line": 14
+    },
+    {
+      "id": "ex4-d2-q1-page",
+      "type": "app",
+      "title": "D2 - Q1 — On the page: the empty-state slot",
+      "narration": "Before the code: the people grid. Above the card there is a slot that renders the empty message only when the list has zero entries; with real data it renders nothing.",
+      "exercise": 4,
+      "demo": 2,
+      "highlight": ".people-grid",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d2-q1",
+      "type": "code",
+      "title": "D2 - Q1 — && and the 0 trap",
+      "narration": "I used {data.people.length === 0 && <p>...</p>} and {firstPerson && <PersonCard/>}. JavaScript && returns its left operand when it is falsy, and React renders numbers, so {items.length && <List/>} with an empty array renders a literal 0 on screen (false, null and undefined render nothing, 0 does not). My code does not have this risk: the first uses a comparison, which is always a boolean, and the second tests an object or undefined (data.people[0], typed Person | undefined thanks to noUncheckedIndexedAccess), never a number. The safe habits are: compare explicitly (length > 0), coerce with !!, or use a ternary with null.",
+      "exercise": 4,
+      "demo": 2,
+      "file": "react/pages/PeoplePage.tsx",
+      "before": "{data.people.length && <p>No people</p>}  // renders \"0\" when the array is empty",
+      "after": "{data.people.length === 0 && <p>No people are on file for this case.</p>}\n{firstPerson && <PersonCard person={firstPerson} ... />}",
+      "line": 24
+    },
+    {
+      "id": "ex4-d2-q2-page",
+      "type": "app",
+      "title": "D2 - Q2 — On the page: the responsibilities list",
+      "narration": "Before the code: the bullet list in the card is a ResponsibilityList. With an empty array it would render nothing at all.",
+      "exercise": 4,
+      "demo": 2,
+      "highlight": ".person-card ul",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d2-q2",
+      "type": "code",
+      "title": "D2 - Q2 — null vs an empty div",
+      "narration": "Returning null means the component adds nothing to the DOM. An empty <div> is still an element: it takes part in layout (margins, padding, a grid or flex cell, gap), shows up in CSS selectors like :empty or :last-child, and is a node React has to create and diff. So for \"nothing to show\" null is preferable. I used null in ResponsibilityList (an empty <ul> would also be an empty list for no reason). I did not use an empty div anywhere; the empty states render a <p> with a message, because there the user should see an explanation, not nothing.",
+      "exercise": 4,
+      "demo": 2,
+      "file": "react/components/ResponsibilityList.tsx",
+      "before": "<ul>{responsibilities.map(/* ... */)}</ul>  // empty array still renders an empty <ul>",
+      "after": "interface ResponsibilityListProps {\n  responsibilities: string[];\n}\n\nexport function ResponsibilityList({ responsibilities }: ResponsibilityListProps) {\n  // Early return of null: render nothing at all, not an empty <ul> that would\n  // still add list margins and an empty list to the DOM.\n  if (responsibilities.length === 0) return null;\n\n  return (\n    <ul>\n      {responsibilities.map((responsibility) => (\n        <li key={responsibility}>{responsibility}</li>\n      ))}\n    </ul>\n  );\n}",
+      "line": 1
     }
   ]
 }

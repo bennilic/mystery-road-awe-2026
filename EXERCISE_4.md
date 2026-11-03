@@ -29,7 +29,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | # | Demo | Ready? |
 |---|---|---|
 | 1 | JSX, function components, typed props, composition & children | ☑ |
-| 2 | Conditional rendering | ☐ |
+| 2 | Conditional rendering | ☑ |
 | 3 | Rendering collections | ☐ |
 | 4 | Stable keys and list identity | ☐ |
 | 5 | Presentational vs. feature components and component boundaries | ☐ |
@@ -62,13 +62,13 @@ each with an explicitly typed props interface/type (no untyped or `any` props).
 
 **Tasks**
 
-- [ ] Implement at least two real conditional-rendering cases in the views you're migrating. For example: an empty state (e.g. "no timeline events match" if applicable), and a state-dependent style/label (e.g. the active People/Locations tab, or a certainty badge's variant on a timeline event).
-- [ ] Use at least two different conditional-rendering techniques (e.g. a ternary, `&&`, early-return, or a lookup/mapping function) and be ready to justify which you used where.
+- [x] Implement at least two real conditional-rendering cases in the views you're migrating. For example: an empty state (e.g. "no timeline events match" if applicable), and a state-dependent style/label (e.g. the active People/Locations tab, or a certainty badge's variant on a timeline event).
+- [x] Use at least two different conditional-rendering techniques (e.g. a ternary, `&&`, early-return, or a lookup/mapping function) and be ready to justify which you used where.
 
 **Questions** (depend on the tasks above)
 
-- [ ] Show one place where you used `condition && <Component />}` instead of a ternary. What would go wrong if `condition` were a number like `0` instead of a boolean and does that risk apply to your actual code?
-- [ ] Why might returning `null` from a component be preferable to returning an empty `<div>` in some cases? Did you use either, and why?
+- [x] Show one place where you used `condition && <Component />}` instead of a ternary. What would go wrong if `condition` were a number like `0` instead of a boolean and does that risk apply to your actual code?
+- [x] Why might returning `null` from a component be preferable to returning an empty `<div>` in some cases? Did you use either, and why?
 
 ---
 

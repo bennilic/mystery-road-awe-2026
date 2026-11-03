@@ -1,5 +1,6 @@
 import type { Person } from "../../js/types.ts";
 import { Card } from "./Card.tsx";
+import { ResponsibilityList } from "./ResponsibilityList.tsx";
 
 interface PersonCardProps {
   person: Person;
@@ -19,11 +20,7 @@ export function PersonCard({ person, relatedEvidenceCount }: PersonCardProps) {
       <p>
         <strong>Speciality:</strong> {person.speciality}
       </p>
-      <ul>
-        {person.responsibilities.map((responsibility) => (
-          <li key={responsibility}>{responsibility}</li>
-        ))}
-      </ul>
+      <ResponsibilityList responsibilities={person.responsibilities} />
       <div className="person-statement">&ldquo;{person.statement}&rdquo;</div>
       <p>
         {relatedEvidenceCount} related evidence item{relatedEvidenceCount === 1 ? "" : "s"}

@@ -1,27 +1,45 @@
 import { useCaseData, type CaseData } from "../data/CaseDataContext.tsx";
 import { PersonCard } from "../components/PersonCard.tsx";
 import { LocationCard } from "../components/LocationCard.tsx";
+import { TabBar, type PeopleTab } from "../components/TabBar.tsx";
 import { evidenceMentionsPerson } from "../../js/lookup.ts";
 
-// Demo 1 only proves the component API with ONE card of each kind; mapping
-// whole collections is Demo 3.
+// Reading a query parameter ONCE to decide what to show initially is allowed
+// in this exercise; the tab becomes a real route in Demo 8.
+function readInitialTab(): PeopleTab {
+  const requested = new URLSearchParams(window.location.search).get("tab");
+  return requested === "locations" ? "locations" : "people";
+}
+
+// Demo 2 still shows ONE card per list (mapping whole collections is Demo 3),
+// but the empty states are real.
 function PeopleContent({ data }: { data: CaseData }) {
+  const activeTab = readInitialTab();
   const firstPerson = data.people[0];
   const firstLocation = data.locations[0];
-  if (!firstPerson || !firstLocation) return null;
-
-  const relatedEvidenceCount = data.evidence.filter((item) =>
-    evidenceMentionsPerson(item, firstPerson),
-  ).length;
 
   return (
     <>
-      <div className="people-grid">
-        <PersonCard person={firstPerson} relatedEvidenceCount={relatedEvidenceCount} />
-      </div>
-      <div className="locations-grid">
-        <LocationCard location={firstLocation} />
-      </div>
+      <TabBar activeTab={activeTab} />
+      {activeTab === "people" ? (
+        <div className="people-grid">
+          {/* `.length === 0` is a boolean, so `&&` can never print a stray 0 */}
+          {data.people.length === 0 && <p>No people are on file for this case.</p>}
+          {firstPerson && (
+            <PersonCard
+              person={firstPerson}
+              relatedEvidenceCount={
+                data.evidence.filter((item) => evidenceMentionsPerson(item, firstPerson)).length
+              }
+            />
+          )}
+        </div>
+      ) : (
+        <div className="locations-grid">
+          {data.locations.length === 0 && <p>No locations are on file for this case.</p>}
+          {firstLocation && <LocationCard location={firstLocation} />}
+        </div>
+      )}
     </>
   );
 }
