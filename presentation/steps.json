@@ -5690,6 +5690,126 @@
       "before": "    socket.on(\"message\", (data) => {\n      let message: ClientMessage;\n      try {\n        // A cast, not a check: Demo 9 adds the real validation. Until then a\n        // broken frame is only kept from crashing the server.\n        message = JSON.parse(data.toString()) as ClientMessage;\n      } catch (error) {\n        log(`[realtime] ignored unreadable message from ${name}: ${String(error)}`);\n        return;\n      }",
       "after": "// Demo 9 replaces the cast with a check (planned):\nconst parsed = parseClientMessage(data.toString(), knownEvidenceIds);\nif (!parsed.ok) { sendMessage(socket, { type: \"error\", ... }); return; }",
       "line": 43
+    },
+    {
+      "id": "ex7-d5-t1-page",
+      "type": "app",
+      "title": "D5 - T1 — Shared bookmark state in server memory behind WorkspaceSession (page)",
+      "narration": "Before the code: the new third line of the Workspace box shows the shared bookmarks the server sent when this tab joined. Nothing can change them yet (that is Demo 6), so it is empty.",
+      "exercise": 7,
+      "demo": 5,
+      "highlight": "#livePanel",
+      "waitFor": "#livePanel",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d5-t1",
+      "type": "code",
+      "title": "D5 - T1 — Shared bookmark state in server memory behind WorkspaceSession",
+      "narration": "The server keeps the shared bookmark ids in a Set inside WorkspaceSession (server/workspaceSession.ts), next to the map of connections. Everything that touches connections goes through that class: join, leave, send to one, and a single broadcast loop. The message handlers in realtime.ts contain no loop over sockets any more; they call session.send or session.broadcast. When a connection joins, the server sends welcome, then workspace-state with the current set, then broadcasts presence; request-state answers the same workspace-state to the asker. Why a class: the exercise keeps one session, but with the state and the connections together, a second session is a second instance, not a rewrite, and the only place that can send to many clients is easy to find and to test. Verified: 3 unit tests on the session (names, toggle as a set, broadcast skips a closing socket), an integration test that a fresh real connection receives workspace-state [] and that request-state repeats it, and the browser box showing \"Shared bookmarks (0): none yet\" right after joining.",
+      "exercise": 7,
+      "demo": 5,
+      "file": "server/workspaceSession.ts",
+      "before": "(file did not exist yet)",
+      "after": "// The one Workspace session: who is connected and which evidence is bookmarked.\n// Everything that touches a connection or the shared state goes through this\n// class, so message handlers never loop over sockets themselves and a second\n// session would be a second instance, not a rewrite.\nexport class WorkspaceSession {\n  private readonly namesBySocket = new Map<WebSocket, string>();\n  // A Set: an evidence id is either bookmarked or not, never twice.\n  private readonly bookmarkIds = new Set<string>();\n\n  /** Registers the connection and returns the unique name it was given. */\n  join(socket: WebSocket): string {\n    const name = createDisplayName(new Set(this.namesBySocket.values()));\n    this.namesBySocket.set(socket, name);\n    return name;\n  }\n\n  leave(socket: WebSocket): void {\n    this.namesBySocket.delete(socket);\n  }\n\n  get names(): string[] {\n    return [...this.namesBySocket.values()];\n  }\n\n  get bookmarks(): string[] {\n    return [...this.bookmarkIds];\n  }\n\n  /** Adds the id when absent, removes it when present; returns the new set. */\n  toggleBookmark(evidenceId: string): string[] {\n    if (!this.bookmarkIds.delete(evidenceId)) this.bookmarkIds.add(evidenceId);\n    return this.bookmarks;\n  }\n\n  /** Sends to one connection; a connection that is no longer open is skipped, not an error. */\n  send(socket: WebSocket, message: ServerMessage): void {\n    if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));\n  }\n\n  /** The only loop over connections: every shared-state change goes out through here. */\n  broadcast(message: ServerMessage): void {\n    for (const socket of this.namesBySocket.keys()) this.send(socket, message);\n  }\n}\n",
+      "line": 5
+    },
+    {
+      "id": "ex7-d5-q1-page",
+      "type": "app",
+      "title": "D5 - Q1 — Why the server is the source of truth (page)",
+      "narration": "Before the code: each tab will draw its stars from the server's set, never from its own.",
+      "exercise": 7,
+      "demo": 5,
+      "highlight": "#liveBookmarks",
+      "waitFor": "#liveBookmarks",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d5-q1",
+      "type": "code",
+      "title": "D5 - Q1 — Why the server is the source of truth",
+      "narration": "If each browser trusted its own local state there would be as many truths as tabs: two tabs could each think a different item is bookmarked, a tab opened later would start empty, and a tampered or buggy client could claim anything. One authority makes all tabs converge: every change goes to the server, the server applies it to the one Set, and tells everybody the result. It also decides what is valid (Demo 9: only evidence ids that exist), and it is the only party that sees all connections. The browsers become views of the server's state, not owners of it.",
+      "exercise": 7,
+      "demo": 5,
+      "file": "server/workspaceSession.ts",
+      "before": "// each browser owned its own copy (Exercise 5/6):\nconst [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);",
+      "after": "  private readonly namesBySocket = new Map<WebSocket, string>();\n  // A Set: an evidence id is either bookmarked or not, never twice.\n  private readonly bookmarkIds = new Set<string>();",
+      "line": 10
+    },
+    {
+      "id": "ex7-d5-q2-page",
+      "type": "app",
+      "title": "D5 - Q2 — What a restart loses (page)",
+      "narration": "Before the code: this set lives only in the running Node process.",
+      "exercise": 7,
+      "demo": 5,
+      "highlight": "#liveBookmarks",
+      "waitFor": "#liveBookmarks",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d5-q2",
+      "type": "code",
+      "title": "D5 - Q2 — What a restart loses",
+      "narration": "A server restart loses everything held in the process: the bookmark Set, and every connection (all sockets drop, so presence is rebuilt as the browsers reconnect, and the names are new). It is acceptable here because the exercise says so explicitly, the bookmarks are small, easy-to-recreate working state of a teaching app, there is one session and one process, and the point is the real-time flow, not durability. The case data itself is untouched because it is read from the JSON files, not from this state.",
+      "exercise": 7,
+      "demo": 5,
+      "file": "server/workspaceSession.ts",
+      "before": "// Exercise 6 backend: stateless, restart loses nothing\nconst fileContent = await readFile(join(options.dataDirectory, `${resource}.json`), \"utf-8\");",
+      "after": "  private readonly namesBySocket = new Map<WebSocket, string>();\n  // A Set: an evidence id is either bookmarked or not, never twice.\n  private readonly bookmarkIds = new Set<string>();",
+      "line": 10
+    },
+    {
+      "id": "ex7-d5-q3-page",
+      "type": "app",
+      "title": "D5 - Q3 — Two isolated sessions (page)",
+      "narration": "Before the code: today every tab lands in the same one session; two sessions would need a way to say which one.",
+      "exercise": 7,
+      "demo": 5,
+      "highlight": "#livePanel",
+      "waitFor": "#livePanel",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d5-q3",
+      "type": "code",
+      "title": "D5 - Q3 — Two isolated sessions",
+      "narration": "The client must say which session it wants (for example /ws?session=case-42 or a path segment, or a session id in the join message). The server then keeps a Map from session id to WorkspaceSession, creates one on first use, and each connection joins only its session, so broadcast reaches only that session's sockets. Because the connections and the Set already live in the class, the message handlers are unchanged except for looking up the right session first. Also needed: deleting a session when its last connection leaves, and (in a real product) checking that the user may join that session.",
+      "exercise": 7,
+      "demo": 5,
+      "file": "server/realtime.ts",
+      "before": "  // The server is the authoritative state: one session, held in memory only.\n  const session = new WorkspaceSession();",
+      "after": "const sessions = new Map<string, WorkspaceSession>();\nfunction sessionFor(id: string): WorkspaceSession {\n  let session = sessions.get(id);\n  if (!session) sessions.set(id, (session = new WorkspaceSession()));\n  return session;\n}\n// connection handler: const session = sessionFor(new URL(request.url, \"http://x\").searchParams.get(\"session\") ?? \"default\");",
+      "line": 21
+    },
+    {
+      "id": "ex7-d5-q4-page",
+      "type": "app",
+      "title": "D5 - Q4 — Why production needs a database or session store (page)",
+      "narration": "Before the code: everything on this panel disappears with the process.",
+      "exercise": 7,
+      "demo": 5,
+      "highlight": "#livePanel",
+      "waitFor": "#livePanel",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d5-q4",
+      "type": "code",
+      "title": "D5 - Q4 — Why production needs a database or session store",
+      "narration": "Durability: bookmarks should survive a deploy or crash. Scale: with two server processes behind a load balancer, each would have its own Set and tabs on different servers would disagree, so the state (and the broadcast, usually through a pub/sub like Redis) must live somewhere all instances share. Identity and history: sessions, who may join, audit trail, undo. Memory: unbounded in-process state for many sessions would grow until the process dies. A database or session store gives persistence, sharing between instances and limits; the WorkspaceSession class is the seam where it would be plugged in.",
+      "exercise": 7,
+      "demo": 5,
+      "file": "server/workspaceSession.ts",
+      "before": "  private readonly namesBySocket = new Map<WebSocket, string>();\n  // A Set: an evidence id is either bookmarked or not, never twice.\n  private readonly bookmarkIds = new Set<string>();",
+      "after": "// production sketch (not built):\nasync toggleBookmark(sessionId: string, evidenceId: string) {\n  await db.transaction(/* toggle row */);\n  await pubsub.publish(sessionId, /* bookmarks-updated */);\n}",
+      "line": 10
     }
   ]
 }

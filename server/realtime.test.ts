@@ -45,10 +45,23 @@ async function connect(socketUrl: string): Promise<{ socket: WebSocket; messages
 test("a new connection gets a welcome with its own name and the presence list", async () => {
   await withBackend(async (socketUrl) => {
     const { socket, messages } = await connect(socketUrl);
-    await waitUntil(() => messages.length >= 2);
-    const [welcome, presence] = messages as [{ name: string }, { names: string[] }];
+    await waitUntil(() => messages.length >= 3);
+    const [welcome, , presence] = messages as [{ name: string }, unknown, { names: string[] }];
     assert.match(welcome.name, /^Investigator-\d+$/);
     assert.deepEqual(presence, { type: "presence-updated", names: [welcome.name] });
+    socket.close();
+  });
+});
+
+test("a new connection is sent the current shared bookmarks, and request-state repeats them", async () => {
+  await withBackend(async (socketUrl) => {
+    const { socket, messages } = await connect(socketUrl);
+    await waitUntil(() => messages.length >= 3);
+    assert.deepEqual(messages[1], { type: "workspace-state", bookmarks: [] });
+    const request: ClientMessage = { type: "request-state" };
+    socket.send(JSON.stringify(request));
+    await waitUntil(() => messages.length >= 4);
+    assert.deepEqual(messages.at(-1), { type: "workspace-state", bookmarks: [] });
     socket.close();
   });
 });
@@ -57,7 +70,7 @@ test("presence lists every open connection and drops a closed one", async () => 
   await withBackend(async (socketUrl, log) => {
     const first = await connect(socketUrl);
     const second = await connect(socketUrl);
-    await waitUntil(() => second.messages.length >= 2);
+    await waitUntil(() => second.messages.length >= 3);
     const lastOf = (messages: unknown[]) => messages[messages.length - 1] as { names: string[] };
     assert.equal(lastOf(second.messages).names.length, 2);
     assert.notEqual(lastOf(second.messages).names[0], lastOf(second.messages).names[1]);

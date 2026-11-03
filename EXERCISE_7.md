@@ -22,7 +22,7 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 | 2 | Minimal WebSocket lifecycle | ☑ |
 | 3 | Client identity and presence | ☑ |
 | 4 | Small typed message protocol | ☑ |
-| 5 | In-memory shared server state | ☐ |
+| 5 | In-memory shared server state | ☑ |
 | 6 | Live bookmark updates | ☐ |
 | 7 | Why bookmarks are easy to synchronize | ☐ |
 | 8 | Disconnect and reconnect | ☐ |
@@ -106,14 +106,14 @@ type ServerMessage =
 
 ### Required task
 
-- [ ] Store the shared bookmark ids in server memory. Send the current state to a newly connected client after it joins. Keep the single Workspace session scoped behind a small collection of session connections rather than scattering broadcast loops through message handlers.
+- [x] Store the shared bookmark ids in server memory. Send the current state to a newly connected client after it joins. Keep the single Workspace session scoped behind a small collection of session connections rather than scattering broadcast loops through message handlers.
 
 ### Questions
 
-- [ ] Why should the server be the source of truth for shared bookmarks instead of trusting each browser's local state?
-- [ ] What is lost when the server restarts, and why is that acceptable for this exercise?
-- [ ] What would need to change to support two isolated sessions instead of one?
-- [ ] Why might a database or session store be needed in a production version?
+- [x] Why should the server be the source of truth for shared bookmarks instead of trusting each browser's local state?
+- [x] What is lost when the server restarts, and why is that acceptable for this exercise?
+- [x] What would need to change to support two isolated sessions instead of one?
+- [x] Why might a database or session store be needed in a production version?
 
 ---
 

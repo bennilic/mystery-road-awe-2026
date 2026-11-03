@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
-import { WebSocketServer, type WebSocket } from "ws";
-import type { ClientMessage, ServerMessage } from "../protocol/workspaceProtocol.ts";
-import { createDisplayName } from "./displayName.ts";
+import { WebSocketServer } from "ws";
+import type { ClientMessage } from "../protocol/workspaceProtocol.ts";
+import { WorkspaceSession } from "./workspaceSession.ts";
 
 // Exercise 7: the WebSocket side of the dev backend. It shares the HTTP
 // server (and so the port) of the REST API: a WebSocket starts life as an HTTP
@@ -11,10 +11,6 @@ export const SOCKET_PATH = "/ws";
 
 export type LogLine = (line: string) => void;
 
-function sendMessage(socket: WebSocket, message: ServerMessage): void {
-  socket.send(JSON.stringify(message));
-}
-
 // A compile error here means a ClientMessage type exists that no case handles.
 function assertNever(message: never): never {
   throw new Error(`Unhandled message: ${JSON.stringify(message)}`);
@@ -22,23 +18,15 @@ function assertNever(message: never): never {
 
 export function attachRealtime(httpServer: Server, log: LogLine): WebSocketServer {
   const socketServer = new WebSocketServer({ server: httpServer, path: SOCKET_PATH });
-  // The server is the authoritative list of who is connected: one entry per open socket.
-  const namesBySocket = new Map<WebSocket, string>();
-
-  function broadcastPresence(): void {
-    const message: ServerMessage = {
-      type: "presence-updated",
-      names: [...namesBySocket.values()],
-    };
-    for (const socket of namesBySocket.keys()) sendMessage(socket, message);
-  }
+  // The server is the authoritative state: one session, held in memory only.
+  const session = new WorkspaceSession();
 
   socketServer.on("connection", (socket) => {
-    const name = createDisplayName(new Set(namesBySocket.values()));
-    namesBySocket.set(socket, name);
+    const name = session.join(socket);
     log(`[realtime] open: ${name}`);
-    sendMessage(socket, { type: "welcome", name });
-    broadcastPresence();
+    session.send(socket, { type: "welcome", name });
+    session.send(socket, { type: "workspace-state", bookmarks: session.bookmarks });
+    session.broadcast({ type: "presence-updated", names: session.names });
 
     socket.on("message", (data) => {
       let message: ClientMessage;
@@ -53,8 +41,10 @@ export function attachRealtime(httpServer: Server, log: LogLine): WebSocketServe
       log(`[realtime] message from ${name}: ${message.type}`);
       switch (message.type) {
         case "toggle-bookmark":
+          // Applying the toggle and broadcasting it arrives in Demo 6.
+          break;
         case "request-state":
-          // Shared bookmark state arrives in Demos 5 and 6.
+          session.send(socket, { type: "workspace-state", bookmarks: session.bookmarks });
           break;
         default:
           assertNever(message);
@@ -62,9 +52,9 @@ export function attachRealtime(httpServer: Server, log: LogLine): WebSocketServe
     });
     socket.on("close", (code, reason) => {
       // Removing the entry on close is what keeps presence honest.
-      namesBySocket.delete(socket);
+      session.leave(socket);
       log(`[realtime] close: ${name} (code ${code}, reason "${reason.toString()}")`);
-      broadcastPresence();
+      session.broadcast({ type: "presence-updated", names: session.names });
     });
     socket.on("error", (error) => log(`[realtime] error: ${name}: ${error.message}`));
   });

@@ -1,7 +1,7 @@
 import { useWorkspaceSocket } from "../../shared/live/useWorkspaceSocket.ts";
 
 export function LivePanel() {
-  const { status, myName, presenceNames } = useWorkspaceSocket();
+  const { status, myName, presenceNames, sharedBookmarkIds } = useWorkspaceSocket();
   return (
     <div className="live-panel" id="livePanel">
       <p>
@@ -22,6 +22,10 @@ export function LivePanel() {
             </span>
           ))}
         </span>
+      </p>
+      <p className="hint-text">
+        Shared bookmarks ({sharedBookmarkIds.length}):{" "}
+        <span id="liveBookmarks">{sharedBookmarkIds.join(", ") || "none yet"}</span>
       </p>
     </div>
   );
