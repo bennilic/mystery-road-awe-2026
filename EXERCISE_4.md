@@ -6,9 +6,9 @@ This is the fourth exercise in Advanced Web Engineering Course (CSDC). It builds
 reusable components, typed props, lists and conditional content, and (for Timeline) filter controls that are visually complete but not required to be functionally wired to `onChange` handlers yet. "No state management beyond what is necessary to render the initial view" is the rule. It's fine (expected, even) for Timeline's filter dropdowns to not filter anything yet when changed by the user.
 
 **Hard rules for every component you write in this exercise:**
-- [ ] No `innerHTML`.
-- [ ] No manual DOM creation (`document.createElement`, `.appendChild`, etc.).
-- [ ] No state beyond what's needed to render the initial view (reading a query param once to decide *what* to show initially is fine.
+- [x] No `innerHTML`.
+- [x] No manual DOM creation (`document.createElement`, `.appendChild`, etc.).
+- [x] No state beyond what's needed to render the initial view (reading a query param once to decide *what* to show initially is fine.
 
 **Out of scope for this exercise**: Evidence Catalogue, Workspace, `useState` and any interactivity beyond what's needed to render the initial view, forms that actually submit
 or validate anything, global/shared state, and accessibility (not covered in this course). 
@@ -37,7 +37,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 7 | Reusable UI elements | ☑ |
 | 8 | Routing: People & Locations as real routes | ☑ |
 | 9 | Route parameters | ☑ |
-| 10 | Query parameters as URL state + migration wrap-up | ☐ |
+| 10 | Query parameters as URL state + migration wrap-up | ☑ |
 
 ---
 
@@ -178,13 +178,13 @@ the other for this specific case?
 
 **Tasks**
 
-- [ ] On the Timeline view, read a query parameter (e.g. `?person=...`) when the page loads, and use it to determine the *initial* rendered list (for example, pre-selecting a person filter if the app is opened via a link that includes one). Remember, the filter controls themselves don't need to be interactive yet. This is about parameterizing the initial render from the URL, not wiring `onChange`.
-- [ ] Do a final pass confirming: Dashboard, People & Locations, and Timeline are fully React, none of them use `innerHTML` or manual DOM creation anywhere, and all three are reachable via real, bookmarkable routes.
+- [x] On the Timeline view, read a query parameter (e.g. `?person=...`) when the page loads, and use it to determine the *initial* rendered list (for example, pre-selecting a person filter if the app is opened via a link that includes one). Remember, the filter controls themselves don't need to be interactive yet. This is about parameterizing the initial render from the URL, not wiring `onChange`.
+- [x] Do a final pass confirming: Dashboard, People & Locations, and Timeline are fully React, none of them use `innerHTML` or manual DOM creation anywhere, and all three are reachable via real, bookmarkable routes.
 
 **Questions** (depend on the tasks above)
 
-- [ ] Why is reading a query parameter once, on initial render, still consistent with this exercise's "no state beyond what's necessary to render the initial view" rule? What would cross the line into "real interactivity" that's out of scope until Exercise 5?
-- [ ] What would you need to add to make Timeline's filters *actually* filter the list when a user changes them? (You don't have to build it. Just name the concept you'd need)
-- [ ] Across the 3 views you've now fully migrated, what's one piece of duplicated logic or markup you noticed but didn't extract yet? Why didn't you, and would you if you had more time?
+- [x] Why is reading a query parameter once, on initial render, still consistent with this exercise's "no state beyond what's necessary to render the initial view" rule? What would cross the line into "real interactivity" that's out of scope until Exercise 5?
+- [x] What would you need to add to make Timeline's filters *actually* filter the list when a user changes them? (You don't have to build it. Just name the concept you'd need)
+- [x] Across the 3 views you've now fully migrated, what's one piece of duplicated logic or markup you noticed but didn't extract yet? Why didn't you, and would you if you had more time?
 
 ---

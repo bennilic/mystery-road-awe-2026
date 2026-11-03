@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import type { Person } from "../../../js/types.ts";
-import { PATHS } from "../../shared/routing/paths.ts";
+import { PATHS, timelineForPersonPath } from "../../shared/routing/paths.ts";
 import { Card } from "./Card.tsx";
 import { ResponsibilityList } from "./ResponsibilityList.tsx";
 
@@ -29,6 +29,9 @@ export function PersonDetailView({ person, relatedEvidenceCount }: PersonDetailV
       <div className="person-statement">&ldquo;{person.statement}&rdquo;</div>
       <p>
         {relatedEvidenceCount} related evidence item{relatedEvidenceCount === 1 ? "" : "s"}
+      </p>
+      <p>
+        <Link to={timelineForPersonPath(person.id)}>Show {person.name} on the timeline</Link>
       </p>
       <p>
         <Link to={PATHS.people}>&larr; Back to all people</Link>

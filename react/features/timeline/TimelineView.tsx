@@ -8,6 +8,8 @@ export interface TimelineEntry {
 }
 
 interface TimelineViewProps {
+  initialPersonId: string;
+  notice: string | undefined;
   entries: TimelineEntry[];
   personOptions: FilterOption[];
   locationOptions: FilterOption[];
@@ -16,6 +18,8 @@ interface TimelineViewProps {
 
 // Presentational: receives already sorted entries and ready-made option lists.
 export function TimelineView({
+  initialPersonId,
+  notice,
   entries,
   personOptions,
   locationOptions,
@@ -24,10 +28,12 @@ export function TimelineView({
   return (
     <>
       <TimelineToolbar
+        initialPersonId={initialPersonId}
         personOptions={personOptions}
         locationOptions={locationOptions}
         typeOptions={typeOptions}
       />
+      {notice && <p role="status">{notice}</p>}
       <div className="timeline-container">
         {entries.length === 0 && <p>No timeline events match the current filters.</p>}
         {entries.map((entry) => (

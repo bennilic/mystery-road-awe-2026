@@ -16,6 +16,13 @@ export function personPath(personId: string): string {
   return `${PATHS.people}/${encodeURIComponent(personId)}`;
 }
 
+// Query parameter name read by the Timeline page.
+export const TIMELINE_PERSON_PARAM = "person";
+
+export function timelineForPersonPath(personId: string): string {
+  return `${PATHS.timeline}?${TIMELINE_PERSON_PARAM}=${encodeURIComponent(personId)}`;
+}
+
 export const NAV_ITEMS: ReadonlyArray<{ path: string; label: string }> = [
   { path: PATHS.dashboard, label: "Dashboard" },
   { path: PATHS.evidence, label: "Evidence" },

@@ -5,12 +5,13 @@ export interface FilterOption {
 
 interface FilterSelectProps {
   id: string;
+  initialValue?: string;
   label: string;
   allLabel: string;
   options: FilterOption[];
 }
 
-function FilterSelect({ id, label, allLabel, options }: FilterSelectProps) {
+function FilterSelect({ id, label, allLabel, options, initialValue = "" }: FilterSelectProps) {
   return (
     <>
       <label htmlFor={id} className="visually-hidden">
@@ -18,7 +19,9 @@ function FilterSelect({ id, label, allLabel, options }: FilterSelectProps) {
       </label>
       {/* defaultValue (uncontrolled) on purpose: the controls are visually
           complete but not wired to anything until Exercise 5. */}
-      <select id={id} defaultValue="">
+      {/* key: defaultValue is only read when the <select> mounts, so a new URL
+          parameter must remount it to be reflected. */}
+      <select id={id} key={initialValue} defaultValue={initialValue}>
         <option value="">{allLabel}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -31,12 +34,14 @@ function FilterSelect({ id, label, allLabel, options }: FilterSelectProps) {
 }
 
 interface TimelineToolbarProps {
+  initialPersonId: string;
   personOptions: FilterOption[];
   locationOptions: FilterOption[];
   typeOptions: FilterOption[];
 }
 
 export function TimelineToolbar({
+  initialPersonId,
   personOptions,
   locationOptions,
   typeOptions,
@@ -55,6 +60,7 @@ export function TimelineToolbar({
           id="timelinePersonFilter"
           label="Filter by person"
           allLabel="All people"
+          initialValue={initialPersonId}
           options={personOptions}
         />
         <FilterSelect
