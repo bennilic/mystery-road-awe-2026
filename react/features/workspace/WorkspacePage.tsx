@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
+import { selectBookmarkedEvidence } from "../../shared/bookmarks/selectBookmarkedEvidence.ts";
 import { readBookmarkIds } from "../../shared/storage/bookmarkStorage.ts";
 import { readNotes } from "../../shared/storage/noteStorage.ts";
 import { BookmarkedEvidenceList } from "./BookmarkedEvidenceList.tsx";
@@ -12,7 +13,7 @@ function WorkspaceContent({ data }: { data: CaseData }) {
   const [bookmarkIds] = useState(readBookmarkIds);
   const [notes] = useState(readNotes);
 
-  const bookmarkedItems = data.evidence.filter((item) => bookmarkIds.includes(item.id));
+  const bookmarkedItems = selectBookmarkedEvidence(data.evidence, bookmarkIds);
 
   return (
     <>

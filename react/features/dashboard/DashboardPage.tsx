@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
+import { selectBookmarkedEvidence } from "../../shared/bookmarks/selectBookmarkedEvidence.ts";
 import { readBookmarkIds } from "../../shared/storage/bookmarkStorage.ts";
 import { HowToUseCard } from "./HowToUseCard.tsx";
 import { CaseSummaryCard } from "./CaseSummaryCard.tsx";
@@ -15,10 +16,10 @@ function DashboardContent({ data }: { data: CaseData }) {
   // navigates away, so coming back re-reads localStorage and can never show
   // a stale bookmark count.
   const [bookmarkIds] = useState(readBookmarkIds);
-  const bookmarkCount = bookmarkIds.length;
 
   // Derived values are computed during render from the data, not stored in
   // state — there is no second copy that could go out of sync.
+  const bookmarkCount = selectBookmarkedEvidence(data.evidence, bookmarkIds).length;
   const reviewedCount = data.evidence.filter(
     (item) => (item.status || "").toLowerCase() === "reviewed",
   ).length;

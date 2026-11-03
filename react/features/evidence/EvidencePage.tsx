@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
@@ -9,7 +9,8 @@ import { readNotes, writeNotes } from "../../shared/storage/noteStorage.ts";
 import { describeStorageFailure } from "../../shared/storage/describeStorageFailure.ts";
 import { EvidenceCard } from "./EvidenceCard.tsx";
 import { EvidenceDetail } from "./EvidenceDetail.tsx";
-import { EvidenceToolbar } from "./EvidenceToolbar.tsx";
+import { EvidenceToolbar, type FilterField } from "./EvidenceToolbar.tsx";
+import { filterAndSortEvidence, type SortOrder } from "./filterEvidence.ts";
 
 // Feature component: owns the Evidence page's state and wires events to it.
 function EvidenceContent({ data }: { data: CaseData }) {
@@ -17,13 +18,43 @@ function EvidenceContent({ data }: { data: CaseData }) {
   const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);
   const [notes, setNotes] = useState(readNotes);
   const [searchTerm, setSearchTerm] = useState("");
+  const [type, setType] = useState("");
+  const [personId, setPersonId] = useState("");
+  const [locationId, setLocationId] = useState("");
+  const [status, setStatus] = useState("");
+  const [relevance, setRelevance] = useState("");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("date-desc");
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(() =>
     searchParams.get(OPEN_EVIDENCE_PARAM),
   );
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
 
-  function handleSearchChange(event: ChangeEvent<HTMLInputElement>) {
-    setSearchTerm(event.target.value);
+  function handleFilterChange(field: FilterField, value: string) {
+    switch (field) {
+      case "searchTerm":
+        return setSearchTerm(value);
+      case "type":
+        return setType(value);
+      case "personId":
+        return setPersonId(value);
+      case "locationId":
+        return setLocationId(value);
+      case "status":
+        return setStatus(value);
+      case "relevance":
+        return setRelevance(value);
+    }
+  }
+
+  // One setter per field: forgetting one here leaves that filter active.
+  function handleClearFilters() {
+    setSearchTerm("");
+    setType("");
+    setPersonId("");
+    setLocationId("");
+    setStatus("");
+    setRelevance("");
+    setSortOrder("date-desc");
   }
 
   function handleToggleBookmark(evidenceId: string) {
@@ -46,10 +77,17 @@ function EvidenceContent({ data }: { data: CaseData }) {
     }
   }
 
-  const normalizedTerm = searchTerm.toLowerCase().trim();
-  const visibleEvidence = data.evidence.filter((item) =>
-    `${item.title} ${item.summary} ${item.tags.join(" ")}`.toLowerCase().includes(normalizedTerm),
-  );
+  // Derived on every render from the full list and the filter state: there
+  // is no "filtered list" state that could fall out of sync with them.
+  const visibleEvidence = filterAndSortEvidence(data.evidence, {
+    searchTerm,
+    type,
+    personId,
+    locationId,
+    status,
+    relevance,
+    sortOrder,
+  });
 
   const selectedItem = data.evidence.find((item) => item.id === selectedEvidenceId);
   const personName = (personId: string) =>
@@ -62,8 +100,10 @@ function EvidenceContent({ data }: { data: CaseData }) {
   return (
     <>
       <EvidenceToolbar
-        searchTerm={searchTerm}
-        onSearchChange={handleSearchChange}
+        filters={{ searchTerm, type, personId, locationId, status, relevance, sortOrder }}
+        onFilterChange={handleFilterChange}
+        onSortChange={setSortOrder}
+        onClear={handleClearFilters}
         typeOptions={[...new Set(data.evidence.map((item) => item.type.toLowerCase()))].map(
           (type) => ({ value: type, label: type }),
         )}

@@ -25,7 +25,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 1 | Migrate event handling from vanilla listeners | ☑ |
 | 2 | `useState` & controlled forms | ☑ |
 | 3 | Immutable updates | ☑ |
-| 4 | Derived values vs. stored state | ☐ |
+| 4 | Derived values vs. stored state | ☑ |
 | 5 | Lifting state to the nearest common owner | ☐ |
 | 6 | Passing callbacks downward | ☐ |
 | 7 | `useReducer` for the filter/search/sort state | ☐ |
@@ -85,13 +85,13 @@ cause real (possibly hard-to-track) bugs elsewhere? What is React actually compa
 
 **Tasks**
 
-- [ ] Implement the Evidence Catalogue's filtering/sorting so that the *filtered, sorted list is computed from* the full evidence list and the current filter/sort state, every render. Never stored as its own separate piece of state that could drift out of sync.
-- [ ] Do the same for the Dashboard's bookmark count and the Workspace's bookmarked-items list: both should be derived from the same single source of truth for bookmarks, not duplicated state.
+- [x] Implement the Evidence Catalogue's filtering/sorting so that the *filtered, sorted list is computed from* the full evidence list and the current filter/sort state, every render. Never stored as its own separate piece of state that could drift out of sync.
+- [x] Do the same for the Dashboard's bookmark count and the Workspace's bookmarked-items list: both should be derived from the same single source of truth for bookmarks, not duplicated state.
 
 **Questions** (depend on the tasks above)
 
-- [ ] What's the rule for deciding whether something belongs in `useState` versus being computed inline (or via `useMemo`) during render? Apply that rule to the filtered evidence list and justify your answer.
-- [ ] The vanilla app had two related bugs here: a dashboard bookmark count that could go stale (because it only re-rendered on a view's first visit), and a `filteredEvidence` variable that was sometimes literally the *same array reference* as the master list. Explain, concretely, why deriving these values during render instead of storing them makes **both** of those bug classes structurally impossible, not just less likely.
+- [x] What's the rule for deciding whether something belongs in `useState` versus being computed inline (or via `useMemo`) during render? Apply that rule to the filtered evidence list and justify your answer.
+- [x] The vanilla app had two related bugs here: a dashboard bookmark count that could go stale (because it only re-rendered on a view's first visit), and a `filteredEvidence` variable that was sometimes literally the *same array reference* as the master list. Explain, concretely, why deriving these values during render instead of storing them makes **both** of those bug classes structurally impossible, not just less likely.
 
 ---
 

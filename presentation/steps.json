@@ -3511,6 +3511,99 @@
       "file": "react/sandbox/MutationDemo.tsx",
       "before": "  function sortMutating() {\n    const visible = items;\n    visible.sort();\n    setItems(visible);\n  }",
       "after": "  function sortOnCopy() {\n    setItems([...items].sort());\n  }"
+    },
+    {
+      "id": "ex5-d4-t1-page",
+      "type": "app",
+      "title": "D4 - T1 — On the page: search, five filters and sort",
+      "narration": "Before the code: every control in this toolbar works now, and they combine. The list below is not stored anywhere: it is recomputed from all 18 items and the seven control values on every render. I compared it against the vanilla app for 12 combinations of search, filters and sort: identical cards in identical order.",
+      "exercise": 5,
+      "demo": 4,
+      "highlight": "#evidenceToolbar",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d4-t1",
+      "type": "code",
+      "title": "D4 - T1 — The visible list is computed during render",
+      "narration": "filterAndSortEvidence(all, filters) is a pure function; EvidenceContent calls it on every render with the full list and the seven values (search, type, person, location, status, relevance, sort), and maps the result to cards. The vanilla version computed the same thing but wrote it into state.filteredEvidence (a second, stored copy that had to be kept in sync and was once literally the same array as the master). Here the only stored things are the inputs. Verified with Playwright against the vanilla app for 12 combinations (no filter, search 'log', type, person, location, status, relevance, three sort orders, and two combined cases): same titles, same order, counts 18, 3, 3, 5, 9, 1, 18, 18, 18, 18, 2, 2. Note: Clear filters here also resets the sort (vanilla leaves the sort order alone).",
+      "exercise": 5,
+      "demo": 4,
+      "file": "react/features/evidence/filterEvidence.ts",
+      "before": "function getFilteredEvidence(): Evidence[] {\n  const searchBox = el<HTMLInputElement>(\"evidenceSearch\");\n  const searchTerm = searchBox ? searchBox.value.toLowerCase().trim() : \"\";\n  const typeVal = el<HTMLSelectElement>(\"filterType\")!.value;\n  const personVal = el<HTMLSelectElement>(\"filterPerson\")!.value;\n  const locationVal = el<HTMLSelectElement>(\"filterLocation\")!.value;\n  const statusVal = el<HTMLSelectElement>(\"filterStatus\")!.value;\n  const relevanceVal = el<HTMLSelectElement>(\"filterRelevance\")!.value;\n\n  const results: Evidence[] = [];\n  for (const item of state.allEvidence) {\n    let matches = true;\n  ...\n  state.filteredEvidence = results; // stored in module state\n  applyCurrentSortOrder(results);\n  return results;",
+      "after": "// Pure: the list the page shows is computed from the full list and the\n// filters. filter() returns a fresh array, so sorting it in place cannot\n// reorder the master list (the Exercise 1 shared-array bug).\nexport function filterAndSortEvidence(\n  evidence: readonly Evidence[],\n  filters: EvidenceFilters,\n): Evidence[] {\n  return evidence\n    .filter((item) => matchesFilters(item, filters))\n    .sort(COMPARE_BY_SORT_ORDER[filters.sortOrder]);\n}\n\n// react/features/evidence/EvidencePage.tsx\n  // Derived on every render from the full list and the filter state: there\n  // is no \"filtered list\" state that could fall out of sync with them.\n  const visibleEvidence = filterAndSortEvidence(data.evidence, {\n    searchTerm,\n    type,\n    personId,\n    locationId,\n    status,\n    relevance,\n    sortOrder,\n  });",
+      "line": 41
+    },
+    {
+      "id": "ex5-d4-t2-page",
+      "type": "app",
+      "title": "D4 - T2 — On the page: the Dashboard count and the Workspace list",
+      "narration": "Before the code: the Dashboard's Bookmarked number and the Workspace's Bookmarked Evidence list are two views of one fact, the list of bookmarked ids.",
+      "exercise": 5,
+      "demo": 4,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d4-t2",
+      "type": "code",
+      "title": "D4 - T2 — Bookmark count and bookmarked list from one rule",
+      "narration": "The bookmark state is only the list of ids. selectBookmarkedEvidence(evidence, ids) is the single rule for 'which evidence is bookmarked'; the Dashboard shows its length and the Workspace maps over it. Before, the Dashboard used ids.length and the Workspace used its own filter, two derivations that would disagree for an id with no evidence behind it, and the vanilla version kept a per-item ev.bookmarked flag as well as the id list (duplicated state). No count and no list of objects is stored anywhere. At this point each page still reads the ids from storage when it mounts, which is fixed by lifting state in Demo 5.",
+      "exercise": 5,
+      "demo": 4,
+      "file": "react/shared/bookmarks/selectBookmarkedEvidence.ts",
+      "before": "// DashboardPage.tsx (before)\nconst bookmarkCount = bookmarkIds.length;\n// WorkspacePage.tsx (before)\nconst bookmarkedItems = data.evidence.filter((item) => bookmarkIds.includes(item.id));",
+      "after": "// react/shared/bookmarks/selectBookmarkedEvidence.ts\nimport type { Evidence } from \"../../../js/types.ts\";\n\n// The one rule for \"which evidence is bookmarked\": an item is bookmarked when\n// its id is in the id list. The Dashboard count and the Workspace list both\n// call this, so they cannot disagree (e.g. over an id with no evidence behind it).\nexport function selectBookmarkedEvidence(\n  evidence: readonly Evidence[],\n  bookmarkedIds: readonly string[],\n): Evidence[] {\n  return evidence.filter((item) => bookmarkedIds.includes(item.id));\n}\n\n// DashboardPage.tsx\n  const bookmarkCount = selectBookmarkedEvidence(data.evidence, bookmarkIds).length;\n// WorkspacePage.tsx\nconst bookmarkedItems = selectBookmarkedEvidence(data.evidence, bookmarkIds);"
+    },
+    {
+      "id": "ex5-d4-q1-page",
+      "type": "app",
+      "title": "D4 - Q1 — On the page: the filtered list",
+      "narration": "Before the code: the cards shown here are the filtered, sorted list.",
+      "exercise": 5,
+      "demo": 4,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d4-q1",
+      "type": "code",
+      "title": "D4 - Q1 — useState or computed during render?",
+      "narration": "Rule: state is for values that (a) change over time because of user or system events and (b) cannot be calculated from other state or props. Anything that can be calculated from existing state/props is computed in render, not stored. Applied: searchTerm, the five dropdown values and sortOrder are state (they come from the user and nothing else knows them); the full evidence list is a prop-like input from the provider; the filtered, sorted list can be calculated from those, so it is a plain const, never useState. Storing it would add a second source of truth plus code to keep it updated (a setFilteredEvidence call after every change, or an effect), which is exactly the vanilla design. useMemo is only a cache of a computed value: I did not use it because the list has 18 items and the filter is cheap; I would add it if profiling showed the filtering was slow or if the result were passed to a memoised child that needs a stable reference. Even then it stays derived, never stored.",
+      "exercise": 5,
+      "demo": 4,
+      "file": "react/features/evidence/EvidencePage.tsx",
+      "before": "// vanilla: stored, re-assigned by hand\nstate.filteredEvidence = results;",
+      "after": "// React: computed, no setter exists\nconst visibleEvidence = filterAndSortEvidence(data.evidence, filters);"
+    },
+    {
+      "id": "ex5-d4-q2-page",
+      "type": "app",
+      "title": "D4 - Q2 — On the page: the Dashboard stat cards",
+      "narration": "Before the code: in the vanilla app this Bookmarked number only refreshed when the Dashboard was rendered for the first time.",
+      "exercise": 5,
+      "demo": 4,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d4-q2",
+      "type": "code",
+      "title": "D4 - Q2 — Why deriving makes both vanilla bug classes structurally impossible",
+      "narration": "Stale count: the vanilla Dashboard was drawn into the DOM once (viewRendered flag) from a snapshot of state.bookmarks, so later bookmarking changed the data but nothing told the old DOM to change. Computed in render, the number is a function of the current data: every time React renders the component it calls the function again, so there is no moment where the number on screen was computed from older data than the data on hand. There is also no copy that needs an update call that somebody can forget. Aliased array: filteredEvidence was assigned the same reference as allEvidence, so sorting 'the view' sorted the master. In the derived version there is no variable named 'the filtered list' that can be assigned or aliased; the list is the return value of filter(), which always allocates a new array, and it is thrown away and rebuilt on every render, so even an in-place sort only touches the throwaway. Both bugs need a second stored thing that has to stay equal to a first one; derive and the second thing does not exist. Less likely vs impossible: a stored copy can always be forgotten, a derived value cannot be out of date by construction (as long as the inputs themselves are state or props).",
+      "exercise": 5,
+      "demo": 4,
+      "file": "react/features/dashboard/DashboardPage.tsx",
+      "before": "// js/views/dashboard.ts (vanilla)\n  html += statCardHTML(state.bookmarks.length, \"Bookmarked\");\n  html += statCardHTML(reviewedCount, \"Reviewed\");\n  html += \"</div>\";\n",
+      "after": "// react/features/dashboard/DashboardPage.tsx\n  const bookmarkCount = selectBookmarkedEvidence(data.evidence, bookmarkIds).length;"
     }
   ]
 }
