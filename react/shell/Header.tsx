@@ -1,11 +1,6 @@
 import { NavBar } from "./NavBar.tsx";
-import type { ViewName } from "../shared/routing/useHashRoute.ts";
 
-interface HeaderProps {
-  currentView: ViewName;
-}
-
-export function Header({ currentView }: HeaderProps) {
+export function Header() {
   return (
     <header className="app-header">
       <div className="header-inner">
@@ -18,7 +13,7 @@ export function Header({ currentView }: HeaderProps) {
             </p>
           </div>
         </div>
-        <NavBar currentView={currentView} />
+        <NavBar />
       </div>
     </header>
   );

@@ -853,3 +853,22 @@ a:focus-visible {
     display: block;
   }
 }
+
+/* Exercise 4 / Demo 8: nav items, tabs and "go to" buttons are now router
+   links (<a>), not <button>s — same look, minus the underline. */
+a.nav-btn,
+a.tab-btn,
+a.btn {
+  display: inline-block;
+  text-decoration: none;
+  color: inherit;
+}
+
+a.nav-btn {
+  color: #e8ecf5;
+}
+
+a.nav-btn.active,
+a.tab-btn.active {
+  color: #fff;
+}

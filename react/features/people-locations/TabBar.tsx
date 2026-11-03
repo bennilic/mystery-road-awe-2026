@@ -1,32 +1,26 @@
+import { NavLink } from "react-router";
+import { PATHS } from "../../shared/routing/paths.ts";
+
 export type PeopleTab = "people" | "locations";
 
-// Lookup technique: label text is data keyed by the tab id, so adding a third
-// tab is one new entry (and the Record type forces it) instead of another branch.
-const TAB_LABELS: Record<PeopleTab, string> = {
-  people: "People",
-  locations: "Locations",
-};
+const TABS: ReadonlyArray<{ tab: PeopleTab; label: string; path: string }> = [
+  { tab: "people", label: "People", path: PATHS.people },
+  { tab: "locations", label: "Locations", path: PATHS.locations },
+];
 
-interface TabBarProps {
-  activeTab: PeopleTab;
-}
-
-// Visually complete, deliberately not interactive: switching tabs becomes a
-// real route in Demo 8, not a click handler with state.
-export function TabBar({ activeTab }: TabBarProps) {
-  const tabs: PeopleTab[] = ["people", "locations"];
-
+// Each tab is a real link to its own URL; the router decides which one is
+// active, so the highlighted tab can never disagree with the address bar.
+export function TabBar() {
   return (
     <div className="tab-bar">
-      {tabs.map((tab) => (
-        <button
-          key={tab}
-          type="button"
-          // Ternary: exactly two outcomes (active or not) for one attribute.
-          className={tab === activeTab ? "tab-btn active" : "tab-btn"}
+      {TABS.map((item) => (
+        <NavLink
+          key={item.tab}
+          to={item.path}
+          className={({ isActive }) => (isActive ? "tab-btn active" : "tab-btn")}
         >
-          {TAB_LABELS[tab]}
-        </button>
+          {item.label}
+        </NavLink>
       ))}
     </div>
   );

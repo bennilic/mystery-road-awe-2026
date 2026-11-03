@@ -21,7 +21,7 @@ export function PeopleLocationsView({
 }: PeopleLocationsViewProps) {
   return (
     <>
-      <TabBar activeTab={activeTab} />
+      <TabBar />
       {activeTab === "people" ? (
         <div className="people-grid">
           {/* `.length === 0` is a boolean, so `&&` can never print a stray 0 */}

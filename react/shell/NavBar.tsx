@@ -1,21 +1,19 @@
-import { VIEWS, navigateTo, type ViewName } from "../shared/routing/useHashRoute.ts";
+import { NavLink } from "react-router";
+import { NAV_ITEMS } from "../shared/routing/paths.ts";
 
-interface NavBarProps {
-  currentView: ViewName;
-}
-
-export function NavBar({ currentView }: NavBarProps) {
+export function NavBar() {
   return (
     <nav className="main-nav" aria-label="Main navigation">
-      {VIEWS.map((view) => (
-        <button
-          key={view.id}
-          type="button"
-          className={view.id === currentView ? "nav-btn active" : "nav-btn"}
-          onClick={() => navigateTo(view.id)}
+      {NAV_ITEMS.map((item) => (
+        <NavLink
+          key={item.path}
+          to={item.path}
+          // NavLink hands us isActive from the router, so there is no
+          // "current view" value to copy around any more.
+          className={({ isActive }) => (isActive ? "nav-btn active" : "nav-btn")}
         >
-          {view.label}
-        </button>
+          {item.label}
+        </NavLink>
       ))}
     </nav>
   );

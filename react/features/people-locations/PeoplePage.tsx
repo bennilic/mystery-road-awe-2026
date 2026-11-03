@@ -4,13 +4,6 @@ import type { PeopleTab } from "./TabBar.tsx";
 import type { Evidence, Person } from "../../../js/types.ts";
 import { evidenceMentionsPerson } from "../../../js/lookup.ts";
 
-// Reading a query parameter ONCE to decide what to show initially is allowed
-// in this exercise; the tab becomes a real route in Demo 8.
-function readInitialTab(): PeopleTab {
-  const requested = new URLSearchParams(window.location.search).get("tab");
-  return requested === "locations" ? "locations" : "people";
-}
-
 // E04 stores "Nova Byte" (a display name) in personIds instead of the id; the
 // vanilla app repairs that once at load time (normalizePersonIds). The React
 // provider does not, so the count accepts either to stay identical.
@@ -22,14 +15,14 @@ function countEvidenceForPerson(evidence: Evidence[], person: Person): number {
 
 // Feature component: knows where the data lives (case-data context), how the
 // URL picks the tab, and how evidence is matched to people.
-function PeopleContent({ data }: { data: CaseData }) {
+function PeopleContent({ data, tab }: { data: CaseData; tab: PeopleTab }) {
   const evidenceCountByPersonId = Object.fromEntries(
     data.people.map((person) => [person.id, countEvidenceForPerson(data.evidence, person)]),
   );
 
   return (
     <PeopleLocationsView
-      activeTab={readInitialTab()}
+      activeTab={tab}
       people={data.people}
       locations={data.locations}
       evidenceCountByPersonId={evidenceCountByPersonId}
@@ -37,7 +30,11 @@ function PeopleContent({ data }: { data: CaseData }) {
   );
 }
 
-export function PeoplePage() {
+interface PeoplePageProps {
+  tab: PeopleTab;
+}
+
+export function PeoplePage({ tab }: PeoplePageProps) {
   const caseData = useCaseData();
 
   return (
@@ -50,7 +47,7 @@ export function PeoplePage() {
           running and reload the page.
         </p>
       )}
-      {caseData.status === "ready" && <PeopleContent data={caseData.data} />}
+      {caseData.status === "ready" && <PeopleContent data={caseData.data} tab={tab} />}
     </section>
   );
 }

@@ -2889,6 +2889,125 @@
       "before": "// js/views/dashboard.ts (case summary)\n'<p><span class=\"badge badge-flagged\">' + status + \"</span></p>\"\n// js/views/dashboard.ts (recent evidence)\n' <span class=\"badge ' + getStatusBadgeClass(item.status) + '\">' + item.status + \"</span>\"\n// js/views/timeline.ts\n'<span class=\"badge badge-' + certaintyBadgeClass(item.certainty) + '\">' + item.certainty + \"</span>\"\n// js/views/evidence.ts (x3 more: critical, status, relevance)\n'<span class=\"badge ' + getStatusBadgeClass(ev.status) + '\">' + ev.status + \"</span>\"",
       "after": "import type { ReactNode } from \"react\";\n\n// Each variant maps 1:1 to a `.badge-<variant>` rule in styles.css.\nexport type BadgeVariant =\n  \"critical\" | \"unreviewed\" | \"reviewed\" | \"flagged\" | \"relevant\" | \"relevance-unclear\";\n\ninterface BadgeProps {\n  variant: BadgeVariant;\n  children: ReactNode;\n}\n\n// What varies per use (colour variant, label) is a prop; what is fixed (the\n// pill markup and the `badge` base class) lives here once.\nexport function Badge({ variant, children }: BadgeProps) {\n  return <span className={`badge badge-${variant}`}>{children}</span>;\n}",
       "line": 1
+    },
+    {
+      "id": "ex4-d8-t1-page",
+      "type": "app",
+      "title": "D8 - T1 — On the page: real navigation",
+      "narration": "Before the code: the navigation bar. These five items are now router links: each one has a real URL (#/dashboard, #/evidence, #/team, #/timeline, #/workspace), and the active one is highlighted by the router.",
+      "exercise": 4,
+      "demo": 8,
+      "highlight": ".main-nav",
+      "waitFor": ".nav-btn",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d8-t1-install",
+      "type": "code",
+      "title": "D8 - T1 — Installing React Router (and why)",
+      "narration": "npm install react-router adds one dependency. Why a library and not my own useHashRoute: the hand-written hook only knew five hash names; it could not express nested paths (/team/people), parameters (/team/people/:personId), query parameters or links, so I would have been rebuilding a router piece by piece, and Exercises 4 and 5 need exactly these features. React Router is the de-facto standard, is declarative (routes are JSX), and gives hooks for params and search params. Alternatives: TanStack Router (stronger type safety, more setup) and wouter (tiny, fewer features); both would do, I picked the one with the most documentation and the one the course manuscript names. Why HashRouter and not BrowserRouter: the app is deployed to GitHub Pages, which has no server rewrite, so a reload on /team/people would 404; hash URLs (react.html#/team/people) work everywhere and still keep the same hash approach as the vanilla app.",
+      "exercise": 4,
+      "demo": 8,
+      "file": "package.json",
+      "before": "  \"dependencies\": {\n    \"react\": \"^19.3.0\",\n    \"react-dom\": \"^19.3.0\"\n  }",
+      "after": "  \"dependencies\": {\n    \"react\": \"^19.3.0\",\n    \"react-dom\": \"^19.3.0\",\n    \"react-router\": \"^8.5.1\"\n  }"
+    },
+    {
+      "id": "ex4-d8-t1b-page",
+      "type": "app",
+      "title": "D8 - T1 — On the page: the route table in action",
+      "narration": "Before the code: People & Locations is now reached through /team/people, with the navigation item staying active on both tabs.",
+      "exercise": 4,
+      "demo": 8,
+      "highlight": ".main-nav",
+      "waitFor": ".person-card",
+      "view": "/team/people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d8-t1b",
+      "type": "code",
+      "title": "D8 - T1 — The route table replaces the PAGES lookup",
+      "narration": "App.tsx lists every route as JSX: Dashboard, Evidence (still a stub), the /team routes, Timeline, Workspace. NavBar maps NAV_ITEMS to NavLink, which gives each item a real href and hands the className function an isActive value from the router, so there is no currentView prop to pass around any more. HowToUseCard on the Dashboard uses Link for its \"Go to ...\" buttons. Verified in the browser: clicking each item changes the URL, Back/Forward work, reload on a deep link restores the page, the legacy #people hash redirects to /team/people, and the console is clean.",
+      "exercise": 4,
+      "demo": 8,
+      "file": "react/app/App.tsx",
+      "before": "import type { ReactNode } from \"react\";\nimport { Header } from \"../shell/Header.tsx\";\nimport { Footer } from \"../shell/Footer.tsx\";\nimport { CaseDataProvider } from \"../shared/data/CaseDataContext.tsx\";\nimport { DashboardPage } from \"../features/dashboard/DashboardPage.tsx\";\nimport { PeoplePage } from \"../features/people-locations/PeoplePage.tsx\";\nimport { TimelinePage } from \"../features/timeline/TimelinePage.tsx\";\nimport { StubPage } from \"../shell/StubPage.tsx\";\nimport { useHashRoute, type ViewName } from \"../shared/routing/useHashRoute.ts\";\n\n// One entry per route. Typing the record as Record<ViewName, ...> makes the\n// compiler fail if a sixth view is added to ViewName without a page here.\nconst PAGES: Record<ViewName, () => ReactNode> = {\n  dashboard: () => <DashboardPage />,\n  evidence: () => <StubPage title=\"Evidence Catalogue\" migratedInExercise={4} />,\n  people: () => <PeoplePage />,\n  timeline: () => <TimelinePage />,\n  workspace: () => <StubPage title=\"Investigator Workspace\" migratedInExercise={5} />,\n};\n\nexport function App() {\n  const currentView = useHashRoute();\n\n  return (\n    <CaseDataProvider>\n      <Header currentView={currentView} />\n      <main id=\"app\" className=\"app-main\">\n        {PAGES[currentView]()}\n      </main>\n      <Footer />\n    </CaseDataProvider>\n  );\n}",
+      "after": "import { Navigate, Route, Routes } from \"react-router\";\nimport { Header } from \"../shell/Header.tsx\";\nimport { Footer } from \"../shell/Footer.tsx\";\nimport { StubPage } from \"../shell/StubPage.tsx\";\nimport { CaseDataProvider } from \"../shared/data/CaseDataContext.tsx\";\nimport { PATHS } from \"../shared/routing/paths.ts\";\nimport { DashboardPage } from \"../features/dashboard/DashboardPage.tsx\";\nimport { PeoplePage } from \"../features/people-locations/PeoplePage.tsx\";\nimport { TimelinePage } from \"../features/timeline/TimelinePage.tsx\";\n\nexport function App() {\n  return (\n    <CaseDataProvider>\n      <Header />\n      <main id=\"app\" className=\"app-main\">\n        <Routes>\n          <Route path=\"/\" element={<Navigate to={PATHS.dashboard} replace />} />\n          <Route path={PATHS.dashboard} element={<DashboardPage />} />\n          <Route\n            path={PATHS.evidence}\n            element={\n              <StubPage title=\"Evidence Catalogue\" migratedInExercise={5} vanillaView=\"evidence\" />\n            }\n          />\n          <Route path={PATHS.team} element={<Navigate to={PATHS.people} replace />} />\n          <Route path={PATHS.people} element={<PeoplePage tab=\"people\" />} />\n          <Route path={PATHS.locations} element={<PeoplePage tab=\"locations\" />} />\n          <Route path={PATHS.timeline} element={<TimelinePage />} />\n          <Route\n            path={PATHS.workspace}\n            element={\n              <StubPage\n                title=\"Investigator Workspace\"\n                migratedInExercise={5}\n                vanillaView=\"workspace\"\n              />\n            }\n          />\n          {/* Old Exercise 3 hashes (#people) keep working as bookmarks. */}\n          <Route path=\"/people\" element={<Navigate to={PATHS.people} replace />} />\n          {/* Anything else: same fallback as the vanilla handleHashChange(), but explicit. */}\n          <Route path=\"*\" element={<Navigate to={PATHS.dashboard} replace />} />\n        </Routes>\n      </main>\n      <Footer />\n    </CaseDataProvider>\n  );\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d8-t2-page",
+      "type": "app",
+      "title": "D8 - T2 — On the page: tabs that are links",
+      "narration": "Before the code: the People / Locations tabs. Click Locations and the address bar changes to #/team/locations; copy that URL into another tab and you land on Locations.",
+      "exercise": 4,
+      "demo": 8,
+      "highlight": ".tab-bar",
+      "waitFor": ".location-card",
+      "view": "/team/locations",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d8-t2",
+      "type": "code",
+      "title": "D8 - T2 — /team/people and /team/locations",
+      "narration": "The tab bar was local state in vanilla (switchPeopleTab toggled classes) and in Demo 2 a ?tab= query read. Now each tab is a NavLink to /team/people or /team/locations, and each route renders PeoplePage with a tab prop. The active class comes from the router, so the highlighted tab cannot disagree with the URL. /team on its own redirects to /team/people. Verified: clicking Locations goes to #/team/locations and shows 6 location cards and 0 person cards; Back returns to the people tab; reloading #/team/locations stays on Locations.",
+      "exercise": 4,
+      "demo": 8,
+      "file": "react/features/people-locations/TabBar.tsx",
+      "before": "export type PeopleTab = \"people\" | \"locations\";\n\n// Lookup technique: label text is data keyed by the tab id, so adding a third\n// tab is one new entry (and the Record type forces it) instead of another branch.\nconst TAB_LABELS: Record<PeopleTab, string> = {\n  people: \"People\",\n  locations: \"Locations\",\n};\n\ninterface TabBarProps {\n  activeTab: PeopleTab;\n}\n\n// Visually complete, deliberately not interactive: switching tabs becomes a\n// real route in Demo 8, not a click handler with state.\nexport function TabBar({ activeTab }: TabBarProps) {\n  const tabs: PeopleTab[] = [\"people\", \"locations\"];\n\n  return (\n    <div className=\"tab-bar\">\n      {tabs.map((tab) => (\n        <button\n          key={tab}\n          type=\"button\"\n          // Ternary: exactly two outcomes (active or not) for one attribute.\n          className={tab === activeTab ? \"tab-btn active\" : \"tab-btn\"}\n        >\n          {TAB_LABELS[tab]}\n        </button>\n      ))}\n    </div>\n  );\n}",
+      "after": "import { NavLink } from \"react-router\";\nimport { PATHS } from \"../../shared/routing/paths.ts\";\n\nexport type PeopleTab = \"people\" | \"locations\";\n\nconst TABS: ReadonlyArray<{ tab: PeopleTab; label: string; path: string }> = [\n  { tab: \"people\", label: \"People\", path: PATHS.people },\n  { tab: \"locations\", label: \"Locations\", path: PATHS.locations },\n];\n\n// Each tab is a real link to its own URL; the router decides which one is\n// active, so the highlighted tab can never disagree with the address bar.\nexport function TabBar() {\n  return (\n    <div className=\"tab-bar\">\n      {TABS.map((item) => (\n        <NavLink\n          key={item.tab}\n          to={item.path}\n          className={({ isActive }) => (isActive ? \"tab-btn active\" : \"tab-btn\")}\n        >\n          {item.label}\n        </NavLink>\n      ))}\n    </div>\n  );\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d8-q1-page",
+      "type": "app",
+      "title": "D8 - Q1 — On the page: a URL per tab",
+      "narration": "Before the code: the tab you are looking at is part of the address.",
+      "exercise": 4,
+      "demo": 8,
+      "highlight": ".tab-bar",
+      "waitFor": ".location-card",
+      "view": "/team/locations",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d8-q1",
+      "type": "code",
+      "title": "D8 - Q1 — Why a route beats component state for the tab",
+      "narration": "Concrete capabilities: (1) Bookmark or share a link that opens straight on Locations (with state, everyone lands on People). (2) The browser Back and Forward buttons move between tabs. (3) Reload keeps you where you were (state resets to the default). (4) Other pages can link to a specific tab, which is how the Dashboard and later the person detail page link in. (5) The URL is a single source of truth, so the nav item and the tab cannot get out of sync. Component state is right for things nobody would link to (an open dropdown); a tab that identifies WHAT you are looking at belongs in the URL.",
+      "exercise": 4,
+      "demo": 8,
+      "file": "react/features/people-locations/TabBar.tsx",
+      "before": "// Demo 2: tab chosen once from ?tab= and not navigable\nfunction readInitialTab(): PeopleTab {\n  const requested = new URLSearchParams(window.location.search).get(\"tab\");\n  return requested === \"locations\" ? \"locations\" : \"people\";\n}",
+      "after": "import { NavLink } from \"react-router\";\nimport { PATHS } from \"../../shared/routing/paths.ts\";\n\nexport type PeopleTab = \"people\" | \"locations\";\n\nconst TABS: ReadonlyArray<{ tab: PeopleTab; label: string; path: string }> = [\n  { tab: \"people\", label: \"People\", path: PATHS.people },\n  { tab: \"locations\", label: \"Locations\", path: PATHS.locations },\n];\n\n// Each tab is a real link to its own URL; the router decides which one is\n// active, so the highlighted tab can never disagree with the address bar.\nexport function TabBar() {\n  return (\n    <div className=\"tab-bar\">\n      {TABS.map((item) => (\n        <NavLink\n          key={item.tab}\n          to={item.path}\n          className={({ isActive }) => (isActive ? \"tab-btn active\" : \"tab-btn\")}\n        >\n          {item.label}\n        </NavLink>\n      ))}\n    </div>\n  );\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d8-q2-page",
+      "type": "app",
+      "title": "D8 - Q2 — On the page: unknown URL",
+      "narration": "Before the code: /nonsense is not a route; the router sends you back to the Dashboard and rewrites the address to #/dashboard.",
+      "exercise": 4,
+      "demo": 8,
+      "highlight": ".nav-btn.active",
+      "waitFor": ".nav-btn.active",
+      "view": "/nonsense",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d8-q2",
+      "type": "code",
+      "title": "D8 - Q2 — Unknown URLs: explicit catch-all route",
+      "narration": "The last route is path=\"*\", the router's catch-all, which renders <Navigate to=\"/dashboard\" replace />. Visible result: the same behaviour as vanilla handleHashChange(), which checked the hash against a list of valid views and fell back to the dashboard with a ternary. Differences: in vanilla the fallback was a ternary hidden in a function, here it is a declared route in the table, the address bar is corrected (replace, so Back does not trap you in a redirect loop), and matching understands nested paths and params instead of exact names. Honest trade-off: a dedicated \"page not found\" screen would tell a user with a typo that the link is wrong; I kept the redirect because it matches vanilla and keeps older slides/bookmarks like #people working (an explicit /people redirect route maps them to /team/people).",
+      "exercise": 4,
+      "demo": 8,
+      "file": "react/app/App.tsx vs js/navigation.ts",
+      "before": "// js/navigation.ts: handleHashChange()\nconst hash: ViewName = isViewName(rawHash) ? rawHash : \"dashboard\";",
+      "after": "<Route path=\"*\" element={<Navigate to={PATHS.dashboard} replace />} />",
+      "line": 45
     }
   ]
 }

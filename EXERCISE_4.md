@@ -35,7 +35,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 5 | Presentational vs. feature components and component boundaries | ☑ |
 | 6 | Feature-oriented folder structure | ☑ |
 | 7 | Reusable UI elements | ☑ |
-| 8 | Routing: People & Locations as real routes | ☐ |
+| 8 | Routing: People & Locations as real routes | ☑ |
 | 9 | Route parameters | ☐ |
 | 10 | Query parameters as URL state + migration wrap-up | ☐ |
 
@@ -145,16 +145,16 @@ folder of files). Including the Dashboard and shell from Exercise 3.
 
 **Tasks**
 
-- [ ] Install a routing library (React Router or an equivalent of your choice, justified) and
+- [x] Install a routing library (React Router or an equivalent of your choice, justified) and
 replace the shell's placeholder navigation from Exercise 3 with real routes for at least Dashboard, People & Locations, and Timeline.
-- [ ] Convert the People/Locations tab toggle from local component state into two real,
+- [x] Convert the People/Locations tab toggle from local component state into two real,
 navigable, bookmarkable routes (e.g. `/team/people` and `/team/locations`) instead of a click handler that only changes what's shown without changing the URL.
 
 **Questions** (depend on the tasks above)
 
-- [ ] Why does making the People/Locations tab a real route (versus keeping it as internal
+- [x] Why does making the People/Locations tab a real route (versus keeping it as internal
 component state) matter for the user? Name a concrete capability the user gains.
-- [ ] What does your router do when the URL doesn't match any route you've defined? Compare this to how the vanilla app's `handleHashChange()` fell back to the dashboard for an invalid hash.
+- [x] What does your router do when the URL doesn't match any route you've defined? Compare this to how the vanilla app's `handleHashChange()` fell back to the dashboard for an invalid hash.
 
 ---
 
