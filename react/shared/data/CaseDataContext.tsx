@@ -1,10 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import {
   NO_SIMULATION,
   simulationQuery,
   type ResourceName,
   type Simulation,
 } from "./simulation.ts";
+import { useFetch, type FetchResult } from "./useFetch.ts";
 import type { CaseInfo, Evidence, Location, Person, TimelineEvent } from "../../../js/types.ts";
 
 export interface CaseData {
@@ -18,14 +19,8 @@ export interface CaseData {
 type CaseDataState =
   | { status: "loading" }
   | { status: "error"; message: string }
+  // requestId: which attempt the visible data came from (shown in the dev panel).
   | { status: "ready"; data: CaseData; requestId: number };
-
-// One attempt to load the case data. `id` numbers the attempts so the dev
-// panel can show which request the visible data came from.
-interface DataRequest {
-  id: number;
-  simulation: Simulation;
-}
 
 interface CaseDataContextValue {
   state: CaseDataState;
@@ -34,38 +29,6 @@ interface CaseDataContextValue {
 }
 
 const CaseDataContext = createContext<CaseDataContextValue | null>(null);
-
-async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(url, { signal });
-  } catch (error) {
-    // An abort is not a failure to report: the caller cancelled on purpose.
-    if (signal.aborted) throw error;
-    // fetch only rejects when no HTTP answer arrived at all (server down, network cut).
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(`${url} could not be reached (${reason})`);
-  }
-  if (!response.ok) {
-    throw new Error(`${url} answered HTTP ${response.status} ${response.statusText}`);
-  }
-  return (await response.json()) as T;
-}
-
-async function loadCaseData(simulation: Simulation, signal: AbortSignal): Promise<CaseData> {
-  const url = (resource: ResourceName) => `api/${resource}${simulationQuery(resource, simulation)}`;
-  const [caseInfo, evidence, people, locations, timeline] = await Promise.all([
-    fetchJson<CaseInfo>(url("case"), signal),
-    fetchJson<Evidence[]>(url("evidence"), signal),
-    fetchJson<Person[]>(url("people"), signal),
-    fetchJson<Location[]>(url("locations"), signal),
-    fetchJson<TimelineEvent[]>(url("timeline"), signal),
-  ]);
-  if (!caseInfo.caseId) {
-    throw new Error("api/case answered HTTP 200 but its body is not a case (no caseId)");
-  }
-  return { caseInfo, evidence: normalizePersonIds(evidence, people), people, locations, timeline };
-}
 
 // evidence.json's E04 lists "Nova Byte" (a display name) where every other
 // record has a person id. Fixed once at the load boundary, as the vanilla
@@ -78,44 +41,86 @@ function normalizePersonIds(evidence: Evidence[], people: Person[]): Evidence[] 
   }));
 }
 
-// Exercise 6: the five resources now come from the dev backend (server/,
-// reached through the Vite proxy at /api/...) instead of static files. The
-// fetch runs in an effect because it is a side effect (Demo 1): render only
-// describes the current state ("loading", "error" or "ready"), and the effect
-// starts the request after the first commit and later calls setState with the
-// outcome, which makes React render again.
+// Five independent useFetch calls become one state for the pages: loading
+// while any is loading, error as soon as one failed, ready when all are.
+function combineStates(
+  caseInfo: FetchResult<CaseInfo>,
+  evidence: FetchResult<Evidence[]>,
+  people: FetchResult<Person[]>,
+  locations: FetchResult<Location[]>,
+  timeline: FetchResult<TimelineEvent[]>,
+): CaseDataState {
+  const states = [caseInfo.state, evidence.state, people.state, locations.state, timeline.state];
+  const failed = states.find((state) => state.status === "error");
+  if (failed?.status === "error") return failed;
+  if (
+    caseInfo.state.status !== "ready" ||
+    evidence.state.status !== "ready" ||
+    people.state.status !== "ready" ||
+    locations.state.status !== "ready" ||
+    timeline.state.status !== "ready"
+  ) {
+    return { status: "loading" };
+  }
+  if (!caseInfo.state.data.caseId) {
+    return {
+      status: "error",
+      message: "api/case answered HTTP 200 but its body is not a case (no caseId)",
+    };
+  }
+  return {
+    status: "ready",
+    requestId: caseInfo.attempt,
+    data: {
+      caseInfo: caseInfo.state.data,
+      evidence: normalizePersonIds(evidence.state.data, people.state.data),
+      people: people.state.data,
+      locations: locations.state.data,
+      timeline: timeline.state.data,
+    },
+  };
+}
+
+// Exercise 6: the five resources come from the dev backend (server/, reached
+// through the Vite proxy at /api/...). All loading, error and cancellation
+// logic lives in useFetch; what stays here is what is specific to this app:
+// which urls, the simulation settings and how the five results combine.
 export function CaseDataProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<CaseDataState>({ status: "loading" });
-  const [request, setRequest] = useState<DataRequest>({ id: 1, simulation: NO_SIMULATION });
+  const [simulation, setSimulation] = useState<Simulation>(NO_SIMULATION);
+  const url = (resource: ResourceName) => `api/${resource}${simulationQuery(resource, simulation)}`;
 
-  useEffect(() => {
-    setState({ status: "loading" });
-    // One controller per request. When a newer request replaces this one (or
-    // the provider unmounts), React runs the cleanup below, which aborts this
-    // request, so its late answer can never overwrite newer data.
-    const controller = new AbortController();
-    loadCaseData(request.simulation, controller.signal).then(
-      (data) => {
-        if (controller.signal.aborted) return;
-        setState({ status: "ready", data, requestId: request.id });
-      },
-      (error: unknown) => {
-        if (controller.signal.aborted) return;
-        const reason = error instanceof Error ? error.message : String(error);
-        setState({ status: "error", message: reason });
-      },
-    );
-    return () => controller.abort();
-  }, [request]);
+  const caseInfo = useFetch<CaseInfo>(url("case"));
+  const evidence = useFetch<Evidence[]>(url("evidence"));
+  const people = useFetch<Person[]>(url("people"));
+  const locations = useFetch<Location[]>(url("locations"));
+  const timeline = useFetch<TimelineEvent[]>(url("timeline"));
 
-  const reload = useCallback((simulation?: Simulation) => {
-    setRequest((previous) => ({
-      id: previous.id + 1,
-      simulation: simulation ?? previous.simulation,
-    }));
-  }, []);
+  // combineStates builds new objects, so memoise it: the context value then
+  // only changes when one of the five results changes.
+  const state = useMemo(
+    () => combineStates(caseInfo, evidence, people, locations, timeline),
+    [caseInfo, evidence, people, locations, timeline],
+  );
 
-  return <CaseDataContext.Provider value={{ state, reload }}>{children}</CaseDataContext.Provider>;
+  const reloadCase = caseInfo.reload;
+  const reloadEvidence = evidence.reload;
+  const reloadPeople = people.reload;
+  const reloadLocations = locations.reload;
+  const reloadTimeline = timeline.reload;
+  const reload = useCallback(
+    (nextSimulation?: Simulation) => {
+      if (nextSimulation) setSimulation(nextSimulation);
+      reloadCase();
+      reloadEvidence();
+      reloadPeople();
+      reloadLocations();
+      reloadTimeline();
+    },
+    [reloadCase, reloadEvidence, reloadPeople, reloadLocations, reloadTimeline],
+  );
+
+  const value = useMemo(() => ({ state, reload }), [state, reload]);
+  return <CaseDataContext.Provider value={value}>{children}</CaseDataContext.Provider>;
 }
 
 function useCaseDataContext(): CaseDataContextValue {

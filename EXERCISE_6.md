@@ -31,7 +31,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 5 | Consume the backend from React | ☑ |
 | 6 | Loading, error, and empty states | ☑ |
 | 7 | Request races & cancellation | ☑ |
-| 8 | Extract a reusable custom hook | ☐ |
+| 8 | Extract a reusable custom hook | ☑ |
 | 9 | Separate UI, application logic, and API access | ☐ |
 | 10 | Data-flow wrap-up & a written UX decision | ☐ |
 ---
@@ -156,12 +156,12 @@ what happens if you do nothing special about it. Does the UI ever show a result 
 
 **Tasks**
 
-- [ ] Extract the data-fetching logic (loading/error/empty state, the effect, cancellation) you've built across Demos 5–7 into at least one reusable custom hook (e.g. `useFetch<T>(url)` or a more specific `useEvidence()`), and use it in at least two different places.
+- [x] Extract the data-fetching logic (loading/error/empty state, the effect, cancellation) you've built across Demos 5–7 into at least one reusable custom hook (e.g. `useFetch<T>(url)` or a more specific `useEvidence()`), and use it in at least two different places.
 
 **Questions** (depend on the tasks above)
 
-- [ ] What makes something a legitimate custom hook rather than just a regular helper function? What rule(s) does React enforce about how/where hooks (including your custom one) can be called?
-- [ ] Show the two places using your hook. What did extracting it save you from duplicating, and is there anything about the two usages that *couldn't* be shared and had to stay specific to each call site?
+- [x] What makes something a legitimate custom hook rather than just a regular helper function? What rule(s) does React enforce about how/where hooks (including your custom one) can be called?
+- [x] Show the two places using your hook. What did extracting it save you from duplicating, and is there anything about the two usages that *couldn't* be shared and had to stay specific to each call site?
 
 ---
 

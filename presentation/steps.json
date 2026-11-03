@@ -4939,6 +4939,102 @@
       "before": "  }, [request]);  // nothing cancels the previous request",
       "after": "    return () => controller.abort(); // React calls this before the next run and on unmount\n  }, [request]);",
       "line": 108
+    },
+    {
+      "id": "ex6-d8-t1-page",
+      "type": "app",
+      "title": "D8 - T1 — On the page: five requests, one piece of logic",
+      "narration": "Before the code: one page load now makes five independent requests (case, evidence, people, locations, timeline), each with its own loading, error and cancellation handling, and the dev panel still drives all of it. Verified with Playwright after the refactor: five /api requests per reload, loading, error, empty, the race (slow normal then fast empty ends on request #7, empty) and all views behave as before.",
+      "exercise": 6,
+      "demo": 8,
+      "highlight": "#devPanel",
+      "waitFor": "#devPanel",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d8-t1",
+      "type": "code",
+      "title": "D8 - T1 — useFetch<T>(url) used five times",
+      "narration": "The loading/error/ready state, the effect with its AbortController and the reload counter moved out of the provider into useFetch<T>(url). The provider calls it once per resource and only combines the five results: loading while any is loading, error as soon as one fails, ready when all are, plus the case-shape check and the person-id normalisation that belong to this app, not to fetching. Behaviour is unchanged (same checks as Demos 5 to 7).",
+      "exercise": 6,
+      "demo": 8,
+      "file": "react/shared/data/useFetch.ts",
+      "before": "  const [state, setState] = useState<CaseDataState>({ status: \"loading\" });\n  const [request, setRequest] = useState<DataRequest>({ id: 1, simulation: NO_SIMULATION });\n\n  useEffect(() => {\n    setState({ status: \"loading\" });\n    const controller = new AbortController();\n    loadCaseData(request.simulation, controller.signal).then(\n      /* ready / error callbacks, aborted checks */\n    );\n    return () => controller.abort();\n  }, [request]);",
+      "after": "export function useFetch<T>(url: string): FetchResult<T> {\n  const [state, setState] = useState<FetchState<T>>({ status: \"loading\" });\n  const [attempt, setAttempt] = useState(1);\n\n  useEffect(() => {\n    setState({ status: \"loading\" });\n    const controller = new AbortController();\n    fetchJson<T>(url, controller.signal).then(\n      /* ready / error callbacks, aborted checks */\n    );\n    return () => controller.abort();\n  }, [url, attempt]);\n\n  const reload = useCallback(() => setAttempt((previous) => previous + 1), []);\n  return useMemo(() => ({ state, attempt, reload }), [state, attempt, reload]);\n}",
+      "line": 35
+    },
+    {
+      "id": "ex6-d8-t1b-page",
+      "type": "app",
+      "title": "D8 - T1 — On the page: the same hook on every resource",
+      "narration": "Before the code: People, Locations and Timeline data are all loaded through the same hook as the evidence list.",
+      "exercise": 6,
+      "demo": 8,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d8-t1b",
+      "type": "code",
+      "title": "D8 - T1 — The call sites",
+      "narration": "Five call sites of one hook in CaseDataProvider: each gets its own state, its own AbortController and its own reload counter, because every call of a hook creates separate state for the component that calls it. A single useFetch call per resource also means a failure or a slow endpoint is attributed to the right url in the error message (api/evidence?fail=1 answered HTTP 500).",
+      "exercise": 6,
+      "demo": 8,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "  const [state, setState] = useState<CaseDataState>({ status: \"loading\" });\n  const [request, setRequest] = useState<DataRequest>({ id: 1, simulation: NO_SIMULATION });\n  // one effect, one Promise.all over five fetches",
+      "after": "  const caseInfo = useFetch<CaseInfo>(url(\"case\"));\n  const evidence = useFetch<Evidence[]>(url(\"evidence\"));\n  const people = useFetch<Person[]>(url(\"people\"));\n  const locations = useFetch<Location[]>(url(\"locations\"));\n  const timeline = useFetch<TimelineEvent[]>(url(\"timeline\"));",
+      "line": 92
+    },
+    {
+      "id": "ex6-d8-q1-page",
+      "type": "app",
+      "title": "D8 - Q1 — On the page: state that belongs to the component that uses it",
+      "narration": "Before the code: the loading and error status shown here is state owned by the provider that called the hook.",
+      "exercise": 6,
+      "demo": 8,
+      "highlight": "#devPanel",
+      "waitFor": "#devPanel",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d8-q1",
+      "type": "code",
+      "title": "D8 - Q1 — Custom hook versus helper function",
+      "narration": "A custom hook is a function whose name starts with use and that calls other hooks (useState, useEffect, useCallback) inside. That is what makes it different from a helper such as fetchJson: a helper only computes and returns, it has no memory between renders and no lifecycle; a hook gives each calling component its own state and effects, tied to that component's mount, update and unmount. React enforces the Rules of Hooks: call hooks only at the top level of a component or another hook, never in loops, conditions, nested functions or after an early return, and never from ordinary functions, because React identifies each hook by its call order within a render. The use prefix lets lint tooling check these rules; I did call all five useFetch hooks unconditionally and before any return.",
+      "exercise": 6,
+      "demo": 8,
+      "file": "react/shared/data/useFetch.ts",
+      "before": "async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {\n  // plain helper: no state, no lifecycle, callable anywhere\n}",
+      "after": "export function useFetch<T>(url: string): FetchResult<T> {\n  const [state, setState] = useState<FetchState<T>>({ status: \"loading\" });\n  const [attempt, setAttempt] = useState(1);\n\n  useEffect(() => {\n    setState({ status: \"loading\" });\n    const controller = new AbortController();\n    fetchJson<T>(url, controller.signal).then(\n      /* ready / error callbacks, aborted checks */\n    );\n    return () => controller.abort();\n  }, [url, attempt]);\n\n  const reload = useCallback(() => setAttempt((previous) => previous + 1), []);\n  return useMemo(() => ({ state, attempt, reload }), [state, attempt, reload]);\n}",
+      "line": 35
+    },
+    {
+      "id": "ex6-d8-q2-page",
+      "type": "app",
+      "title": "D8 - Q2 — On the page: the evidence list and the people behind it",
+      "narration": "Before the code: evidence and people come from two call sites of the hook, but only the evidence needs the people to be fixed up afterwards.",
+      "exercise": 6,
+      "demo": 8,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d8-q2",
+      "type": "code",
+      "title": "D8 - Q2 — What was shared and what stayed per call site",
+      "narration": "Shared by extraction: the status union, the effect, creating and aborting the AbortController, ignoring aborted answers, turning network failures and non-2xx statuses into errors with the url in the message, and the reload counter. That was written once instead of five times (and previously once for a bundle, with Promise.all). Not shareable: the url and the type argument T (different per resource), what counts as empty (the Evidence page decides length 0, the hook only knows that the request succeeded), the normalisation of person ids that needs evidence and people together, the check that /api/case has a caseId, and how the five states combine into one. Those depend on the application meaning of the data, so they stay at the call sites, in the provider. Honest limit: all five call sites sit in one component, so the second usage is the same provider; a page that loads a single resource would be a natural sixth.",
+      "exercise": 6,
+      "demo": 8,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "  // one Promise.all over five fetches, one state, one request id",
+      "after": "  const caseInfo = useFetch<CaseInfo>(url(\"case\"));\n  const evidence = useFetch<Evidence[]>(url(\"evidence\"));\n  const people = useFetch<Person[]>(url(\"people\"));\n  const locations = useFetch<Location[]>(url(\"locations\"));\n  const timeline = useFetch<TimelineEvent[]>(url(\"timeline\"));\n  const state = useMemo(() => combineStates(caseInfo, evidence, people, locations, timeline), [...]);",
+      "line": 92
     }
   ]
 }
