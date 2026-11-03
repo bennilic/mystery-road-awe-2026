@@ -1,4 +1,5 @@
-import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
+import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
+import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import { useBookmarks } from "../../shared/bookmarks/BookmarksContext.tsx";
 import { selectBookmarkedEvidence } from "../../shared/bookmarks/selectBookmarkedEvidence.ts";
 import {
@@ -54,20 +55,11 @@ function DashboardContent({ data, reviewEdits }: DashboardStateProps & { data: C
 }
 
 export function DashboardPage(props: DashboardStateProps) {
-  const caseData = useCaseData();
-
   return (
     <section className="view active">
       <h2>Case Dashboard</h2>
       <HowToUseCard />
-      {caseData.status === "loading" && <p>Loading case file&hellip;</p>}
-      {caseData.status === "error" && (
-        <p role="alert">
-          The case file could not be loaded ({caseData.message}). Check that the dev server is
-          running and reload the page.
-        </p>
-      )}
-      {caseData.status === "ready" && <DashboardContent data={caseData.data} {...props} />}
+      <CaseDataGate>{(data) => <DashboardContent data={data} {...props} />}</CaseDataGate>
     </section>
   );
 }

@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { formatDate } from "../../../js/lookup.ts";
 import type { ReviewEdit } from "../../shared/evidence/reviewEdits.ts";
 import type { Evidence, EvidenceRelevance, EvidenceStatus } from "../../../js/types.ts";
@@ -21,8 +21,42 @@ function isEvidenceRelevance(value: string): value is EvidenceRelevance {
   return value === "unknown" || value === "relevant" || value === "irrelevant";
 }
 
-// Presentational: everything arrives as props; the only thing it owns is the
-// DOM state of its uncontrolled note field.
+// Presentational: everything arrives as props.
+interface NoteEditorProps {
+  evidenceId: string;
+  savedNote: string;
+  onSaveNote: (evidenceId: string, text: string) => void;
+}
+
+// The draft is its own state on purpose: it differs from the saved note until
+// Save is pressed, and the preview shows only what was saved.
+function NoteEditor({ evidenceId, savedNote, onSaveNote }: NoteEditorProps) {
+  const [draft, setDraft] = useState(savedNote);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    // Without this the browser would submit the form and reload the page.
+    event.preventDefault();
+    onSaveNote(evidenceId, draft);
+  }
+
+  return (
+    <form className="detail-field" onSubmit={handleSubmit}>
+      <strong>Investigator note</strong>
+      <textarea
+        id="evidenceNoteInput"
+        className="note-textarea"
+        rows={3}
+        placeholder="Add a private note about this evidence..."
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+      />
+      <button type="submit" className="btn btn-primary btn-small" style={{ marginTop: 6 }}>
+        Save note
+      </button>
+    </form>
+  );
+}
+
 export function EvidenceDetail({
   item,
   personNames,
@@ -32,13 +66,6 @@ export function EvidenceDetail({
   onSaveNote,
   onChangeReview,
 }: EvidenceDetailProps) {
-  function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {
-    // Without this the browser would submit the form and reload the page.
-    event.preventDefault();
-    const noteText = new FormData(event.currentTarget).get("note");
-    onSaveNote(item.id, typeof noteText === "string" ? noteText : "");
-  }
-
   return (
     <div className="evidence-detail" id="evidenceDetailSection">
       <div className="evidence-detail-header">
@@ -112,22 +139,13 @@ export function EvidenceDetail({
         </select>
       </div>
 
-      <form className="detail-field" onSubmit={handleNoteSubmit}>
-        <strong>Investigator note</strong>
-        {/* key: the textarea is uncontrolled, so a different item must remount it. */}
-        <textarea
-          key={item.id}
-          id="evidenceNoteInput"
-          name="note"
-          className="note-textarea"
-          rows={3}
-          placeholder="Add a private note about this evidence..."
-          defaultValue={savedNote}
-        />
-        <button type="submit" className="btn btn-primary btn-small" style={{ marginTop: 6 }}>
-          Save note
-        </button>
-      </form>
+      {/* key: a different item starts with its own draft. */}
+      <NoteEditor
+        key={item.id}
+        evidenceId={item.id}
+        savedNote={savedNote}
+        onSaveNote={onSaveNote}
+      />
 
       <div className="detail-field">
         <strong>Note preview</strong>

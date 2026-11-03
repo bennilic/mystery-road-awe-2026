@@ -3373,6 +3373,18 @@
       "line": 19
     },
     {
+      "id": "ex5-d2-t3-page",
+      "type": "app",
+      "title": "D2 - T3 — On the page: the Save hypothesis draft button",
+      "narration": "Before the code: Save hypothesis draft takes whatever the controlled form currently holds and writes it to localStorage; the green 'Saved' appears for two seconds.",
+      "exercise": 5,
+      "demo": 2,
+      "highlight": ".form-actions",
+      "waitFor": "#hypSuspect",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
       "id": "ex5-d2-t3",
       "type": "code",
       "title": "D2 - T3 — Save reads the controlled state and persists it",
@@ -3451,6 +3463,17 @@
       "before": "  function pushMutating() {\n    items.push(\"E03\"); // mutates the array React is holding\n    setItems(items); // same reference: React sees \"no change\" and bails out\n  }",
       "after": "  function appendImmutably() {\n    setItems([...items, \"E03\"]);\n  }",
       "line": 30
+    },
+    {
+      "id": "ex5-d3-t2-page",
+      "type": "app",
+      "title": "D3 - T2 — On the page: the bookmark toggle and the frozen-array check",
+      "narration": "Before the code: the stars in the app use the pure toggleBookmarkId; the sandbox page prints the check that runs it on a frozen array.",
+      "exercise": 5,
+      "demo": 3,
+      "highlight": "#toggleCheck",
+      "waitFor": "#toggleCheck",
+      "page": "sandbox-state.html"
     },
     {
       "id": "ex5-d3-t2",
@@ -4136,6 +4159,99 @@
       "file": "react/features/evidence/EvidencePage.tsx",
       "before": "// vanilla: the same fact, kept in sync by hand\nstate.bookmarks.push(evidenceId);   // id list\nev.bookmarked = true;               // flag on the object\nstate.filteredEvidence = state.allEvidence;  // same array\nstate.selectedEvidence = ev;        // and again in the DOM",
       "after": "  const bookmarkCount = selectBookmarkedEvidence(evidence, bookmarkedIds).length;\n  const visibleEvidence = filterAndSortEvidence(evidence, filters);\n// derived, never stored"
+    },
+    {
+      "id": "ex5-d10-t1-page",
+      "type": "app",
+      "title": "D10 - T1 — On the page: all five views",
+      "narration": "Before the code: I walked through Dashboard, Evidence, People & Locations (and a profile), Timeline and Workspace in the React app: every view renders, with no errors in the console.",
+      "exercise": 5,
+      "demo": 10,
+      "highlight": ".main-nav",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d10-t1",
+      "type": "code",
+      "title": "D10 - T1 — Final sweep for direct DOM manipulation",
+      "narration": "Swept the whole react/ folder with a grep for innerHTML, insertAdjacentHTML, dangerouslySetInnerHTML, createElement, appendChild, querySelector, getElementById, classList, setAttribute, addEventListener and textContent assignments (sandbox pages excluded, they are not the app). One hit: document.getElementById('root') in main.tsx, the mount point createRoot needs. Two small things changed in this pass: the note textarea in the detail panel was the last uncontrolled field and its value was read from the DOM with FormData, so it is now a controlled NoteEditor with a draft in useState; and the loading/error switch that Exercise 4 Demo 10 Q3 flagged (four copies) was extracted into CaseDataGate, now used by all five pages, since the two new pages made it six copies.",
+      "exercise": 5,
+      "demo": 10,
+      "file": "react/features/evidence/EvidenceDetail.tsx",
+      "before": "  function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {\n    // Without this the browser would submit the form and reload the page.\n    event.preventDefault();\n    const noteText = new FormData(event.currentTarget).get(\"note\");\n    onSaveNote(item.id, typeof noteText === \"string\" ? noteText : \"\");\n  }\n  ...\n      <form className=\"detail-field\" onSubmit={handleNoteSubmit}>\n        <strong>Investigator note</strong>\n        {/* key: the textarea is uncontrolled, so a different item must remount it. */}\n        <textarea\n          key={item.id}\n          id=\"evidenceNoteInput\"\n          name=\"note\"\n          className=\"note-textarea\"\n          rows={3}\n          placeholder=\"Add a private note about this evidence...\"\n          defaultValue={savedNote}\n        />\n        <button type=\"submit\" className=\"btn btn-primary btn-small\" style={{ marginTop: 6 }}>\n          Save note\n        </button>\n      </form>",
+      "after": "function NoteEditor({ evidenceId, savedNote, onSaveNote }: NoteEditorProps) {\n  const [draft, setDraft] = useState(savedNote);\n\n  function handleSubmit(event: FormEvent<HTMLFormElement>) {\n    // Without this the browser would submit the form and reload the page.\n    event.preventDefault();\n    onSaveNote(evidenceId, draft);\n  }\n\n  return (\n    <form className=\"detail-field\" onSubmit={handleSubmit}>\n      <strong>Investigator note</strong>\n      <textarea\n        id=\"evidenceNoteInput\"\n        className=\"note-textarea\"\n        rows={3}\n        placeholder=\"Add a private note about this evidence...\"\n        value={draft}\n        onChange={(event) => setDraft(event.target.value)}\n      />\n      <button type=\"submit\" className=\"btn btn-primary btn-small\" style={{ marginTop: 6 }}>\n        Save note\n\n$ grep -rnE \"innerHTML|insertAdjacentHTML|outerHTML|dangerouslySetInnerHTML|createElement\\(|appendChild|removeChild|querySelector|getElementsBy|getElementById|classList|setAttribute|addEventListener|textContent *=\" react (outside react/sandbox)\nreact/main.tsx:6:  const rootElement = document.getElementById(\"root\");\n// (the one hit: the mount point that createRoot needs; nothing else)",
+      "line": 33
+    },
+    {
+      "id": "ex5-d10-t2-page",
+      "type": "app",
+      "title": "D10 - T2 — On the page: the whole app in React",
+      "narration": "Before the code: react.html contains only an empty div; header, nav, pages and footer are all rendered by React from state and props.",
+      "exercise": 5,
+      "demo": 10,
+      "highlight": ".main-nav",
+      "waitFor": ".hypothesis-card",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d10-t2",
+      "type": "code",
+      "title": "D10 - T2 — All five views run on React state and props",
+      "narration": "Evidence: filters (useReducer), open item (URL), bookmarks (Context), notes and review edits (state in AppBody, props), derived visible list. Workspace: bookmarks and notes from the same owners, hypothesis form (useState object). Dashboard: counts derived from the same state. People & Locations and Timeline: no state of their own except what the URL gives them (tab, :personId, ?person=). Checked by the sweep on the previous slide plus a Playwright walk through every view, the profile route, the ?person= timeline link, the note editor (a draft is separate from the saved preview, switching items resets it, switching back shows the saved note) and the hypothesis save/reload round trip; no console errors or warnings. Check commands that pass: npm run typecheck, npm run lint, npx prettier --check ., npm run build. There is no automated test suite in this repo and tests are out of scope for this exercise.",
+      "exercise": 5,
+      "demo": 10,
+      "file": "react/app/App.tsx",
+      "before": "<div id=\"root\"></div>   // react.html",
+      "after": "// react.html\n<div id=\"root\"></div>\n// react/main.tsx\ncreateRoot(rootElement).render(<StrictMode><HashRouter><App /></HashRouter></StrictMode>);\n\n$ npm run typecheck && npm run lint && npx prettier --check . && npm run build\n(all pass)"
+    },
+    {
+      "id": "ex5-d10-q1-page",
+      "type": "app",
+      "title": "D10 - Q1 — On the page: the bookmark star and the Dashboard count",
+      "narration": "Before the code: the decision I am least sure about.",
+      "exercise": 5,
+      "demo": 10,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d10-q1",
+      "type": "code",
+      "title": "D10 - Q1 — The call I am not sure about: Context for bookmarks only",
+      "narration": "Decision: BookmarksProvider with Context, while notes and review edits are lifted state with props (Demo 8). For it: bookmarks have three consumers in three subtrees and the star sat four levels deep behind two pass-through components; removing those props made EvidencePage and EvidenceContent simpler and the star can be understood from one hook. Against it: EvidenceCard stopped being a props-only component (it now needs a provider to render), the dependency is implicit, and the app now has two ways to share state, so a reader must learn both and decide where a new piece of state goes. A uniform approach (all props, which was working after Demo 6, or one Context per concern) is easier to explain. If a fourth consumer or another shared value appeared I would be more confident in Context; if the app stayed this size I would probably have stayed with lifted state and props. Related uncertainty: review edits are in memory only (like the vanilla app); persisting them would be more useful but changes behaviour, so I left it.",
+      "exercise": 5,
+      "demo": 10,
+      "file": "react/shared/bookmarks/BookmarksContext.tsx",
+      "before": "function AppBody() {\n  const [notes, setNotes] = useState(readNotes);\n  // In memory only, like the vanilla app: review edits are lost on reload.\n  const [reviewEdits, setReviewEdits] = useState<ReviewEditsByEvidenceId>({});\n  // props everywhere",
+      "after": "// Context for one concern, props for the others\nexport function BookmarksProvider({ children }: { children: ReactNode }) {\n  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\n  const [storageNotice, setStorageNotice] = useState<string | null>(null);"
+    },
+    {
+      "id": "ex5-d10-q2-page",
+      "type": "app",
+      "title": "D10 - Q2 — On the page: the Dashboard stat cards",
+      "narration": "Before the code: the vanilla Dashboard rendered once and could show an old number. This one is a function of the current state.",
+      "exercise": 5,
+      "demo": 10,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d10-q2",
+      "type": "code",
+      "title": "D10 - Q2 — Structurally gone: forgetting to re-render a view",
+      "narration": "Exercise 1's defect: views were drawn into the DOM by hand and guarded by viewRendered flags, so after data changed the screen stayed old until someone remembered to call the right render function (the stale Dashboard bookmark count). In React that category cannot be written: a component is a function from props and state to a description of the UI, React calls it again whenever state it uses changes, and there is no render function to forget and no DOM kept between renders to go stale. The only way for the screen to differ from the data is if the data is not in state/props (a mutated object, a value in a global), which Demos 3 and 4 removed and Demo 9 checked. A second one that is gone by construction: rendering user text as markup (the vanilla notes preview used innerHTML 'unsafe on purpose'); JSX renders strings as text, and the only way back is the greppable dangerouslySetInnerHTML, which appears nowhere in react/ (the sweep above). Verified: saving the note '<b>' style text shows it literally. Not gone: logic bugs in the derived functions themselves (a wrong filter rule), which the 12-combination comparison with the vanilla app guarded.",
+      "exercise": 5,
+      "demo": 10,
+      "file": "react/features/dashboard/DashboardPage.tsx",
+      "before": "// vanilla: drawn into the DOM from a snapshot; later changes need a manual render call\nhtml += statCardHTML(state.bookmarks.length, \"Bookmarked\");\n// js/navigation.ts\n  if (hash === \"dashboard\" && !state.viewRendered.dashboard) {\n    renderDashboard();\n    state.viewRendered.dashboard = true;\n  } else if (hash === \"evidence\" && !state.viewRendered.evidence) {",
+      "after": "  const bookmarkCount = selectBookmarkedEvidence(evidence, bookmarkedIds).length;\n// re-run by React on every render; no flag, no render call to forget"
     }
   ]
 }

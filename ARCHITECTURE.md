@@ -14,18 +14,38 @@ react/
   features/
     dashboard/                  everything only the Dashboard needs
       DashboardPage.tsx  StatGrid.tsx  CaseSummaryCard.tsx  ReviewProgress.tsx
-      RecentEvidenceList.tsx  RecentTimelineList.tsx  HowToUseCard.tsx  bookmarks.ts
+      RecentEvidenceList.tsx  RecentTimelineList.tsx  HowToUseCard.tsx
     people-locations/
       PeoplePage.tsx PersonDetailPage.tsx (feature)  PeopleLocationsView.tsx PersonDetailView.tsx (presentational)
       PersonCard.tsx  LocationCard.tsx  Card.tsx  TabBar.tsx  ResponsibilityList.tsx
     timeline/
       TimelinePage.tsx (feature)  TimelineView.tsx (presentational)
       TimelineItem.tsx  TimelineToolbar.tsx
+    evidence/                   (Exercise 5) catalogue + detail panel
+      EvidencePage.tsx (feature)  EvidenceToolbar.tsx  EvidenceCard.tsx  EvidenceDetail.tsx
+      filterEvidence.ts  evidenceFiltersReducer.ts
+    workspace/                  (Exercise 5) bookmarks list, notes list, hypothesis form
+      WorkspacePage.tsx (feature)  BookmarkedEvidenceList.tsx  NotesList.tsx  HypothesisForm.tsx
   shared/                       used by more than one feature
-    data/CaseDataContext.tsx
+    data/CaseDataContext.tsx  CaseDataGate.tsx
     routing/paths.ts
+    bookmarks/                  BookmarksContext.tsx  toggleBookmarkId.ts  selectBookmarkedEvidence.ts
+    evidence/reviewEdits.ts
+    storage/                    localStorage readers/writers (bookmarks, notes, hypothesis)
+    components/                 Badge.tsx  evidenceBadges.ts
   sandbox/                      throwaway teaching demos, not part of the app
 ```
+
+### State ownership (Exercise 5)
+
+| State | Owner | Reaches consumers by |
+|-------|-------|----------------------|
+| Bookmark ids | `BookmarksProvider` (`useState`) | Context (`useBookmarks`) |
+| Notes, review edits | `AppBody` in `app/App.tsx` (`useState`) | props + callbacks |
+| Evidence filters/sort | `EvidenceContent` (`useReducer`) | props to the toolbar |
+| Hypothesis form | `HypothesisForm` (`useState` object) | local |
+| Open evidence item | the URL (`?open=E01`) | `useSearchParams` |
+| Filtered/sorted list, bookmark count, reviewed count | derived during render, never stored | - |
 
 Domain types and helpers (`js/types.ts`, `js/lookup.ts`) are still imported from the vanilla
 `js/` folder, because the vanilla app keeps running next to the React one (`index.html` vs

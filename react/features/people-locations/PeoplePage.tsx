@@ -1,4 +1,5 @@
-import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
+import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
+import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import { PeopleLocationsView } from "./PeopleLocationsView.tsx";
 import type { PeopleTab } from "./TabBar.tsx";
 import { countEvidenceForPerson } from "./countEvidenceForPerson.ts";
@@ -25,19 +26,10 @@ interface PeoplePageProps {
 }
 
 export function PeoplePage({ tab }: PeoplePageProps) {
-  const caseData = useCaseData();
-
   return (
     <section className="view active">
       <h2>People &amp; Locations</h2>
-      {caseData.status === "loading" && <p>Loading case file&hellip;</p>}
-      {caseData.status === "error" && (
-        <p role="alert">
-          The case file could not be loaded ({caseData.message}). Check that the dev server is
-          running and reload the page.
-        </p>
-      )}
-      {caseData.status === "ready" && <PeopleContent data={caseData.data} tab={tab} />}
+      <CaseDataGate>{(data) => <PeopleContent data={data} tab={tab} />}</CaseDataGate>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router";
-import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
+import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
+import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import { PATHS } from "../../shared/routing/paths.ts";
 import { countEvidenceForPerson } from "./countEvidenceForPerson.ts";
 import { PersonDetailView } from "./PersonDetailView.tsx";
@@ -34,21 +35,13 @@ export function PersonDetailPage() {
   // useParams types every param as `string | undefined`: TypeScript cannot know
   // the URL matched a pattern that contains :personId.
   const { personId } = useParams<{ personId: string }>();
-  const caseData = useCaseData();
 
   return (
     <section className="view active">
       <h2>Person profile</h2>
-      {caseData.status === "loading" && <p>Loading case file&hellip;</p>}
-      {caseData.status === "error" && (
-        <p role="alert">
-          The case file could not be loaded ({caseData.message}). Check that the dev server is
-          running and reload the page.
-        </p>
-      )}
-      {caseData.status === "ready" && (
-        <PersonDetailContent data={caseData.data} personId={personId} />
-      )}
+      <CaseDataGate>
+        {(data) => <PersonDetailContent data={data} personId={personId} />}
+      </CaseDataGate>
     </section>
   );
 }

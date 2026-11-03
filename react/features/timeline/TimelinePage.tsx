@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router";
 import { TIMELINE_PERSON_PARAM } from "../../shared/routing/paths.ts";
-import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
+import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
+import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import { TimelineView } from "./TimelineView.tsx";
 
 // Feature component: sorts the events, resolves location ids to labels and
@@ -51,19 +52,10 @@ function TimelineContent({ data }: { data: CaseData }) {
 }
 
 export function TimelinePage() {
-  const caseData = useCaseData();
-
   return (
     <section className="view active">
       <h2>Investigation Timeline</h2>
-      {caseData.status === "loading" && <p>Loading case file&hellip;</p>}
-      {caseData.status === "error" && (
-        <p role="alert">
-          The case file could not be loaded ({caseData.message}). Check that the dev server is
-          running and reload the page.
-        </p>
-      )}
-      {caseData.status === "ready" && <TimelineContent data={caseData.data} />}
+      <CaseDataGate>{(data) => <TimelineContent data={data} />}</CaseDataGate>
     </section>
   );
 }

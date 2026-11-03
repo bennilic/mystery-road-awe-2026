@@ -31,7 +31,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 7 | `useReducer` for the filter/search/sort state | ☑ |
 | 8 | Context, and when not to use it | ☑ |
 | 9 | Diagnose & fix common state problems | ☑ |
-| 10 | Remove remaining direct DOM manipulation + wrap-up | ☐ |
+| 10 | Remove remaining direct DOM manipulation + wrap-up | ☑ |
 
 ---
 
@@ -177,12 +177,12 @@ building this exercise, that's normal and expected, not a failure).
 
 **Tasks**
 
-- [ ] Do a final sweep of the Evidence Catalogue and Workspace views (and re-check Dashboard/People & Locations/Timeline from Exercises 3–4) for any remaining direct DOM manipulation, e.g. `document.querySelector`, manual `classList` changes, `innerHTML`, anything not going through React's render, and remove it.
-- [ ] Confirm the whole app (all 5 views) now runs entirely on React state and props, with zero manual DOM manipulation anywhere.
+- [x] Do a final sweep of the Evidence Catalogue and Workspace views (and re-check Dashboard/People & Locations/Timeline from Exercises 3–4) for any remaining direct DOM manipulation, e.g. `document.querySelector`, manual `classList` changes, `innerHTML`, anything not going through React's render, and remove it.
+- [x] Confirm the whole app (all 5 views) now runs entirely on React state and props, with zero manual DOM manipulation anywhere.
 
 **Questions** (depend on the tasks above)
 
-- [ ] Show one state-management decision you made somewhere in this exercise (state ownership, `useState` vs. `useReducer`, prop drilling vs. Context, or something else) that you're not 100% sure was the right call. Explain the trade-off honestly, both directions.
-- [ ] Across Exercises 3–5, name one bug category from the *original* vanilla app (Exercise 1's defect list) that is now, by construction, no longer possible in your React version — not just fixed, but structurally prevented. Explain why the React architecture rules it out.
+- [x] Show one state-management decision you made somewhere in this exercise (state ownership, `useState` vs. `useReducer`, prop drilling vs. Context, or something else) that you're not 100% sure was the right call. Explain the trade-off honestly, both directions.
+- [x] Across Exercises 3–5, name one bug category from the *original* vanilla app (Exercise 1's defect list) that is now, by construction, no longer possible in your React version — not just fixed, but structurally prevented. Explain why the React architecture rules it out.
 
 ---
