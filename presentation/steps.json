@@ -4252,6 +4252,105 @@
       "file": "react/features/dashboard/DashboardPage.tsx",
       "before": "// vanilla: drawn into the DOM from a snapshot; later changes need a manual render call\nhtml += statCardHTML(state.bookmarks.length, \"Bookmarked\");\n// js/navigation.ts\n  if (hash === \"dashboard\" && !state.viewRendered.dashboard) {\n    renderDashboard();\n    state.viewRendered.dashboard = true;\n  } else if (hash === \"evidence\" && !state.viewRendered.evidence) {",
       "after": "  const bookmarkCount = selectBookmarkedEvidence(evidence, bookmarkedIds).length;\n// re-run by React on every render; no flag, no render call to forget"
+    },
+    {
+      "id": "exercise-6-intro",
+      "type": "app",
+      "title": "Exercise 6 — Effects, Data Fetching & a Backend",
+      "narration": "Section marker: from here on the deck is Exercise 6. Until now every view read its data from static data/*.json files, which can only ever be instant or 404. This exercise first teaches render versus effects, dependency arrays and cleanup, then adds a small read-only Node backend with a simulated delay and error, consumes it from React with loading, error and empty states, fixes request races with AbortController, extracts a reusable hook, separates UI, application logic and API access, and closes with the data-flow picture and a written UX decision.",
+      "exercise": 6,
+      "demo": -1
+    },
+    {
+      "id": "ex6-d1-t1-page",
+      "type": "app",
+      "title": "D1 - T1 — On the page: a component that does work while rendering",
+      "narration": "Before the code: this throwaway sandbox page has a BAD component. Its counter should show 1 after the first render, but it shows 2, and it jumps by 2 every time I click re-render parent. Nothing in the UI looks wrong at a glance, which is exactly why render-time side effects are dangerous.",
+      "exercise": 6,
+      "demo": 1,
+      "highlight": "#badCounter",
+      "waitFor": "#badCounter",
+      "page": "sandbox-effects.html"
+    },
+    {
+      "id": "ex6-d1-t1",
+      "type": "code",
+      "title": "D1 - T1 — Side effects written directly in the render body",
+      "narration": "The BAD component does three things in its render body: it mutates a module variable (badRenderCounter += 1), it calls console.log, and it reads localStorage inline. It seems to work because the screen shows plausible values, but each one is a side effect: it changes or reads something outside the component, so the result no longer depends only on props and state. Under StrictMode React renders twice on purpose to expose exactly this, and the counter proves it: it goes 2 on mount and +2 per update, not +1. The GOOD version only computes JSX during render; logging runs in an effect after commit and the localStorage read runs in an effect that stores the result in state. Verified with Playwright in the sandbox: counter 2 after mount, 4 after one re-render.",
+      "exercise": 6,
+      "demo": 1,
+      "file": "react/sandbox/RenderSideEffectDemo.tsx",
+      "before": "function BadRenderComponent() {\n  badRenderCounter += 1; // (1) outside world changes during render\n  console.log(`[bad] render body ran, counter=${badRenderCounter}`); // (2)\n  const savedName = localStorage.getItem(\"sandbox_name\") ?? \"nobody\"; // (3)\n  // counter after mount: 2, after one re-render: 4\n}",
+      "after": "function GoodRenderComponent() {\n  const [savedName, setSavedName] = useState(\"nobody\");\n  useEffect(() => {\n    console.log(\"[good] effect ran after commit\");\n  });\n  useEffect(() => {\n    setSavedName(localStorage.getItem(\"sandbox_name\") ?? \"nobody\");\n  }, []);\n}",
+      "line": 12
+    },
+    {
+      "id": "ex6-d1-t2-page",
+      "type": "app",
+      "title": "D1 - T2 — On the page: the good component",
+      "narration": "Before the code: the GOOD line below the bad one only changes when I click its own re-render button, and its logging happens in an effect. This is the pattern the rule describes.",
+      "exercise": 6,
+      "demo": 1,
+      "highlight": "#goodName",
+      "waitFor": "#goodName",
+      "page": "sandbox-effects.html"
+    },
+    {
+      "id": "ex6-d1-t2",
+      "type": "code",
+      "title": "D1 - T2 — My rule: render vs. effect",
+      "narration": "Rule in my own words: render describes what the screen should look like for the current props and state, and nothing else. It may read props, state and context and compute new values from them, but it must not change anything outside itself and must give the same output for the same input. Anything that reaches outside React or depends on time, the network, the browser or storage (subscriptions, timers, fetch, document.title, writing to localStorage) belongs in an effect, which runs after the render was committed to the screen, or in an event handler if it is caused by a user action. Why this split: React is free to call render several times, pause it or throw its result away, so only code that is safe to repeat can live there.",
+      "exercise": 6,
+      "demo": 1,
+      "file": "react/sandbox/RenderSideEffectDemo.tsx",
+      "before": "// render: pure description\nfunction Component({ items }) {\n  const visible = items.filter(...); // derive, do not store\n  return <List items={visible} />;\n}\n// not allowed here: fetch, timers, document.title, localStorage writes, mutating outside variables",
+      "after": "// effect: after commit, for synchronising with the outside world\nuseEffect(() => {\n  document.title = title;\n}, [title]);\n// event handler: because the user did something\nfunction handleSave() { writeNotes(next); }"
+    },
+    {
+      "id": "ex6-d1-q1-page",
+      "type": "app",
+      "title": "D1 - Q1 — On the page: the doubled counter",
+      "narration": "Before the code: the counter was incremented once per render in the code, yet the page shows steps of two. That is Strict Mode rendering the component twice.",
+      "exercise": 6,
+      "demo": 1,
+      "highlight": "#badCounter",
+      "waitFor": "#badCounter",
+      "page": "sandbox-effects.html"
+    },
+    {
+      "id": "ex6-d1-q1",
+      "type": "code",
+      "title": "D1 - Q1 — Why React renders more than once",
+      "narration": "React treats a component as a pure function of props and state, so it is allowed to call it again whenever it wants: for a state update, a parent re-render, a concurrent render that gets interrupted or discarded, or in development under Strict Mode, where it deliberately renders twice (and runs effects twice) to expose impure code. If render ran twice with my side-effect example, the module counter would be wrong (it counts renders, not visits, and the screen shows 2 after mount instead of 1), the console log would be duplicated, and a render-time write such as appending to a list or sending an analytics call would happen twice. The fix is not to avoid double renders but to make render safe to repeat. Verified: counter 2 after mount, 4 after one update.",
+      "exercise": 6,
+      "demo": 1,
+      "file": "react/sandbox/effectsMain.tsx",
+      "before": "createRoot(rootElement).render(<RenderSideEffectDemo />); // one render per update: counter looks right",
+      "after": "createRoot(rootElement).render(\n  <StrictMode>\n    <RenderSideEffectDemo />\n  </StrictMode>,\n); // two renders per update: the hidden side effect shows up",
+      "line": 9
+    },
+    {
+      "id": "ex6-d1-q2-page",
+      "type": "app",
+      "title": "D1 - Q2 — On the page: the filtered evidence list",
+      "narration": "Before the code: this list is the result of the search, type, person and status filters. It is calculated, not stored.",
+      "exercise": 6,
+      "demo": 1,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d1-q2",
+      "type": "code",
+      "title": "D1 - Q2 — Is a derived value a side effect?",
+      "narration": "No. Calculating the filtered evidence list reads props and state and returns a new value; it changes nothing outside the function and gives the same result for the same inputs, so running it twice is harmless. A side effect is something that reaches outside the render computation (mutates, writes, subscribes, fetches). That is why the rule says: derive during render, do not store it in state and do not compute it in an effect, because a second copy would have to be kept in sync. The only caveat is that the derivation must not mutate its input (Exercise 5 Demo 3: filter and sort on a copy).",
+      "exercise": 6,
+      "demo": 1,
+      "file": "react/features/evidence/EvidencePage.tsx",
+      "before": "// anti-pattern, never in this repo: copy kept in state, synced in an effect: copy kept in state, synced in an effect\nconst [visible, setVisible] = useState([]);\nuseEffect(() => setVisible(filterEvidence(...)), [...]);",
+      "after": "// derived during render: pure, nothing to keep in sync\nconst visibleEvidence = filterAndSortEvidence(evidence, filters);"
     }
   ]
 }
