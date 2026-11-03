@@ -3697,6 +3697,98 @@
       "file": "react/app/App.tsx",
       "before": "// three copies (Demos 1-4)\nEvidenceContent:  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\nDashboardContent: const [bookmarkIds] = useState(readBookmarkIds);\nWorkspaceContent: const [bookmarkIds] = useState(readBookmarkIds);",
       "after": "  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\n// the pages only receive it\n<DashboardPage bookmarkedIds={bookmarkedIds} />"
+    },
+    {
+      "id": "ex5-d6-t1-page",
+      "type": "app",
+      "title": "D6 - T1 — On the page: the star calls a function it was given",
+      "narration": "Before the code: the star does not touch any state itself. It calls onToggleBookmark, a function passed down from the app.",
+      "exercise": 5,
+      "demo": 6,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d6-t1",
+      "type": "code",
+      "title": "D6 - T1 — onToggleBookmark passed down from AppBody",
+      "narration": "handleToggleBookmark is defined next to the useState it changes, in AppBody. It is handed to EvidencePage as the prop onToggleBookmark, from there to EvidenceContent, to EvidenceCard and finally to the star's onClick. No child imports the setter or writes to storage; a child can only say 'toggle E03'. The state, the rule (toggleBookmarkId) and the storage write stay in one place, so the Dashboard and Workspace cannot miss a change made through it. Verified: starring on Evidence changes the Dashboard and Workspace on the next render.",
+      "exercise": 5,
+      "demo": 6,
+      "file": "react/app/App.tsx",
+      "before": "// Demo 5: AppBody passed only the value\n<EvidencePage bookmarkedIds={bookmarkedIds} onToggleBookmark={handleToggleBookmark} />\n// (the callback was already there for the star)",
+      "after": "  function handleToggleBookmark(evidenceId: string) {\n    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);\n    setBookmarkedIds(nextIds);\n    try {\n      writeBookmarkIds(nextIds);\n    } catch (error) {\n      setStorageNotice(describeStorageFailure(\"Your bookmark\", error));\n    }\n  }\n              <EvidencePage\n                bookmarkedIds={bookmarkedIds}\n                onToggleBookmark={handleToggleBookmark}\n                notes={notes}\n                onSaveNote={handleSaveNote}\n                reviewEdits={reviewEdits}\n                onChangeReview={handleChangeReview}\n              />"
+    },
+    {
+      "id": "ex5-d6-t2-page",
+      "type": "app",
+      "title": "D6 - T2 — On the page: note and review status in the detail panel",
+      "narration": "Before the code: in the detail panel, the review status and relevance selects and the Save note button all change state that belongs to the app, not to this panel: the Dashboard's Reviewed number, the card badges and the Workspace notes list follow.",
+      "exercise": 5,
+      "demo": 6,
+      "highlight": "#evidenceDetailSection",
+      "waitFor": "#evidenceDetailSection",
+      "view": "/evidence?open=E01",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d6-t2",
+      "type": "code",
+      "title": "D6 - T2 — Two more callbacks: onSaveNote and onChangeReview",
+      "narration": "Notes moved from EvidenceContent (plus a Workspace snapshot read from storage) to AppBody, with onSaveNote; the detail panel's Review status and Relevance selects, which did nothing since Demo 1, now call onChangeReview(id, {status}). The evidence list is read-only data, so the edit is kept as a small map of overrides (reviewEdits: id -> {status, relevance}) and applyReviewEdits(list, edits) layers it over the list in render, for the Evidence page and for the Dashboard. Both updates are immutable ({...previous, [id]: ...}). Verified: marking E14 reviewed+relevant changes its badges (CRITICAL, REVIEWED, RELEVANT), the Status filter 'reviewed' lists 2 items, the Dashboard Reviewed goes 1 to 2; saving a note shows it in the preview, in localStorage and in the Workspace notes list without a reload. Review edits are in memory only, like in the vanilla app.",
+      "exercise": 5,
+      "demo": 6,
+      "file": "react/app/App.tsx",
+      "before": "// Demo 5: notes owned by EvidenceContent\nconst [notes, setNotes] = useState(readNotes);\nfunction handleSaveNote(evidenceId: string, text: string) { ...setNotes(nextNotes); writeNotes(nextNotes); }\n// status selects: defaultValue, no handler",
+      "after": "  function handleSaveNote(evidenceId: string, text: string) {\n    const nextNotes = { ...notes, [evidenceId]: text };\n    setNotes(nextNotes);\n    try {\n      writeNotes(nextNotes);\n    } catch (error) {\n      setStorageNotice(describeStorageFailure(\"Your note\", error));\n    }\n  }\n\n  function handleChangeReview(evidenceId: string, change: ReviewEdit) {\n    setReviewEdits((previous) => ({\n      ...previous,\n      [evidenceId]: { ...previous[evidenceId], ...change },\n    }));\n  }\n\n  return (\n    <>\n      <Header />"
+    },
+    {
+      "id": "ex5-d6-q1-page",
+      "type": "app",
+      "title": "D6 - Q1 — On the page: a child far from the state",
+      "narration": "Before the code: this Save note button is three components below the state it changes.",
+      "exercise": 5,
+      "demo": 6,
+      "highlight": ".evidence-detail form",
+      "waitFor": ".evidence-detail",
+      "view": "/evidence?open=E01",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d6-q1",
+      "type": "code",
+      "title": "D6 - Q1 — Why a nested child should not change distant state itself",
+      "narration": "React data flows one way, down. A child cannot reach up and set a parent's state: it only has what it was given. It would need the setter (or the storage module) imported or passed, which means (1) the rules for changing that state (immutable update, persistence, error message) get copied into every child that touches it, (2) the owner no longer controls how its state changes, so you cannot know who changed it by reading the owner, and (3) the child is welded to that particular state and cannot be reused or shown with different data. Mutating a parent's object from the child is the worst version: no render is scheduled (Demo 3). A callback prop gives a single named entry point, the owner's function: the child states what happened ('save this note'), the owner decides how state changes. It also keeps the child presentational: EvidenceDetail only gets text and functions and can be rendered with fake ones.",
+      "exercise": 5,
+      "demo": 6,
+      "file": "react/features/evidence/EvidenceDetail.tsx",
+      "before": "// the child would need the owner's internals\nimport { writeNotes } from \"../../shared/storage/noteStorage.ts\";\nsetNotes({ ...notes, [item.id]: text }); // needs notes and setNotes too",
+      "after": "  function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {\n    // Without this the browser would submit the form and reload the page.\n    event.preventDefault();\n    const noteText = new FormData(event.currentTarget).get(\"note\");\n    onSaveNote(item.id, typeof noteText === \"string\" ? noteText : \"\");"
+    },
+    {
+      "id": "ex5-d6-q2-page",
+      "type": "app",
+      "title": "D6 - Q2 — On the page: following onToggleBookmark",
+      "narration": "Before the code: the star on a card is where the callback is finally called.",
+      "exercise": 5,
+      "demo": 6,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d6-q2",
+      "type": "code",
+      "title": "D6 - Q2 — Tracing onToggleBookmark: is this too many layers?",
+      "narration": "Defined in AppBody (handleToggleBookmark, which calls setBookmarkedIds). Path: AppBody -> EvidencePage (prop) -> EvidenceContent (prop; EvidencePage passes {...props} through CaseDataGate's render prop) -> EvidenceCard (prop) -> the star's onClick calls it. That is three components below AppBody; two of them (EvidencePage and EvidenceContent) only pass it along. The notes callback is the same depth (EvidencePage -> EvidenceContent -> EvidenceDetail). Does it feel like too many? Not yet: the path is short, the names are the same at each hop so it is easy to follow, and TypeScript fails to compile if a hop forgets one. But the cost is visible: EvidencePage now has six state-related props that it never uses itself, and every new thing the detail panel needs means editing four files. I would call it manageable, not a problem; Demo 8 revisits the threshold.",
+      "exercise": 5,
+      "demo": 6,
+      "file": "react/features/evidence/EvidencePage.tsx",
+      "before": "// AppBody\nonToggleBookmark={handleToggleBookmark}\n// EvidencePage\nexport function EvidencePage(props) { ... <EvidenceContent data={data} {...props} />\n// EvidenceContent (pass-through)\n<EvidenceCard onToggleBookmark={onToggleBookmark} />\n// EvidenceCard (calls it)\nonClick={(event) => { event.stopPropagation(); onToggleBookmark(item.id); }}",
+      "after": "interface EvidenceStateProps {\n  bookmarkedIds: string[];\n  onToggleBookmark: (evidenceId: string) => void;\n  notes: Record<string, string>;\n  onSaveNote: (evidenceId: string, text: string) => void;\n  reviewEdits: ReviewEditsByEvidenceId;\n  onChangeReview: (evidenceId: string, change: ReviewEdit) => void;\n}\n            <EvidenceCard\n              key={item.id}\n              item={item}\n              isBookmarked={bookmarkedIds.includes(item.id)}\n              onOpen={setSelectedEvidenceId}\n              onToggleBookmark={onToggleBookmark}\n            />\n          ))}"
     }
   ]
 }

@@ -5,6 +5,8 @@ import { Footer } from "../shell/Footer.tsx";
 import { CaseDataProvider } from "../shared/data/CaseDataContext.tsx";
 import { toggleBookmarkId } from "../shared/bookmarks/toggleBookmarkId.ts";
 import { readBookmarkIds, writeBookmarkIds } from "../shared/storage/bookmarkStorage.ts";
+import { readNotes, writeNotes } from "../shared/storage/noteStorage.ts";
+import type { ReviewEdit, ReviewEditsByEvidenceId } from "../shared/evidence/reviewEdits.ts";
 import { describeStorageFailure } from "../shared/storage/describeStorageFailure.ts";
 import { PATHS } from "../shared/routing/paths.ts";
 import { DashboardPage } from "../features/dashboard/DashboardPage.tsx";
@@ -27,7 +29,10 @@ export function App() {
 // the bookmark state lives here, one level above all three.
 function AppBody() {
   const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);
-  const [bookmarkNotice, setBookmarkNotice] = useState<string | null>(null);
+  const [notes, setNotes] = useState(readNotes);
+  // In memory only, like the vanilla app: review edits are lost on reload.
+  const [reviewEdits, setReviewEdits] = useState<ReviewEditsByEvidenceId>({});
+  const [storageNotice, setStorageNotice] = useState<string | null>(null);
 
   function handleToggleBookmark(evidenceId: string) {
     const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);
@@ -35,22 +40,49 @@ function AppBody() {
     try {
       writeBookmarkIds(nextIds);
     } catch (error) {
-      setBookmarkNotice(describeStorageFailure("Your bookmark", error));
+      setStorageNotice(describeStorageFailure("Your bookmark", error));
     }
+  }
+
+  function handleSaveNote(evidenceId: string, text: string) {
+    const nextNotes = { ...notes, [evidenceId]: text };
+    setNotes(nextNotes);
+    try {
+      writeNotes(nextNotes);
+    } catch (error) {
+      setStorageNotice(describeStorageFailure("Your note", error));
+    }
+  }
+
+  function handleChangeReview(evidenceId: string, change: ReviewEdit) {
+    setReviewEdits((previous) => ({
+      ...previous,
+      [evidenceId]: { ...previous[evidenceId], ...change },
+    }));
   }
 
   return (
     <>
       <Header />
       <main id="app" className="app-main">
-        {bookmarkNotice && <p role="alert">{bookmarkNotice}</p>}
+        {storageNotice && <p role="alert">{storageNotice}</p>}
         <Routes>
           <Route path="/" element={<Navigate to={PATHS.dashboard} replace />} />
-          <Route path={PATHS.dashboard} element={<DashboardPage bookmarkedIds={bookmarkedIds} />} />
+          <Route
+            path={PATHS.dashboard}
+            element={<DashboardPage bookmarkedIds={bookmarkedIds} reviewEdits={reviewEdits} />}
+          />
           <Route
             path={PATHS.evidence}
             element={
-              <EvidencePage bookmarkedIds={bookmarkedIds} onToggleBookmark={handleToggleBookmark} />
+              <EvidencePage
+                bookmarkedIds={bookmarkedIds}
+                onToggleBookmark={handleToggleBookmark}
+                notes={notes}
+                onSaveNote={handleSaveNote}
+                reviewEdits={reviewEdits}
+                onChangeReview={handleChangeReview}
+              />
             }
           />
           <Route path={PATHS.team} element={<Navigate to={PATHS.people} replace />} />
@@ -58,7 +90,10 @@ function AppBody() {
           <Route path={`${PATHS.people}/:personId`} element={<PersonDetailPage />} />
           <Route path={PATHS.locations} element={<PeoplePage tab="locations" />} />
           <Route path={PATHS.timeline} element={<TimelinePage />} />
-          <Route path={PATHS.workspace} element={<WorkspacePage bookmarkedIds={bookmarkedIds} />} />
+          <Route
+            path={PATHS.workspace}
+            element={<WorkspacePage bookmarkedIds={bookmarkedIds} notes={notes} />}
+          />
           {/* Old Exercise 3 hashes (#people) keep working as bookmarks. */}
           <Route path="/people" element={<Navigate to={PATHS.people} replace />} />
           {/* Anything else: same fallback as the vanilla handleHashChange(), but explicit. */}

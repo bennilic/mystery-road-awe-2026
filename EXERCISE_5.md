@@ -27,7 +27,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 3 | Immutable updates | ☑ |
 | 4 | Derived values vs. stored state | ☑ |
 | 5 | Lifting state to the nearest common owner | ☑ |
-| 6 | Passing callbacks downward | ☐ |
+| 6 | Passing callbacks downward | ☑ |
 | 7 | `useReducer` for the filter/search/sort state | ☐ |
 | 8 | Context, and when not to use it | ☐ |
 | 9 | Diagnose & fix common state problems | ☐ |
@@ -114,13 +114,13 @@ Dashboard the next time it's rendered.
 
 **Tasks**
 
-- [ ] From wherever you lifted bookmark state to (Demo 5), pass a callback (e.g. `onToggleBookmark`) down through props to every component that needs to trigger a change, rather than letting child components reach up and mutate anything themselves.
-- [ ] Do the same for at least one more interaction that needs to affect state owned by a parent (e.g. saving a note, or changing evidence review status from the detail view).
+- [x] From wherever you lifted bookmark state to (Demo 5), pass a callback (e.g. `onToggleBookmark`) down through props to every component that needs to trigger a change, rather than letting child components reach up and mutate anything themselves.
+- [x] Do the same for at least one more interaction that needs to affect state owned by a parent (e.g. saving a note, or changing evidence review status from the detail view).
 
 **Questions** (depend on the tasks above)
 
-- [ ] Why can't (or shouldn't) a deeply nested child component just directly modify state that lives in a distant ancestor? What does passing a callback down get you instead?
-- [ ] Trace one callback all the way from where it's defined (with the actual `useState` setter
+- [x] Why can't (or shouldn't) a deeply nested child component just directly modify state that lives in a distant ancestor? What does passing a callback down get you instead?
+- [x] Trace one callback all the way from where it's defined (with the actual `useState` setter
 inside it) down to the component that calls it. How many component layers does it pass through, and does that feel like "too many". Is prop drilling becoming a real problem here?
 
 ---

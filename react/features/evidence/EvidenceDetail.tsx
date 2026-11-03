@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { formatDate } from "../../../js/lookup.ts";
-import type { Evidence } from "../../../js/types.ts";
+import type { ReviewEdit } from "../../shared/evidence/reviewEdits.ts";
+import type { Evidence, EvidenceRelevance, EvidenceStatus } from "../../../js/types.ts";
 
 interface EvidenceDetailProps {
   item: Evidence;
@@ -9,6 +10,15 @@ interface EvidenceDetailProps {
   savedNote: string;
   onClose: () => void;
   onSaveNote: (evidenceId: string, text: string) => void;
+  onChangeReview: (evidenceId: string, change: ReviewEdit) => void;
+}
+
+function isEvidenceStatus(value: string): value is EvidenceStatus {
+  return value === "unreviewed" || value === "reviewed" || value === "flagged";
+}
+
+function isEvidenceRelevance(value: string): value is EvidenceRelevance {
+  return value === "unknown" || value === "relevant" || value === "irrelevant";
 }
 
 // Presentational: everything arrives as props; the only thing it owns is the
@@ -20,6 +30,7 @@ export function EvidenceDetail({
   savedNote,
   onClose,
   onSaveNote,
+  onChangeReview,
 }: EvidenceDetailProps) {
   function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {
     // Without this the browser would submit the form and reload the page.
@@ -70,7 +81,15 @@ export function EvidenceDetail({
 
       <div className="detail-field">
         <strong>Review status</strong>
-        <select id="detailStatusSelect" defaultValue={item.status.toLowerCase()}>
+        <select
+          id="detailStatusSelect"
+          value={item.status.toLowerCase()}
+          onChange={(event) => {
+            if (isEvidenceStatus(event.target.value)) {
+              onChangeReview(item.id, { status: event.target.value });
+            }
+          }}
+        >
           <option value="unreviewed">Unreviewed</option>
           <option value="reviewed">Reviewed</option>
           <option value="flagged">Flagged</option>
@@ -78,7 +97,15 @@ export function EvidenceDetail({
       </div>
       <div className="detail-field">
         <strong>Relevance</strong>
-        <select id="detailRelevanceSelect" defaultValue={item.relevance.toLowerCase()}>
+        <select
+          id="detailRelevanceSelect"
+          value={item.relevance.toLowerCase()}
+          onChange={(event) => {
+            if (isEvidenceRelevance(event.target.value)) {
+              onChangeReview(item.id, { relevance: event.target.value });
+            }
+          }}
+        >
           <option value="unknown">Unknown</option>
           <option value="relevant">Relevant</option>
           <option value="irrelevant">Irrelevant</option>

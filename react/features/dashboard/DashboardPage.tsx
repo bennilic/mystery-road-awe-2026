@@ -1,5 +1,9 @@
 import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
 import { selectBookmarkedEvidence } from "../../shared/bookmarks/selectBookmarkedEvidence.ts";
+import {
+  applyReviewEdits,
+  type ReviewEditsByEvidenceId,
+} from "../../shared/evidence/reviewEdits.ts";
 import { HowToUseCard } from "./HowToUseCard.tsx";
 import { CaseSummaryCard } from "./CaseSummaryCard.tsx";
 import { StatGrid } from "./StatGrid.tsx";
@@ -9,24 +13,35 @@ import { RecentTimelineList } from "./RecentTimelineList.tsx";
 
 const RECENT_ITEM_COUNT = 5;
 
-function DashboardContent({ data, bookmarkedIds }: { data: CaseData; bookmarkedIds: string[] }) {
+interface DashboardStateProps {
+  bookmarkedIds: string[];
+  reviewEdits: ReviewEditsByEvidenceId;
+}
+
+function DashboardContent({
+  data,
+  bookmarkedIds,
+  reviewEdits,
+}: DashboardStateProps & { data: CaseData }) {
+  // Review edits layered over the loaded list, so "Reviewed" and the badges follow the detail panel.
+  const evidence = applyReviewEdits(data.evidence, reviewEdits);
   // Derived values are computed during render from the data, not stored in
   // state — there is no second copy that could go out of sync.
-  const bookmarkCount = selectBookmarkedEvidence(data.evidence, bookmarkedIds).length;
-  const reviewedCount = data.evidence.filter(
+  const bookmarkCount = selectBookmarkedEvidence(evidence, bookmarkedIds).length;
+  const reviewedCount = evidence.filter(
     (item) => (item.status || "").toLowerCase() === "reviewed",
   ).length;
   const progressPercent =
-    data.evidence.length === 0 ? 0 : Math.round((reviewedCount / data.evidence.length) * 100);
+    evidence.length === 0 ? 0 : Math.round((reviewedCount / evidence.length) * 100);
 
-  const recentEvidence = data.evidence.slice(-RECENT_ITEM_COUNT).reverse();
+  const recentEvidence = evidence.slice(-RECENT_ITEM_COUNT).reverse();
   const recentTimeline = data.timeline.slice(-RECENT_ITEM_COUNT).reverse();
 
   return (
     <>
       <CaseSummaryCard caseInfo={data.caseInfo} />
       <StatGrid
-        evidenceCount={data.evidence.length}
+        evidenceCount={evidence.length}
         peopleCount={data.people.length}
         locationCount={data.locations.length}
         bookmarkCount={bookmarkCount}
@@ -41,7 +56,7 @@ function DashboardContent({ data, bookmarkedIds }: { data: CaseData; bookmarkedI
   );
 }
 
-export function DashboardPage({ bookmarkedIds }: { bookmarkedIds: string[] }) {
+export function DashboardPage(props: DashboardStateProps) {
   const caseData = useCaseData();
 
   return (
@@ -55,9 +70,7 @@ export function DashboardPage({ bookmarkedIds }: { bookmarkedIds: string[] }) {
           running and reload the page.
         </p>
       )}
-      {caseData.status === "ready" && (
-        <DashboardContent data={caseData.data} bookmarkedIds={bookmarkedIds} />
-      )}
+      {caseData.status === "ready" && <DashboardContent data={caseData.data} {...props} />}
     </section>
   );
 }
