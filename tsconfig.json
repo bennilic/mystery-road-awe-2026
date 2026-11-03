@@ -6,6 +6,8 @@
     // Exercise 3: compile JSX with the automatic runtime (react/jsx-runtime),
     // so .tsx files need no `import React` — matches @vitejs/plugin-react.
     "jsx": "react-jsx",
+    // TypeScript 6 no longer loads every @types package by default; server/ needs node.
+    "types": ["node"],
     "moduleResolution": "Bundler",
     // Vite resolves a relative "./foo.ts" specifier by its literal path,
     // not by stripping/guessing an extension the way Node's resolver does
@@ -44,5 +46,5 @@
     // the not-yet-converted .js modules) are gone — every file under js/ is
     // .ts now, so there's nothing left to bridge to.
   },
-  "include": ["js/**/*.ts", "react/**/*.ts", "react/**/*.tsx", "vite.config.ts"]
+  "include": ["js/**/*.ts", "react/**/*.ts", "react/**/*.tsx", "server/**/*.ts", "vite.config.ts"]
 }

@@ -27,6 +27,11 @@ export default [
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
   },
+  // server/ runs in Node, not the browser (Exercise 6, Demo 4).
+  {
+    files: ["server/**/*.ts"],
+    languageOptions: { globals: { ...globals.node } },
+  },
   // Turns off ESLint stylistic rules that would otherwise conflict with
   // Prettier's own formatting decisions — must stay last so it overrides
   // the configs above rather than the other way round.

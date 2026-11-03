@@ -4538,6 +4538,121 @@
       "before": "useEffect(() => {\n  function handleKeyDown(event: KeyboardEvent) {\n    if (event.key === \"Escape\") onClose();\n  }\n  window.addEventListener(\"keydown\", handleKeyDown);\n  // no cleanup: Esc on #/timeline -> hash becomes #/evidence\n}, [onClose]);",
       "after": "useEffect(() => {\n  function handleKeyDown(event: KeyboardEvent) {\n    if (event.key === \"Escape\") onClose();\n  }\n  window.addEventListener(\"keydown\", handleKeyDown);\n  return () => window.removeEventListener(\"keydown\", handleKeyDown);\n}, [onClose]);",
       "line": 72
+    },
+    {
+      "id": "ex6-d4-t1-page",
+      "type": "app",
+      "title": "D4 - T1 — On the page: the numbers that will come from the backend",
+      "narration": "Before the code: everything on this Dashboard (case title, stat cards, recent items) is built from the five data files. The new backend serves exactly these five resources.",
+      "exercise": 6,
+      "demo": 4,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d4-t1",
+      "type": "code",
+      "title": "D4 - T1 — One GET endpoint per resource, same body as the JSON file",
+      "narration": "server/app.ts is a plain node:http server (no Express; for five read-only routes a dependency would add nothing). GET /api/case, /evidence, /people, /locations and /timeline read public/data/<name>.json and send the file content unchanged, so the shape is by construction identical to what the frontend used to fetch. Other methods answer 405 and unknown paths 404 with a JSON error naming the valid endpoints. Verified: curl output byte-identical (cmp) to each file, and npm test (5 node:test integration tests that start the server on a random port) passes.",
+      "exercise": 6,
+      "demo": 4,
+      "file": "server/app.ts",
+      "before": "(file did not exist yet)",
+      "after": "export const RESOURCES = [\"case\", \"evidence\", \"people\", \"locations\", \"timeline\"] as const;\n// ...\nconst fileContent = await readFile(join(options.dataDirectory, `${resource}.json`), \"utf-8\");\nresponse.writeHead(200, { \"Content-Type\": \"application/json; charset=utf-8\", \"Cache-Control\": \"no-store\" });\nresponse.end(fileContent);"
+    },
+    {
+      "id": "ex6-d4-t2-page",
+      "type": "app",
+      "title": "D4 - T2 — On the page: content that can later be slow, broken or empty",
+      "narration": "Before the code: these cards are what the user will wait for, or never see, when the server is slow or failing.",
+      "exercise": 6,
+      "demo": 4,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d4-t2",
+      "type": "code",
+      "title": "D4 - T2 — Delay, error and empty on demand",
+      "narration": "Three query parameters work on every endpoint: ?delay=<ms> waits before answering (default can be set with SIM_DELAY_MS), ?fail=1 answers HTTP 500 with a JSON error body (?fail=503 picks another status), and ?empty=1 answers a successful 200 with no data. I added the third because Demo 6 needs a response that is successful but empty, which the static files could never produce. Verified with curl: delay 1500 took 1.50 s, SIM_DELAY_MS=700 took 0.71 s, fail returned 500, empty returned [].",
+      "exercise": 6,
+      "demo": 4,
+      "file": "server/app.ts",
+      "before": "(file did not exist yet)",
+      "after": "await wait(parseDelayMs(query.get(\"delay\"), options.defaultDelayMs));\nif (query.has(\"fail\")) {\n  sendJson(response, status, { error: `Simulated failure of /api/${resource} (HTTP ${status}).` });\n  return;\n}\nif (query.get(\"empty\") === \"1\") {\n  sendJson(response, 200, emptyBodyFor(resource));\n  return;\n}"
+    },
+    {
+      "id": "ex6-d4-t3-page",
+      "type": "app",
+      "title": "D4 - T3 — On the page: the frontend that runs next to the backend",
+      "narration": "Before the code: this page is served by Vite on port 8080; the backend runs as a second process on 3001.",
+      "exercise": 6,
+      "demo": 4,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d4-t3",
+      "type": "code",
+      "title": "D4 - T3 — Runs alongside vite dev, documented as dev-only",
+      "narration": "npm run server starts the backend on 3001, npm run dev -- --port 8080 starts Vite; Vite proxies /api/* to the backend. Both run at the same time (checked: /api/case through port 8080 answers 200). The README section states that the backend is development-only, not deployed and not part of the GitHub Pages workflow, which still builds only the static frontend. Consequence worth knowing: a deployed build has no /api, so the React app would show its error state there; deploying a backend is out of scope for this exercise.",
+      "exercise": 6,
+      "demo": 4,
+      "file": "vite.config.js",
+      "before": "export default defineConfig({\n  base: \"./\",\n  plugins: [react()],",
+      "after": "export default defineConfig({\n  base: \"./\",\n  plugins: [react()],\n  server: {\n    proxy: { \"/api\": \"http://127.0.0.1:3001\" },\n  },"
+    },
+    {
+      "id": "ex6-d4-q1-page",
+      "type": "app",
+      "title": "D4 - Q1 — On the page: a view that never has to wait today",
+      "narration": "Before the code: today this page appears instantly because the data is a file next to the app. That is the problem.",
+      "exercise": 6,
+      "demo": 4,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d4-q1",
+      "type": "code",
+      "title": "D4 - Q1 — Why artificial delay and error controls",
+      "narration": "A static file is either there immediately or a 404. Without a slow server I cannot show a loading state that stays on screen long enough to see, a request race (two overlapping requests where the older answers last), or cancellation; without a failing server I cannot show an error state or prove that a stuck spinner is impossible; without a successful-but-empty response I cannot distinguish empty from error. Real servers do all of these on their own but unpredictably, so a demo that waits for them is not reproducible. The controls make each condition a URL parameter I can trigger live. Pointing at the static files can only teach the happy path.",
+      "exercise": 6,
+      "demo": 4,
+      "file": "server/app.ts",
+      "before": "(file did not exist yet)",
+      "after": "// ?delay=3000 -> loading state, races\n// ?fail=1      -> error state\n// ?empty=1     -> empty state"
+    },
+    {
+      "id": "ex6-d4-q2-page",
+      "type": "app",
+      "title": "D4 - Q2 — On the page: same origin, different server",
+      "narration": "Before the code: the page comes from localhost:8080 but its data comes from the process on 3001. Different ports are different origins.",
+      "exercise": 6,
+      "demo": 4,
+      "highlight": ".stat-grid",
+      "waitFor": ".stat-card",
+      "view": "/dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d4-q2",
+      "type": "code",
+      "title": "D4 - Q2 — CORS and why I did not have to configure it",
+      "narration": "CORS (cross-origin resource sharing) is the browser rule that a page from one origin (scheme + host + port) may only read responses from another origin if that server answers with Access-Control-Allow-Origin (and for non-simple requests a preflight). Origin 8080 to origin 3001 is cross-origin. Proven in Playwright: fetch(\"http://127.0.0.1:3001/api/case\") from the page fails with \"Failed to fetch\" (the server sends no CORS headers; curl shows none). I did not need to configure CORS because Vite proxies /api to the backend: the browser only talks to 8080, the proxy forwards server-to-server (where CORS does not exist) and the page sees a same-origin answer. The alternative would be an Access-Control-Allow-Origin header on the backend, which is needed when the frontend is deployed separately from the API.",
+      "exercise": 6,
+      "demo": 4,
+      "file": "vite.config.js",
+      "before": "// browser at :8080 -> fetch(\"http://127.0.0.1:3001/api/case\")  -> blocked (no Access-Control-Allow-Origin)",
+      "after": "// browser at :8080 -> fetch(\"/api/case\") -> Vite proxy -> :3001   (same origin for the browser)\nserver: { proxy: { \"/api\": \"http://127.0.0.1:3001\" } },"
     }
   ]
 }

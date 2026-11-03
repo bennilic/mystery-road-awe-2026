@@ -27,7 +27,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 1 | Render logic vs. effects | ☑ |
 | 2 | `useEffect` mental model & dependency arrays | ☑ |
 | 3 | Cleanup: timers & subscriptions | ☑ |
-| 4 | Build the read-only Node backend | ☐ |
+| 4 | Build the read-only Node backend | ☑ |
 | 5 | Consume the backend from React | ☐ |
 | 6 | Loading, error, and empty states | ☐ |
 | 7 | Request races & cancellation | ☐ |
@@ -92,16 +92,16 @@ often each one actually runs.
 
 **Tasks**
 
-- [ ] Set up a minimal Node.js server (Express or equivalent) with one GET endpoint per data
+- [x] Set up a minimal Node.js server (Express or equivalent) with one GET endpoint per data
 resource (case, evidence, people, locations, timeline), each returning the same shape of data
 as the corresponding `data/*.json` file does today.
-- [ ] Add a way to deliberately simulate real-world conditions for testing later demos: an artificial delay (configurable, e.g. via a query param or env var) on at least one endpoint, and a way to make one endpoint return an error response (e.g. a 500) on demand.
-- [ ] Confirm the server runs locally alongside `vite dev` and is documented (a README section is enough) as dev-only (not part of the Exercise 2 deploy pipeline).
+- [x] Add a way to deliberately simulate real-world conditions for testing later demos: an artificial delay (configurable, e.g. via a query param or env var) on at least one endpoint, and a way to make one endpoint return an error response (e.g. a 500) on demand.
+- [x] Confirm the server runs locally alongside `vite dev` and is documented (a README section is enough) as dev-only (not part of the Exercise 2 deploy pipeline).
 
 **Questions** (depend on the tasks above)
 
-- [ ] Why does this exercise ask for artificial delay/error controls on the backend, instead of just pointing the frontend at the static JSON files directly (as it already could)? What could you *not* teach convincingly without them?
-- [ ] What is CORS, and did you have to deal with it running your frontend (from Vite's dev server) against this separate backend server? If yes, what did you configure and why? If no, why not?
+- [x] Why does this exercise ask for artificial delay/error controls on the backend, instead of just pointing the frontend at the static JSON files directly (as it already could)? What could you *not* teach convincingly without them?
+- [x] What is CORS, and did you have to deal with it running your frontend (from Vite's dev server) against this separate backend server? If yes, what did you configure and why? If no, why not?
 
 ---
 

@@ -11,9 +11,17 @@ import react from "@vitejs/plugin-react";
 // serves every root-level .html file as-is, but `vite build` only bundles
 // the entries listed in rollupOptions.input — without listing both, the
 // production build would silently drop react.html.
+//
+// Exercise 6: the dev-only Node backend (npm run server, port 3001) is reached
+// through this proxy, so the browser sees /api/... on the same origin as the
+// page and no CORS headers are needed. `vite build` ignores `server`, and the
+// GitHub Pages deploy has no backend (see README).
 export default defineConfig({
   base: "./",
   plugins: [react()],
+  server: {
+    proxy: { "/api": "http://127.0.0.1:3001" },
+  },
   build: {
     rollupOptions: {
       input: {

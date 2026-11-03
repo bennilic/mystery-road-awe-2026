@@ -29,6 +29,35 @@ Then open `http://localhost:8080`. The presentation is at `http://localhost:8080
 
 To check the production build locally: `npm run build && npm run preview`.
 
+## Development backend (Exercise 6, dev only)
+
+The React app (`react.html`) reads its case data from a small read-only Node server instead of
+from the static files. **This backend runs locally in development only. It is not deployed and
+is not part of the Exercise 2 GitHub Pages pipeline**, which still builds and publishes only the
+static frontend.
+
+Run two processes (two terminals):
+
+```bash
+npm run server                 # backend on http://127.0.0.1:3001 (serves public/data/*.json)
+npm run dev -- --port 8080     # Vite; it proxies /api/* to the backend
+```
+
+Endpoints (GET only): `/api/case`, `/api/evidence`, `/api/people`, `/api/locations`,
+`/api/timeline`. Each returns exactly the content of the matching `public/data/*.json` file.
+
+Simulating real-world conditions (query parameters on any endpoint):
+
+| Parameter      | Effect                                                           |
+| -------------- | ---------------------------------------------------------------- |
+| `?delay=<ms>`  | Wait this long before answering (max 30000)                      |
+| `?fail=1`      | Answer HTTP 500 (`?fail=503` for another status)                 |
+| `?empty=1`     | Answer successfully but with no data (`[]`, or `{}` for `case`)  |
+
+`SIM_DELAY_MS=<ms> npm run server` adds a default delay to every request, `PORT=<n>` changes
+the port (then change the proxy target in `vite.config.js` too). `npm test` runs the backend's
+tests. The vanilla `index.html` app is unchanged and still reads the static files.
+
 ## Features
 
 - **Dashboard** — case summary and key statistics calculated from the loaded case data.
