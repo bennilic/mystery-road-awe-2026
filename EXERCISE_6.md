@@ -26,7 +26,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 |---|---|---|
 | 1 | Render logic vs. effects | ☑ |
 | 2 | `useEffect` mental model & dependency arrays | ☑ |
-| 3 | Cleanup: timers & subscriptions | ☐ |
+| 3 | Cleanup: timers & subscriptions | ☑ |
 | 4 | Build the read-only Node backend | ☐ |
 | 5 | Consume the backend from React | ☐ |
 | 6 | Loading, error, and empty states | ☐ |
@@ -77,14 +77,14 @@ often each one actually runs.
 
 **Tasks**
 
-- [ ] Implement at least one effect that sets up something needing cleanup (a `setTimeout`/
+- [x] Implement at least one effect that sets up something needing cleanup (a `setTimeout`/
 `setInterval`, a `window` event listener, or similar) and returns a proper cleanup function.
-- [ ] Demonstrate what happens (e.g. via a console log in both the effect and its cleanup) when the component unmounts or the dependencies change, with and without the cleanup function present.
+- [x] Demonstrate what happens (e.g. via a console log in both the effect and its cleanup) when the component unmounts or the dependencies change, with and without the cleanup function present.
 
 **Questions** (depend on the tasks above)
 
-- [ ] What actually calls your cleanup function, and when? Name at least two distinct situations that trigger it.
-- [ ] What real, observable bug would you get in this app if you set up a subscription/timer in an effect but forgot the cleanup function? Be specific, not just "a memory leak."
+- [x] What actually calls your cleanup function, and when? Name at least two distinct situations that trigger it.
+- [x] What real, observable bug would you get in this app if you set up a subscription/timer in an effect but forgot the cleanup function? Be specific, not just "a memory leak."
 
 ---
 

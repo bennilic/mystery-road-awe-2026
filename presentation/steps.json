@@ -4444,6 +4444,100 @@
       "before": "function Component() {\n  fetchSomething(); // runs on EVERY render, before commit\n  return <p>...</p>;\n}",
       "after": "function Component() {\n  useEffect(() => {\n    effectRuns.emptyArray += 1; // after the first commit only\n  }, []);\n  return <p>...</p>;\n}",
       "line": 12
+    },
+    {
+      "id": "ex6-d3-t1-page",
+      "type": "app",
+      "title": "D3 - T1 — On the page: an open evidence panel that listens for Esc",
+      "narration": "Before the code: with an evidence item open, pressing Esc closes this detail panel. The key listener is registered on window, which React does not own, so it needs a cleanup function.",
+      "exercise": 6,
+      "demo": 3,
+      "highlight": "#evidenceDetailSection",
+      "waitFor": "#evidenceDetailSection",
+      "view": "/evidence?open=E01",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d3-t1",
+      "type": "code",
+      "title": "D3 - T1 — keydown listener with a cleanup in EvidenceDetail",
+      "narration": "The effect adds a keydown listener to window and returns a function that removes the same handler. It depends on onClose, so when the parent passes a new onClose the old listener is removed and a new one attached; when the panel closes or the user leaves the page, the listener is removed. Verified with Playwright: Esc closes the panel; opening E01 then E03, then leaving for the Timeline and pressing Esc does nothing.",
+      "exercise": 6,
+      "demo": 3,
+      "file": "react/features/evidence/EvidenceDetail.tsx",
+      "before": "// no keyboard shortcut existed",
+      "after": "useEffect(() => {\n  function handleKeyDown(event: KeyboardEvent) {\n    if (event.key === \"Escape\") onClose();\n  }\n  window.addEventListener(\"keydown\", handleKeyDown);\n  return () => window.removeEventListener(\"keydown\", handleKeyDown);\n}, [onClose]);",
+      "line": 72
+    },
+    {
+      "id": "ex6-d3-t2-page",
+      "type": "app",
+      "title": "D3 - T2 — On the page: the sandbox with a ticker, an unmount button and a cleanup checkbox",
+      "narration": "Before the code: the sandbox has a Ticker that starts a setInterval. SETUP and CLEANUP lines are logged in the effect and in its cleanup, and the counter shows how many timers are still running.",
+      "exercise": 6,
+      "demo": 3,
+      "highlight": "#cleanupLog",
+      "waitFor": "#cleanupLog",
+      "page": "sandbox-effects.html?strict=0"
+    },
+    {
+      "id": "ex6-d3-t2",
+      "type": "code",
+      "title": "D3 - T2 — With and without the cleanup function",
+      "narration": "With the cleanup: every change of the interval or unmount logs CLEANUP before the next SETUP, and the live timer count returns to 0 (log: SETUP 1000, CLEANUP 1000, SETUP 1500, CLEANUP 1500). Without it (checkbox off): changing the interval twice and then unmounting printed only SETUP lines and left 3 timers running even though the Ticker is gone, each still firing setTicks every interval. In the real app the same mistake is visible: with the cleanup removed from the Esc listener, opening evidence items and then going to the Timeline and pressing Esc jumped me to the Evidence page (hash changed from #/timeline to #/evidence), because the stale listeners still called the old onClose.",
+      "exercise": 6,
+      "demo": 3,
+      "file": "react/sandbox/CleanupDemo.tsx",
+      "before": "    const timerId = window.setInterval(() => setTicks((n) => n + 1), intervalMs);\n    if (!hasCleanup) return;\n    // -> checkbox off: SETUP 1500, SETUP 2000, SETUP 2500, never CLEANUP; 3 timers left after unmount",
+      "after": "    const timerId = window.setInterval(() => setTicks((n) => n + 1), intervalMs);\n    return () => {\n      window.clearInterval(timerId);\n      onLog(`CLEANUP interval ${intervalMs}ms`);\n    };\n    // -> SETUP 1000, CLEANUP 1000, SETUP 1500, CLEANUP 1500; 0 timers left",
+      "line": 17
+    },
+    {
+      "id": "ex6-d3-q1-page",
+      "type": "app",
+      "title": "D3 - Q1 — On the page: unmount and change-interval buttons",
+      "narration": "Before the code: these two buttons are the two situations I trigger the cleanup with.",
+      "exercise": 6,
+      "demo": 3,
+      "highlight": "#toggleMount",
+      "waitFor": "#toggleMount",
+      "page": "sandbox-effects.html?strict=0"
+    },
+    {
+      "id": "ex6-d3-q1",
+      "type": "code",
+      "title": "D3 - Q1 — What calls the cleanup and when",
+      "narration": "React calls it, not my code. (1) Before re-running the effect because a dependency changed: the old effect is cleaned up with the old values, then the new one is set up (change interval: CLEANUP 1000 then SETUP 1500). (2) When the component unmounts (unmount button, or navigating to another route). (3) In development Strict Mode, right after the first setup, React runs setup, cleanup, setup once to prove that the cleanup really undoes the setup. For effects with an empty array only (2) and (3) apply.",
+      "exercise": 6,
+      "demo": 3,
+      "file": "react/sandbox/CleanupDemo.tsx",
+      "before": "// nobody calls clearInterval for us",
+      "after": "// React calls the returned function: before the next run of this effect, on unmount, and once in Strict Mode dev\nreturn () => window.clearInterval(timerId);",
+      "line": 17
+    },
+    {
+      "id": "ex6-d3-q2-page",
+      "type": "app",
+      "title": "D3 - Q2 — On the page: the Timeline where a stale Esc handler misbehaves",
+      "narration": "Before the code: I am on the Timeline. Without the cleanup, pressing Esc here would send me to the Evidence page.",
+      "exercise": 6,
+      "demo": 3,
+      "highlight": ".timeline-list",
+      "waitFor": ".timeline-item",
+      "view": "/timeline",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d3-q2",
+      "type": "code",
+      "title": "D3 - Q2 — The bug without the cleanup, concretely",
+      "narration": "Not just a leak: with the removeEventListener line deleted, I opened E01 and E03, went to the Timeline with a fresh page load and pressed Esc: the URL changed from #/timeline to #/evidence. Each opened panel left a window listener behind, holding that render onClose (which calls setSearchParams for the Evidence page), so keys on unrelated pages navigate the user away, filters set by URL on the Timeline (?person=) could be wiped, and every further open adds another listener that fires on each key press. With the cleanup, the same sequence leaves the Timeline untouched (verified, same procedure, hash stays #/timeline). The sandbox shows the cost another way: unstopped intervals keep running after unmount.",
+      "exercise": 6,
+      "demo": 3,
+      "file": "react/features/evidence/EvidenceDetail.tsx",
+      "before": "useEffect(() => {\n  function handleKeyDown(event: KeyboardEvent) {\n    if (event.key === \"Escape\") onClose();\n  }\n  window.addEventListener(\"keydown\", handleKeyDown);\n  // no cleanup: Esc on #/timeline -> hash becomes #/evidence\n}, [onClose]);",
+      "after": "useEffect(() => {\n  function handleKeyDown(event: KeyboardEvent) {\n    if (event.key === \"Escape\") onClose();\n  }\n  window.addEventListener(\"keydown\", handleKeyDown);\n  return () => window.removeEventListener(\"keydown\", handleKeyDown);\n}, [onClose]);",
+      "line": 72
     }
   ]
 }

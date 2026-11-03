@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { formatDate } from "../../../js/lookup.ts";
 import type { ReviewEdit } from "../../shared/evidence/reviewEdits.ts";
 import type { Evidence, EvidenceRelevance, EvidenceStatus } from "../../../js/types.ts";
@@ -66,6 +66,17 @@ export function EvidenceDetail({
   onSaveNote,
   onChangeReview,
 }: EvidenceDetailProps) {
+  // Esc closes the panel. The listener lives on window, outside React, so it
+  // must be removed when the panel closes or onClose changes; otherwise Esc
+  // would keep calling a stale onClose on other pages.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <div className="evidence-detail" id="evidenceDetailSection">
       <div className="evidence-detail-header">

@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RenderSideEffectDemo } from "./RenderSideEffectDemo.tsx";
 import { EffectDependencyDemo } from "./EffectDependencyDemo.tsx";
+import { CleanupDemo } from "./CleanupDemo.tsx";
 
 const rootElement = document.getElementById("sandboxRoot");
 if (!rootElement) {
@@ -15,6 +16,7 @@ const demos = (
   <>
     <RenderSideEffectDemo />
     <EffectDependencyDemo />
+    <CleanupDemo />
   </>
 );
 createRoot(rootElement).render(useStrictMode ? <StrictMode>{demos}</StrictMode> : demos);
