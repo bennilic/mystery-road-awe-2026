@@ -25,7 +25,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | # | Demo | Ready? |
 |---|---|---|
 | 1 | Render logic vs. effects | ☑ |
-| 2 | `useEffect` mental model & dependency arrays | ☐ |
+| 2 | `useEffect` mental model & dependency arrays | ☑ |
 | 3 | Cleanup: timers & subscriptions | ☐ |
 | 4 | Build the read-only Node backend | ☐ |
 | 5 | Consume the backend from React | ☐ |
@@ -61,15 +61,15 @@ effect? Why or why not, and how does that distinction inform the rule you wrote?
 
 **Tasks**
 
-- [ ] Write a small `useEffect` example (can be a throwaway one first) with an empty dependency
+- [x] Write a small `useEffect` example (can be a throwaway one first) with an empty dependency
 array, one with a populated dependency array, and one with no array at all, and observe how
 often each one actually runs.
-- [ ] Find a real, justified use for `useEffect` you'll need in this app (loading data is coming in Demo 5, so pick something else — e.g. syncing the document title to the current view).
+- [x] Find a real, justified use for `useEffect` you'll need in this app (loading data is coming in Demo 5, so pick something else — e.g. syncing the document title to the current view).
 
 **Questions** (depend on the tasks above)
 
-- [ ] What does React actually compare, between renders, to decide whether to re-run an effect with a populated dependency array? What happens if you omit a value your effect actually uses from that array?
-- [ ] What's the difference, in practice, between `useEffect(fn, [])` and just writing `fn()` directly in the component body? Why doesn't the second one work the way you'd expect for "run once"?
+- [x] What does React actually compare, between renders, to decide whether to re-run an effect with a populated dependency array? What happens if you omit a value your effect actually uses from that array?
+- [x] What's the difference, in practice, between `useEffect(fn, [])` and just writing `fn()` directly in the component body? Why doesn't the second one work the way you'd expect for "run once"?
 
 ---
 

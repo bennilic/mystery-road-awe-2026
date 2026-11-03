@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, Route, Routes } from "react-router";
+import { Navigate, Route, Routes, useLocation } from "react-router";
 import { Header } from "../shell/Header.tsx";
 import { Footer } from "../shell/Footer.tsx";
 import { CaseDataProvider } from "../shared/data/CaseDataContext.tsx";
@@ -8,6 +8,7 @@ import { readNotes, writeNotes } from "../shared/storage/noteStorage.ts";
 import type { ReviewEdit, ReviewEditsByEvidenceId } from "../shared/evidence/reviewEdits.ts";
 import { describeStorageFailure } from "../shared/storage/describeStorageFailure.ts";
 import { PATHS } from "../shared/routing/paths.ts";
+import { titleForPath, useDocumentTitle } from "../shared/routing/useDocumentTitle.ts";
 import { DashboardPage } from "../features/dashboard/DashboardPage.tsx";
 import { PeoplePage } from "../features/people-locations/PeoplePage.tsx";
 import { PersonDetailPage } from "../features/people-locations/PersonDetailPage.tsx";
@@ -32,6 +33,7 @@ function AppBody() {
   // In memory only, like the vanilla app: review edits are lost on reload.
   const [reviewEdits, setReviewEdits] = useState<ReviewEditsByEvidenceId>({});
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
+  useDocumentTitle(titleForPath(useLocation().pathname));
 
   function handleSaveNote(evidenceId: string, text: string) {
     const nextNotes = { ...notes, [evidenceId]: text };
