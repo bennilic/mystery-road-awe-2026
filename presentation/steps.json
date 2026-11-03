@@ -2630,6 +2630,101 @@
       "before": "{responsibilities.map((_, index) => (\n  <li key={index}>{/* ... */}</li>\n))}",
       "after": "{responsibilities.map((responsibility) => (\n  <li key={responsibility}>{responsibility}</li>\n))}",
       "line": 12
+    },
+    {
+      "id": "ex4-d5-t1-page",
+      "type": "app",
+      "title": "D5 - T1 — On the page: presentational vs feature",
+      "narration": "Before the code: everything on this page is drawn by presentational components (tab bar, cards, list layout). The only parts that know where data comes from are the page-level feature components above them.",
+      "exercise": 4,
+      "demo": 5,
+      "highlight": ".tab-bar",
+      "waitFor": ".tab-btn",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d5-t1",
+      "type": "code",
+      "title": "D5 - T1 — Classification of every component",
+      "narration": "Rule: presentational means everything it renders arrives via props or children and it never reads context, fetches, localStorage or the URL; feature means it knows where the data lives and derives domain data (sorting, matching, counts) before passing it down. Why it matters: presentational components are trivially reusable and testable (give props, look at output), and the places that touch the outside world are few and easy to find. The full table, including honest edge cases like NavBar (props only, but its click calls navigateTo), is in docs/exercise-4/05-component-classification.md.",
+      "exercise": 4,
+      "demo": 5,
+      "file": "docs/exercise-4/05-component-classification.md",
+      "before": "(file did not exist yet)",
+      "after": "# Exercise 4 — Presentational vs. feature components (Demo 5)\n\n**Rule used:** a component is *presentational* if everything it renders arrives through its props\nor `children` (same props in, same output), and it never reads context, fetches, touches\n`localStorage` or `window.location`. It is a *feature* (container) component if it knows where\ndata comes from or how domain data is derived (context, URL, sorting, matching), and hands the\nresult down as props.\n\n| Component | Kind | Why |\n|---|---|---|\n| `App` | feature (composition root) | Reads the current route, chooses the page, mounts the data provider |\n| `CaseDataProvider` | feature (infrastructure) | Fetches the five JSON files, owns loading/error/ready |\n| `Header`, `Footer`, `HowToUseCard`, `StubPage` | presentational | Static markup / props only |\n| `NavBar` | presentational (with one callback-style dependency) | Gets `currentView` as a prop; the click calls `navigateTo`, a plain function — becomes a router link in Demo 8 |\n| `DashboardPage`, `DashboardContent` | feature | Read context and localStorage, derive counts and recent lists |\n| `CaseSummaryCard`, `StatGrid`, `StatCard`, `ReviewProgress`, `RecentEvidenceList`, `RecentTimelineList` | presentational | Props in, markup out |\n| `PeoplePage`, `PeopleContent` | feature | Read context and the URL, match evidence to people |\n| `PeopleLocationsView` | presentational | **Result of the split.** Tab, lists and counts all via props |\n| `TabBar`, `Card`, `PersonCard`, `LocationCard`, `ResponsibilityList` | presentational | Props / children only |\n| `TimelinePage`, `TimelineContent` | feature | Read context, sort events, resolve location labels, build filter options |\n| `TimelineView` | presentational | **Result of the split.** Receives sorted entries and option lists |\n| `TimelineItem`, `TimelineToolbar`, `FilterSelect` | presentational | Props only (toolbar controls are uncontrolled until Exercise 5) |\n| `CaseBadge`, `KeyedPersonList` (sandbox) | presentational | Throwaway demos, not mounted in the app |\n\n## The split\n\n`PeoplePage` used to do four jobs in one tree: gate on loading/error, read the tab from the URL,\ncount evidence per person, and lay out tab bar plus cards. It is now:\n\n- `PeopleContent` (feature): data and URL in, `activeTab` / `people` / `locations` /\n  `evidenceCountByPersonId` out.\n- `PeopleLocationsView` (presentational): layout and conditional rendering only.\n\n`TimelinePage` got the same treatment (`TimelineContent` and `TimelineView`)."
+    },
+    {
+      "id": "ex4-d5-t2-page",
+      "type": "app",
+      "title": "D5 - T2 — On the page: the part that was split",
+      "narration": "Before the code: this whole area (tab bar plus cards) is now PeopleLocationsView. Looking up evidence counts and reading the tab from the URL happens one level above, in PeopleContent.",
+      "exercise": 4,
+      "demo": 5,
+      "highlight": ".people-grid",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d5-t2",
+      "type": "code",
+      "title": "D5 - T2 — Splitting PeopleContent in two",
+      "narration": "PeopleContent did two jobs: derive data (count evidence per person, read the tab from the URL) and lay out the view (tab bar, grids, empty states). Now PeopleContent is the feature half and PeopleLocationsView the presentational half, with a props interface as the boundary. TimelineContent / TimelineView got the same split. I re-ran the browser comparison with the vanilla app after the split: people, locations and timeline text are identical and there are no console warnings.",
+      "exercise": 4,
+      "demo": 5,
+      "file": "react/pages/PeoplePage.tsx",
+      "before": "function PeopleContent({ data }: { data: CaseData }) {\n  const activeTab = readInitialTab();\n\n  return (\n    <>\n      <TabBar activeTab={activeTab} />\n      {activeTab === \"people\" ? (\n        <div className=\"people-grid\">\n          {/* `.length === 0` is a boolean, so `&&` can never print a stray 0 */}\n          {data.people.length === 0 && <p>No people are on file for this case.</p>}\n          {data.people.map((person) => (\n            <PersonCard\n              key={person.id}\n              person={person}\n              relatedEvidenceCount={countEvidenceForPerson(data.evidence, person)}\n            />\n          ))}\n        </div>\n      ) : (\n        <div className=\"locations-grid\">\n          {data.locations.length === 0 && <p>No locations are on file for this case.</p>}\n          {data.locations.map((location) => (\n            <LocationCard key={location.id} location={location} />\n          ))}\n        </div>\n      )}\n    </>\n  );\n}",
+      "after": "// Feature component: knows where the data lives (case-data context), how the\n// URL picks the tab, and how evidence is matched to people.\nfunction PeopleContent({ data }: { data: CaseData }) {\n  const evidenceCountByPersonId = Object.fromEntries(\n    data.people.map((person) => [person.id, countEvidenceForPerson(data.evidence, person)]),\n  );\n\n  return (\n    <PeopleLocationsView\n      activeTab={readInitialTab()}\n      people={data.people}\n      locations={data.locations}\n      evidenceCountByPersonId={evidenceCountByPersonId}\n    />\n  );\n}",
+      "line": 28
+    },
+    {
+      "id": "ex4-d5-q1-page",
+      "type": "app",
+      "title": "D5 - Q1 — On the page: one half draws, one half decides",
+      "narration": "Before the code: the cards show \"N related evidence items\". The number is computed in the feature half and merely displayed by the presentational half.",
+      "exercise": 4,
+      "demo": 5,
+      "highlight": ".person-card p:last-child",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d5-q1",
+      "type": "code",
+      "title": "D5 - Q1 — One responsibility per half",
+      "narration": "PeopleContent: obtain and prepare data (context, URL tab, evidence counts). PeopleLocationsView: turn already-prepared data into markup, including empty states. If an implementation detail in one half changes, the other is unaffected as long as the props contract stays: e.g. if evidence matching changes to also accept names, or the tab is later read from a route param, only PeopleContent changes; if the layout becomes a table or the empty state text changes, only the view changes. What does cross the boundary is the props interface (activeTab, people, locations, evidenceCountByPersonId), which is the only coupling, and TypeScript checks it.",
+      "exercise": 4,
+      "demo": 5,
+      "file": "react/components/PeopleLocationsView.tsx",
+      "before": "(file did not exist yet)",
+      "after": "import type { Location, Person, PersonId } from \"../../js/types.ts\";\nimport { LocationCard } from \"./LocationCard.tsx\";\nimport { PersonCard } from \"./PersonCard.tsx\";\nimport { TabBar, type PeopleTab } from \"./TabBar.tsx\";\n\ninterface PeopleLocationsViewProps {\n  activeTab: PeopleTab;\n  people: Person[];\n  locations: Location[];\n  evidenceCountByPersonId: Record<PersonId, number>;\n}\n\n// Presentational: everything arrives through props, so the same props always\n// give the same output. It does not know where the data came from, which tab\n// the URL asked for, or how evidence is matched to people.\nexport function PeopleLocationsView({\n  activeTab,\n  people,\n  locations,\n  evidenceCountByPersonId,\n}: PeopleLocationsViewProps) {\n  return (\n    <>\n      <TabBar activeTab={activeTab} />\n      {activeTab === \"people\" ? (\n        <div className=\"people-grid\">\n          {/* `.length === 0` is a boolean, so `&&` can never print a stray 0 */}\n          {people.length === 0 && <p>No people are on file for this case.</p>}\n          {people.map((person) => (\n            <PersonCard\n              key={person.id}\n              person={person}\n              relatedEvidenceCount={evidenceCountByPersonId[person.id] ?? 0}\n            />\n          ))}\n        </div>\n      ) : (\n        <div className=\"locations-grid\">\n          {locations.length === 0 && <p>No locations are on file for this case.</p>}\n          {locations.map((location) => (\n            <LocationCard key={location.id} location={location} />\n          ))}\n        </div>\n      )}\n    </>\n  );\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d5-q2-page",
+      "type": "app",
+      "title": "D5 - Q2 — On the page: a pure card",
+      "narration": "Before the code: this card is a pure function of its props. It could be dropped into any other page unchanged.",
+      "exercise": 4,
+      "demo": 5,
+      "highlight": ".person-card",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d5-q2",
+      "type": "code",
+      "title": "D5 - Q2 — My deciding rule",
+      "narration": "Rule: \"Does this component need to know where the data comes from (context, URL, storage, fetch) or how it is derived (filter, sort, count)? If yes, feature. If it could render from a props object I could write by hand in a test, presentational.\" Concrete use: PersonCard only needs a Person and a number, so it is presentational; the number itself comes from evidence matching, which is domain logic, so it is computed in the feature component and passed down. A secondary rule: reach for the presentational option first and only lift data access up one level when needed.",
+      "exercise": 4,
+      "demo": 5,
+      "file": "react/components/PersonCard.tsx",
+      "before": "// vanilla: one function fetched, counted and built HTML\nfor (const person of state.allPeople) {\n  const count = countEvidenceForPerson(person);\n  html += '<div class=\"person-card\">' + /* ... */;\n}",
+      "after": "import type { Person } from \"../../js/types.ts\";\nimport { Card } from \"./Card.tsx\";\nimport { ResponsibilityList } from \"./ResponsibilityList.tsx\";\n\ninterface PersonCardProps {\n  person: Person;\n  relatedEvidenceCount: number;\n}\n\nexport function PersonCard({ person, relatedEvidenceCount }: PersonCardProps) {\n  return (\n    <Card variant=\"person\">\n      <div className=\"person-card-header\">\n        <img className=\"person-avatar\" src={person.avatar} alt={`Portrait of ${person.name}`} />\n        <div>\n          <h3>{person.name}</h3>\n          <div className=\"person-role\">{person.role}</div>\n        </div>\n      </div>\n      <p>\n        <strong>Speciality:</strong> {person.speciality}\n      </p>\n      <ResponsibilityList responsibilities={person.responsibilities} />\n      <div className=\"person-statement\">&ldquo;{person.statement}&rdquo;</div>\n      <p>\n        {relatedEvidenceCount} related evidence item{relatedEvidenceCount === 1 ? \"\" : \"s\"}\n      </p>\n    </Card>\n  );\n}",
+      "line": 1
     }
   ]
 }

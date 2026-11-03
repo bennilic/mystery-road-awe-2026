@@ -1,7 +1,6 @@
 import { useCaseData, type CaseData } from "../data/CaseDataContext.tsx";
-import { PersonCard } from "../components/PersonCard.tsx";
-import { LocationCard } from "../components/LocationCard.tsx";
-import { TabBar, type PeopleTab } from "../components/TabBar.tsx";
+import { PeopleLocationsView } from "../components/PeopleLocationsView.tsx";
+import type { PeopleTab } from "../components/TabBar.tsx";
 import type { Evidence, Person } from "../../js/types.ts";
 import { evidenceMentionsPerson } from "../../js/lookup.ts";
 
@@ -21,33 +20,20 @@ function countEvidenceForPerson(evidence: Evidence[], person: Person): number {
   ).length;
 }
 
+// Feature component: knows where the data lives (case-data context), how the
+// URL picks the tab, and how evidence is matched to people.
 function PeopleContent({ data }: { data: CaseData }) {
-  const activeTab = readInitialTab();
+  const evidenceCountByPersonId = Object.fromEntries(
+    data.people.map((person) => [person.id, countEvidenceForPerson(data.evidence, person)]),
+  );
 
   return (
-    <>
-      <TabBar activeTab={activeTab} />
-      {activeTab === "people" ? (
-        <div className="people-grid">
-          {/* `.length === 0` is a boolean, so `&&` can never print a stray 0 */}
-          {data.people.length === 0 && <p>No people are on file for this case.</p>}
-          {data.people.map((person) => (
-            <PersonCard
-              key={person.id}
-              person={person}
-              relatedEvidenceCount={countEvidenceForPerson(data.evidence, person)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="locations-grid">
-          {data.locations.length === 0 && <p>No locations are on file for this case.</p>}
-          {data.locations.map((location) => (
-            <LocationCard key={location.id} location={location} />
-          ))}
-        </div>
-      )}
-    </>
+    <PeopleLocationsView
+      activeTab={readInitialTab()}
+      people={data.people}
+      locations={data.locations}
+      evidenceCountByPersonId={evidenceCountByPersonId}
+    />
   );
 }
 
