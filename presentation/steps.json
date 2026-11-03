@@ -3428,6 +3428,89 @@
       "file": "react/features/workspace/HypothesisForm.tsx",
       "before": "// six separate fields instead (the alternative, not used)\nconst [suspectId, setSuspectId] = useState(draft.suspectId);\nconst [nature, setNature] = useState(draft.nature);\nconst [evidenceIds, setEvidenceIds] = useState(draft.evidenceIds);\nconst [confidence, setConfidence] = useState(draft.confidence);\nconst [explanation, setExplanation] = useState(draft.explanation);\nconst [alternative, setAlternative] = useState(draft.alternative);",
       "after": "type HypothesisFormValues = Omit<HypothesisDraft, \"savedAt\">;\n\n  const [values, setValues] = useState<HypothesisFormValues>(readHypothesisDraft);\n  function updateField<Field extends keyof HypothesisFormValues>(\n    field: Field,\n    value: HypothesisFormValues[Field],\n  ) {\n    setValues((previous) => ({ ...previous, [field]: value }));\n  }\n"
+    },
+    {
+      "id": "ex5-d3-t1-page",
+      "type": "app",
+      "title": "D3 - T1 — On the page: the sandbox with a mutating push",
+      "narration": "Before the code: a throwaway sandbox. Press 'push (mutating)': the array is changed but the screen stays the same. Press 'unrelated re-render' and the new item suddenly appears, while the memo child still says 2 items.",
+      "exercise": 5,
+      "demo": 3,
+      "highlight": "#listText",
+      "waitFor": "#listText",
+      "page": "sandbox-state.html"
+    },
+    {
+      "id": "ex5-d3-t1",
+      "type": "code",
+      "title": "D3 - T1 — The mutating first instinct vs the immutable update",
+      "narration": "My first instinct for a bookmark toggle was items.push(id); setItems(items). Recorded in the sandbox: after the click the screen still shows 'E02, E01' because setItems received the same array reference, so React bails out without rendering. After an unrelated re-render the list text shows E03 (it 'works' by accident), but the memo child still reports 2 items, because its prop was the same object all along. The immutable version, setItems([...items, 'E03']), makes a new array: list and memo child both update at once ('E02, E01, E03, E03' and 4 items in the recording because I pressed it after the push). The real code never contained the mutation: the Evidence handler builds a new array, and the logic now lives in the pure toggleBookmarkId.",
+      "exercise": 5,
+      "demo": 3,
+      "file": "react/sandbox/MutationDemo.tsx",
+      "before": "  function pushMutating() {\n    items.push(\"E03\"); // mutates the array React is holding\n    setItems(items); // same reference: React sees \"no change\" and bails out\n  }",
+      "after": "  function appendImmutably() {\n    setItems([...items, \"E03\"]);\n  }",
+      "line": 30
+    },
+    {
+      "id": "ex5-d3-t2",
+      "type": "code",
+      "title": "D3 - T2 — Bookmark toggle extracted as a pure function, with a check on a frozen array",
+      "narration": "toggleBookmarkId(ids, id) is the whole toggle rule: it returns ids.filter(...) or [...ids, id], never push/splice. A check specifically exercising the immutability sits in the sandbox page: it calls the real function with Object.freeze(['E01','E02']). A version that mutated its input would throw a TypeError there (ES modules are strict mode); instead the page prints 'add returns a new array: true', 'remove returns a new array: true', 'input unchanged: true', 'add result: E01,E02,E03', 'remove result: E02'. (No test framework: automated tests are out of scope for this exercise.) In the app: toggling star 3, star 1, star 3 again leaves ['E01'] in localStorage and exactly one active star.",
+      "exercise": 5,
+      "demo": 3,
+      "file": "react/shared/bookmarks/toggleBookmarkId.ts",
+      "before": "// react/features/evidence/EvidencePage.tsx (Demo 2)\n  function handleToggleBookmark(evidenceId: string) {\n    const nextIds = bookmarkedIds.includes(evidenceId)\n      ? bookmarkedIds.filter((id) => id !== evidenceId)\n      : [...bookmarkedIds, evidenceId];",
+      "after": "// react/shared/bookmarks/toggleBookmarkId.ts\n// Returns a NEW array with `evidenceId` added or removed; never touches\n// `bookmarkedIds`. React decides whether to re-render by comparing the old and\n// new state with Object.is, so a changed value needs a changed reference.\nexport function toggleBookmarkId(bookmarkedIds: readonly string[], evidenceId: string): string[] {\n  return bookmarkedIds.includes(evidenceId)\n    ? bookmarkedIds.filter((id) => id !== evidenceId)\n    : [...bookmarkedIds, evidenceId];\n}\n\n\n// react/features/evidence/EvidencePage.tsx\n  function handleToggleBookmark(evidenceId: string) {\n    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);\n    setBookmarkedIds(nextIds);"
+    },
+    {
+      "id": "ex5-d3-q1-page",
+      "type": "app",
+      "title": "D3 - Q1 — On the page: the screen did not change",
+      "narration": "Before the code: same sandbox, 'sort shared array' was pressed on a two-item list and the list text on screen is still 'E02, E01' although the array underneath is already sorted.",
+      "exercise": 5,
+      "demo": 3,
+      "highlight": "#listText",
+      "waitFor": "#listText",
+      "page": "sandbox-state.html",
+      "action": {
+        "type": "click",
+        "selector": "#sortMutating"
+      }
+    },
+    {
+      "id": "ex5-d3-q1",
+      "type": "code",
+      "title": "D3 - Q1 — Why mutation sometimes looks fine, and what React compares",
+      "narration": "React does not look inside state. After setState it compares the new value with the old one using Object.is, i.e. reference identity for arrays and objects; if they are the same it skips the render of that component and treats memo children, useMemo and effect dependencies as unchanged. Mutation 'works' on screen whenever something else triggers a render anyway (another setState, a parent update, a keystroke in another field): the render then reads the already-mutated array, so the screen looks right. It breaks whenever the render is skipped or relied on a reference check: the push example above (no render until something else caused one), the React.memo child that kept showing 2 items, a useMemo/dependency array that never re-runs, and time travel/undo or comparing previous and next state, where the 'previous' array already contains the change. Those bugs depend on timing, which is why they are hard to track: the same code looks correct or broken depending on what else happened to render.",
+      "exercise": 5,
+      "demo": 3,
+      "file": "react/sandbox/MutationDemo.tsx",
+      "before": "  function pushMutating() {\n    items.push(\"E03\"); // mutates the array React is holding\n    setItems(items); // same reference: React sees \"no change\" and bails out\n  }",
+      "after": "const ItemCount = memo(function ItemCount({ items }: { items: string[] }) {\n  return <output id=\"countFromMemo\">memo child sees {items.length} items</output>;\n});\n// Object.is(oldItems, newItems) is true after push -> bail out, memo child keeps its old props"
+    },
+    {
+      "id": "ex5-d3-q2-page",
+      "type": "app",
+      "title": "D3 - Q2 — On the page: the bookmark stars and the sort menu",
+      "narration": "Before the code: the equivalent actions in the app, toggling a star and choosing a sort order. Neither can change the master evidence list.",
+      "exercise": 5,
+      "demo": 3,
+      "highlight": "#evidenceToolbar",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d3-q2",
+      "type": "code",
+      "title": "D3 - Q2 — How the React version avoids the vanilla shared-array sort bug",
+      "narration": "Vanilla (Exercise 1): state.filteredEvidence and state.allEvidence were the same array object, and the sort did filteredEvidence.sort(...), which sorts in place, so the master order was lost for good. Specific differences now: (1) the evidence list is not state at all, it is read-only data from the provider and nothing ever receives a write handle to it; (2) bookmarks are a separate list of ids and the toggle only produces a new array via filter / spread, the evidence objects are never flagged (the vanilla ev.bookmarked = true is gone); (3) when I sort in Demo 4 the visible list is built with filter (a new array) and sorted as a copy, so the original is untouched even if I did call .sort; (4) the sandbox shows the difference directly: 'sort shared array' reorders the array React holds (the screen even lags behind), 'sort a copy' ([...items].sort()) produces a new array and the screen and state agree. It is not that React protects against mutation (it does not, it only compares references); it is that the state design never hands out the master array to code that sorts, and updates go through new values.",
+      "exercise": 5,
+      "demo": 3,
+      "file": "react/sandbox/MutationDemo.tsx",
+      "before": "  function sortMutating() {\n    const visible = items;\n    visible.sort();\n    setItems(visible);\n  }",
+      "after": "  function sortOnCopy() {\n    setItems([...items].sort());\n  }"
     }
   ]
 }

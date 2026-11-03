@@ -24,7 +24,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 |---|---|---|
 | 1 | Migrate event handling from vanilla listeners | ☑ |
 | 2 | `useState` & controlled forms | ☑ |
-| 3 | Immutable updates | ☐ |
+| 3 | Immutable updates | ☑ |
 | 4 | Derived values vs. stored state | ☐ |
 | 5 | Lifting state to the nearest common owner | ☐ |
 | 6 | Passing callbacks downward | ☐ |
@@ -70,14 +70,14 @@ confidence range, explanation and alternative textareas) fully controlled.
 
 **Tasks**
 
-- [ ] Find at least one place where your first instinct (or an early draft) would have mutated state directly (e.g. `evidence.bookmarked = true`, or pushing directly into a state array), and rewrite it as an immutable update.
-- [ ] Add a case to your bookmark toggle logic that specifically exercises this: toggling a bookmark must produce a *new* array/object, not a mutated one.
+- [x] Find at least one place where your first instinct (or an early draft) would have mutated state directly (e.g. `evidence.bookmarked = true`, or pushing directly into a state array), and rewrite it as an immutable update.
+- [x] Add a case to your bookmark toggle logic that specifically exercises this: toggling a bookmark must produce a *new* array/object, not a mutated one.
 
 **Questions** (depend on the tasks above)
 
-- [ ] Why does mutating state directly in React sometimes still appear to "work" on screen, but
+- [x] Why does mutating state directly in React sometimes still appear to "work" on screen, but
 cause real (possibly hard-to-track) bugs elsewhere? What is React actually comparing when it decides whether to re-render?
-- [ ] The original vanilla app had a real bug where sorting evidence mutated the master array via a shared reference, permanently losing the original order. Show how your React state update for the equivalent action (bookmark toggle, or sort, if you implement it) avoids that exact class of bug. Be specific about what's different, not just "React handles it."
+- [x] The original vanilla app had a real bug where sorting evidence mutated the master array via a shared reference, permanently losing the original order. Show how your React state update for the equivalent action (bookmark toggle, or sort, if you implement it) avoids that exact class of bug. Be specific about what's different, not just "React handles it."
 
 ---
 

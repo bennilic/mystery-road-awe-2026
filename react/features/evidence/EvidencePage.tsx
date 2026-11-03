@@ -4,6 +4,7 @@ import { CaseDataGate } from "../../shared/data/CaseDataGate.tsx";
 import type { CaseData } from "../../shared/data/CaseDataContext.tsx";
 import { OPEN_EVIDENCE_PARAM } from "../../shared/routing/paths.ts";
 import { readBookmarkIds, writeBookmarkIds } from "../../shared/storage/bookmarkStorage.ts";
+import { toggleBookmarkId } from "../../shared/bookmarks/toggleBookmarkId.ts";
 import { readNotes, writeNotes } from "../../shared/storage/noteStorage.ts";
 import { describeStorageFailure } from "../../shared/storage/describeStorageFailure.ts";
 import { EvidenceCard } from "./EvidenceCard.tsx";
@@ -26,9 +27,7 @@ function EvidenceContent({ data }: { data: CaseData }) {
   }
 
   function handleToggleBookmark(evidenceId: string) {
-    const nextIds = bookmarkedIds.includes(evidenceId)
-      ? bookmarkedIds.filter((id) => id !== evidenceId)
-      : [...bookmarkedIds, evidenceId];
+    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);
     setBookmarkedIds(nextIds);
     try {
       writeBookmarkIds(nextIds);
