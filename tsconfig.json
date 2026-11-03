@@ -46,5 +46,12 @@
     // the not-yet-converted .js modules) are gone — every file under js/ is
     // .ts now, so there's nothing left to bridge to.
   },
-  "include": ["js/**/*.ts", "react/**/*.ts", "react/**/*.tsx", "server/**/*.ts", "vite.config.ts"]
+  "include": [
+    "js/**/*.ts",
+    "protocol/**/*.ts",
+    "react/**/*.ts",
+    "react/**/*.tsx",
+    "server/**/*.ts",
+    "vite.config.ts"
+  ]
 }

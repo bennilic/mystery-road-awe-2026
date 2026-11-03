@@ -5570,6 +5570,126 @@
       "before": "names: [...namesBySocket.values()]",
       "after": "// per connection, instead of just a name:\ninterface Participant {\n  name: string;\n  viewingEvidenceId: string | null;\n}\nconst participants = new Map<WebSocket, Participant>();\n// presence-updated: { type, participants: Participant[] }",
       "line": 19
+    },
+    {
+      "id": "ex7-d4-t1-page",
+      "type": "app",
+      "title": "D4 - T1 — One shared discriminated-union protocol (page)",
+      "narration": "Before the code: the presence chips on the Workspace are now driven by typed messages; behaviour is unchanged, but both sides now speak one declared language.",
+      "exercise": 7,
+      "demo": 4,
+      "highlight": "#livePanel",
+      "waitFor": "#livePanel",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d4-t1",
+      "type": "code",
+      "title": "D4 - T1 — One shared discriminated-union protocol",
+      "narration": "protocol/workspaceProtocol.ts declares ClientMessage (toggle-bookmark, request-state) and ServerMessage (welcome, workspace-state, bookmarks-updated, presence-updated) exactly as required, as discriminated unions on the type field. The server builds every outgoing message through sendMessage(socket, message: ServerMessage) and switches over ClientMessage with an assertNever default; the browser switches over ServerMessage. Before this change the client had two hand-written type guards and the server sent anonymous object literals. Verified: tsc is clean, the Workspace still shows the name and presence in the browser, and an integration test sends a typed request-state, then an unreadable frame, and shows that the server logs both and keeps serving. Note: Prettier reformatted ClientMessage onto one line; the type is identical to the spec.",
+      "exercise": 7,
+      "demo": 4,
+      "file": "protocol/workspaceProtocol.ts",
+      "before": "// (no shared message type: each side guessed the other's shape)\nfunction isWelcome(message: unknown): message is { type: \"welcome\"; name: string } { /* ... */ }",
+      "after": "// Browser -> server.\nexport type ClientMessage =\n  { type: \"toggle-bookmark\"; evidenceId: string } | { type: \"request-state\" };\n\n// Server -> browser.\nexport type ServerMessage =\n  | { type: \"welcome\"; name: string }\n  | { type: \"workspace-state\"; bookmarks: string[] }\n  | { type: \"bookmarks-updated\"; bookmarks: string[] }\n  | { type: \"presence-updated\"; names: string[] };",
+      "line": 7
+    },
+    {
+      "id": "ex7-d4-q1-page",
+      "type": "app",
+      "title": "D4 - Q1 — Why a type discriminator (page)",
+      "narration": "Before the code: every update on this panel is one of four message kinds; the type field says which one.",
+      "exercise": 7,
+      "demo": 4,
+      "highlight": "#livePanel",
+      "waitFor": "#livePanel",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d4-q1",
+      "type": "code",
+      "title": "D4 - Q1 — Why a type discriminator",
+      "narration": "With one object with many optional properties (name?, names?, bookmarks?, evidenceId?) the compiler cannot say which fields exist: every access needs a check, impossible combinations are allowed (a welcome that carries bookmarks, a toggle without an evidenceId), and a typo goes unnoticed. With a discriminated union, checking message.type narrows the object: inside case \"presence-updated\" TypeScript knows names exists and is a string[], and inside case \"welcome\" it knows name does. The type is also the natural switch key, and a switch with an assertNever default makes forgetting a case a compile error. It is clearer for readers, too: the union is the complete list of what can be said.",
+      "exercise": 7,
+      "demo": 4,
+      "file": "protocol/workspaceProtocol.ts",
+      "before": "interface Message {\n  type: string;\n  name?: string;\n  names?: string[];\n  bookmarks?: string[];\n  evidenceId?: string;\n}\n// message.names.length  -> error: possibly undefined, but is it a presence message?",
+      "after": "// Server -> browser.\nexport type ServerMessage =\n  | { type: \"welcome\"; name: string }\n  | { type: \"workspace-state\"; bookmarks: string[] }\n  | { type: \"bookmarks-updated\"; bookmarks: string[] }\n  | { type: \"presence-updated\"; names: string[] };",
+      "line": 11
+    },
+    {
+      "id": "ex7-d4-q2-page",
+      "type": "app",
+      "title": "D4 - Q2 — How the types are shared (page)",
+      "narration": "Before the code: the same file feeds the server that sends these chips and the page that draws them.",
+      "exercise": 7,
+      "demo": 4,
+      "highlight": "#livePanel",
+      "waitFor": "#livePanel",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d4-q2",
+      "type": "code",
+      "title": "D4 - Q2 — How the types are shared",
+      "narration": "protocol/workspaceProtocol.ts is a plain TypeScript file with only type declarations; the browser code (react/shared/live) and the Node server (server/realtime.ts) both import it with a relative path, and tsconfig.json includes protocol/ in the one compile. Vite and Node (type stripping) erase the types, so no runtime code is shared or bundled. The problem it prevents is drift: I tested it by renaming names to users in the protocol only, and tsc immediately failed on both sides: react/shared/live/useWorkspaceSocket.ts(55,36): error TS2339: Property 'names' does not exist on type '{ type: 'presence-updated'; users: string[]; }'. | server/realtime.ts(31,7): error TS2353: Object literal may only specify known properties, and 'names' does not exist in type '{ type: 'presence-updated'; users: string[]; }'.. Without a shared file each side would keep its own idea of the shape, and the mismatch would show up only at runtime as an undefined value in the UI.",
+      "exercise": 7,
+      "demo": 4,
+      "file": "server/realtime.ts",
+      "before": "// server and browser each had their own idea:\nsocket.send(JSON.stringify({ type: \"presence-updated\", names: [...namesBySocket.values()] }));",
+      "after": "import type { ClientMessage, ServerMessage } from \"../protocol/workspaceProtocol.ts\";\n// ...\nconst message: ServerMessage = { type: \"presence-updated\", names: [...namesBySocket.values()] };\n\n// protocol renamed names -> users, tsc output:\n// react/shared/live/useWorkspaceSocket.ts(55,36): error TS2339: Property 'names' does not exist on type '{ type: \"presence-updated\"; users: string[]; }'.\n// server/realtime.ts(31,7): error TS2353: Object literal may only specify known properties, and 'names' does not exist in type '{ type: \"presence-updated\"; users: string[]; }'.",
+      "line": 20
+    },
+    {
+      "id": "ex7-d4-q3-page",
+      "type": "app",
+      "title": "D4 - Q3 — Adding a note-update message (page)",
+      "narration": "Before the code: notes live in this Workspace; a live note update would be a new kind of message, not a change to the bookmark ones.",
+      "exercise": 7,
+      "demo": 4,
+      "highlight": "#livePanel",
+      "waitFor": "#livePanel",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d4-q3",
+      "type": "code",
+      "title": "D4 - Q3 — Adding a note-update message",
+      "narration": "Add one more member to the union, for example { type: \"update-note\"; evidenceId: string; text: string } to ClientMessage (and a note-updated one to ServerMessage). The existing members toggle-bookmark and request-state are not touched, so nothing that already sends or receives them changes. The compiler then lists exactly what is left to do: I tried it and tsc reported only server/realtime.ts(53,23): error TS2345: Argument of type '{ type: \"update-note\"; evidenceId: string; text: string; }' is not assignable to parameter of type 'never'. , i.e. the server's exhaustive switch has no case for the new message. That is the point of the union plus assertNever: extension is additive and the missing work is found by the compiler, not by a user.",
+      "exercise": 7,
+      "demo": 4,
+      "file": "protocol/workspaceProtocol.ts",
+      "before": "// Browser -> server.\nexport type ClientMessage =\n  { type: \"toggle-bookmark\"; evidenceId: string } | { type: \"request-state\" };",
+      "after": "export type ClientMessage =\n  | { type: \"toggle-bookmark\"; evidenceId: string }\n  | { type: \"request-state\" }\n  | { type: \"update-note\"; evidenceId: string; text: string };\n\n// tsc: server/realtime.ts(53,23): error TS2345: Argument of type '{ type: \"update-note\"; evidenceId: string; text: string; }' is not assignable to parameter of type 'never'.",
+      "line": 7
+    },
+    {
+      "id": "ex7-d4-q4-page",
+      "type": "app",
+      "title": "D4 - Q4 — Where runtime validation belongs (page)",
+      "narration": "Before the code: anything typed into a WebSocket from outside this page never passed through these types.",
+      "exercise": 7,
+      "demo": 4,
+      "highlight": "#livePanel",
+      "waitFor": "#livePanel",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d4-q4",
+      "type": "code",
+      "title": "D4 - Q4 — Where runtime validation belongs",
+      "narration": "At the boundary where bytes become typed data: JSON.parse returns any, and a TypeScript type is erased at runtime, so nothing guarantees that an incoming frame really is a ClientMessage. The server must validate every incoming frame (valid JSON, known type, right field types, evidence id that exists) before it touches state; that is Demo 9. The browser should check what it receives too, if the server is not fully trusted (version mismatch after a deploy), at least type plus the fields it reads. Inside the program, between functions that already receive validated, typed values, no repeated checks are needed. Today both sides still use a cast, which is exactly the gap Demo 9 closes on the server.",
+      "exercise": 7,
+      "demo": 4,
+      "file": "server/realtime.ts",
+      "before": "    socket.on(\"message\", (data) => {\n      let message: ClientMessage;\n      try {\n        // A cast, not a check: Demo 9 adds the real validation. Until then a\n        // broken frame is only kept from crashing the server.\n        message = JSON.parse(data.toString()) as ClientMessage;\n      } catch (error) {\n        log(`[realtime] ignored unreadable message from ${name}: ${String(error)}`);\n        return;\n      }",
+      "after": "// Demo 9 replaces the cast with a check (planned):\nconst parsed = parseClientMessage(data.toString(), knownEvidenceIds);\nif (!parsed.ok) { sendMessage(socket, { type: \"error\", ... }); return; }",
+      "line": 43
     }
   ]
 }

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { fileURLToPath } from "node:url";
 import { WebSocket } from "ws";
+import type { ClientMessage } from "../protocol/workspaceProtocol.ts";
 import { createBackend } from "./app.ts";
 
 const dataDirectory = fileURLToPath(new URL("../public/data", import.meta.url));
@@ -65,6 +66,24 @@ test("presence lists every open connection and drops a closed one", async () => 
     await waitUntil(() => lastOf(second.messages).names.length === 1);
     assert.equal(lastOf(second.messages).names.length, 1);
     assert.ok(log.some((line) => line.startsWith("[realtime] close")));
+    second.socket.close();
+  });
+});
+
+test("typed client messages are logged by type and a broken frame does not crash the server", async () => {
+  await withBackend(async (socketUrl, log) => {
+    const { socket, messages } = await connect(socketUrl);
+    const request: ClientMessage = { type: "request-state" };
+    socket.send(JSON.stringify(request));
+    socket.send("this is not json");
+    await waitUntil(() => log.some((line) => line.includes("ignored unreadable")));
+    assert.ok(log.some((line) => line.endsWith(": request-state")));
+    // Still serving: a new connection is welcomed.
+    const second = await connect(socketUrl);
+    await waitUntil(() => second.messages.length >= 1);
+    assert.equal((second.messages[0] as { type: string }).type, "welcome");
+    assert.ok(messages.length >= 1);
+    socket.close();
     second.socket.close();
   });
 });

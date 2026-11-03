@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ServerMessage } from "../../../protocol/workspaceProtocol.ts";
 
 export type ConnectionStatus = "connecting" | "live" | "disconnected";
 
@@ -15,37 +16,14 @@ function logSocketEvent(eventName: string, detail?: unknown): void {
   console.info(`[live] ${eventName}`, detail ?? "");
 }
 
-// Hand-written checks for now; Demo 4 replaces them with one shared message type.
-function isWelcome(message: unknown): message is { type: "welcome"; name: string } {
-  return (
-    typeof message === "object" &&
-    message !== null &&
-    "type" in message &&
-    message.type === "welcome" &&
-    "name" in message &&
-    typeof message.name === "string"
-  );
-}
-
-function isPresenceUpdate(
-  message: unknown,
-): message is { type: "presence-updated"; names: string[] } {
-  return (
-    typeof message === "object" &&
-    message !== null &&
-    "type" in message &&
-    message.type === "presence-updated" &&
-    "names" in message &&
-    Array.isArray(message.names)
-  );
-}
-
 export interface WorkspaceSocket {
   status: ConnectionStatus;
   // The name the server gave this connection; null until the welcome arrives.
   myName: string | null;
   // Everyone currently connected, as last reported by the server.
   presenceNames: string[];
+  // The shared bookmark ids as last sent by the server.
+  sharedBookmarkIds: string[];
 }
 
 // Connects, reports the status, keeps the server's name for this connection and
@@ -54,6 +32,7 @@ export function useWorkspaceSocket(): WorkspaceSocket {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [myName, setMyName] = useState<string | null>(null);
   const [presenceNames, setPresenceNames] = useState<string[]>([]);
+  const [sharedBookmarkIds, setSharedBookmarkIds] = useState<string[]>([]);
 
   useEffect(() => {
     const socket = new WebSocket(socketUrl());
@@ -67,9 +46,19 @@ export function useWorkspaceSocket(): WorkspaceSocket {
     socket.addEventListener("message", (event: MessageEvent<string>) => {
       logSocketEvent("message", event.data);
       if (!isCurrent) return;
-      const message: unknown = JSON.parse(event.data);
-      if (isWelcome(message)) setMyName(message.name);
-      else if (isPresenceUpdate(message)) setPresenceNames(message.names);
+      const message = JSON.parse(event.data) as ServerMessage;
+      switch (message.type) {
+        case "welcome":
+          setMyName(message.name);
+          break;
+        case "presence-updated":
+          setPresenceNames(message.names);
+          break;
+        case "workspace-state":
+        case "bookmarks-updated":
+          setSharedBookmarkIds(message.bookmarks);
+          break;
+      }
     });
     socket.addEventListener("error", (event) => logSocketEvent("error", event));
     socket.addEventListener("close", (event) => {
@@ -83,5 +72,5 @@ export function useWorkspaceSocket(): WorkspaceSocket {
     };
   }, []);
 
-  return { status, myName, presenceNames };
+  return { status, myName, presenceNames, sharedBookmarkIds };
 }

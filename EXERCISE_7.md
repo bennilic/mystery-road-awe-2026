@@ -21,7 +21,7 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 | 1 | HTTP request-response vs. WebSockets | ☑ |
 | 2 | Minimal WebSocket lifecycle | ☑ |
 | 3 | Client identity and presence | ☑ |
-| 4 | Small typed message protocol | ☐ |
+| 4 | Small typed message protocol | ☑ |
 | 5 | In-memory shared server state | ☐ |
 | 6 | Live bookmark updates | ☐ |
 | 7 | Why bookmarks are easy to synchronize | ☐ |
@@ -79,7 +79,7 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 
 ### Required task
 
-- [ ] Define and share a small discriminated-union protocol covering the required messages:
+- [x] Define and share a small discriminated-union protocol covering the required messages:
 
 ```ts
 type ClientMessage =
@@ -95,10 +95,10 @@ type ServerMessage =
 
 ### Questions
 
-- [ ] Why is a `type` discriminator safer and clearer than one object with many optional properties?
-- [ ] How are the message types shared between the browser and Node server, and what problem does that prevent?
-- [ ] How would you add a message for a note update without changing the existing bookmark message shape?
-- [ ] Where should runtime validation be added?
+- [x] Why is a `type` discriminator safer and clearer than one object with many optional properties?
+- [x] How are the message types shared between the browser and Node server, and what problem does that prevent?
+- [x] How would you add a message for a note update without changing the existing bookmark message shape?
+- [x] Where should runtime validation be added?
 
 ---
 
