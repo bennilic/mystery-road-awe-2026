@@ -3222,6 +3222,107 @@
       "file": "react/features/*/ *Page.tsx",
       "before": "export function TimelinePage() {\n  const caseData = useCaseData();\n\n  return (\n    <section className=\"view active\">\n      <h2>Investigation Timeline</h2>\n      {caseData.status === \"loading\" && <p>Loading case file&hellip;</p>}\n      {caseData.status === \"error\" && (\n        <p role=\"alert\">\n          The case file could not be loaded ({caseData.message}). Check that the dev server is\n          running and reload the page.\n        </p>\n      )}\n      {caseData.status === \"ready\" && <TimelineContent data={caseData.data} />}\n    </section>\n  );\n}",
       "after": "<CaseDataGate>\n  {(data) => <TimelineContent data={data} />}\n</CaseDataGate>   // proposed, not built"
+    },
+    {
+      "id": "exercise-5-intro",
+      "type": "app",
+      "title": "Exercise 5 — React Interactivity, State & Reactive Programming",
+      "narration": "Section marker: Exercise 5 makes the app interactive. The last two views, Evidence Catalogue and Workspace, are built in React for the first time, and state (useState, useReducer, Context) replaces the vanilla globals and DOM reads. Out of scope: useEffect and data fetching (Exercise 6), a backend and automated tests. Open http://localhost:8080/react.html next to the vanilla app (index.html) to compare.",
+      "exercise": 5,
+      "demo": -1
+    },
+    {
+      "id": "ex5-d1-t1-page",
+      "type": "app",
+      "title": "D1 - T1 — On the page: the two new views and their handlers",
+      "narration": "Before the code: the Evidence Catalogue is now a real React page: the filter toolbar, the cards with a bookmark button, the detail panel with the note form, and (next tab) the Workspace with the notes list and the hypothesis form. Three handlers are live: the bookmark star, the search box and Save note; the hypothesis Save button and the confidence slider are migrated too.",
+      "exercise": 5,
+      "demo": 1,
+      "highlight": "#evidenceToolbar",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d1-t1",
+      "type": "code",
+      "title": "D1 - T1 — Cards, toolbar, detail and Workspace as React components, with real handlers",
+      "narration": "EvidencePage is the feature component that owns the state; EvidenceToolbar, EvidenceCard and EvidenceDetail are presentational and receive callbacks. Handlers migrated from the vanilla version: (1) bookmark click (inline data-action button plus a delegated listener before, onClick on the button now), (2) search input (addEventListener('input') before, onChange now), (3) Save note (inline onclick=saveCurrentNote() that read the textarea back from the DOM, now a form onSubmit that reads FormData), (4) Save hypothesis (inline onclick, now form onSubmit), (5) the confidence slider (addEventListener('input') before, onChange now). The other filters are visible but inert until Demo 4. Verified in the browser with Playwright: search 'chat' leaves 2 of 18 cards, the star toggles and writes remotion_bookmarks, Save note writes remotion_notes and the preview shows it, the Workspace lists the bookmark and the note, 'Open' opens that item's detail, the hypothesis saves and survives a reload; no console errors.",
+      "exercise": 5,
+      "demo": 1,
+      "file": "react/features/evidence/EvidenceCard.tsx",
+      "before": "// js/views/evidence.ts (vanilla): HTML string + one delegated listener\nfunction renderEvidenceCardHTML(ev: Evidence): string {\n  const isBookmarked = state.bookmarks.indexOf(ev.id) !== -1;\n  let html = '<div class=\"evidence-card\" data-id=\"' + ev.id + '\">';\n  html +=\n    '<button class=\"bookmark-btn ' +\n    (isBookmarked ? \"active\" : \"\") +\n    '\" data-action=\"bookmark\" data-id=\"' +\n    ev.id +\n    '\" aria-label=\"Toggle bookmark for ' +\n    ev.title +\n    '\"><span class=\"bookmark-icon\">' +\n    (isBookmarked ? \"★\" : \"☆\") +\n    \"</span></button>\";\n  html += \"<h3>\" + ev.title + \"</h3>\";\n  html +=\n    '<div class=\"evidence-meta\">' +\n...\nfunction handleEvidenceListClick(event: Event): void {\n  const target = event.target as HTMLElement;\n\n  if (target.dataset && target.dataset.action === \"bookmark\") {\n    event.stopPropagation();\n    handleBookmarkClick(target.dataset.id!);\n    return;\n  }\n\n  const card = target.closest<HTMLElement>(\".evidence-card\");\n  if (card) {\n    openEvidenceDetail(card.getAttribute(\"data-id\")!);\n  }\n}",
+      "after": "  return (\n    // React attaches this handler itself; there is no inline HTML attribute string\n    // and no listener on a parent container to dispatch by event.target.\n    <div className=\"evidence-card\" onClick={() => onOpen(item.id)}>\n      <button\n        type=\"button\"\n        className={isBookmarked ? \"bookmark-btn active\" : \"bookmark-btn\"}\n        aria-label={`Toggle bookmark for ${item.title}`}\n        onClick={(event) => {\n          // The button sits inside the clickable card: without this the same\n          // click would also open the detail panel.\n          event.stopPropagation();\n          onToggleBookmark(item.id);\n        }}\n      >\n        <span className=\"bookmark-icon\">{isBookmarked ? \"★\" : \"☆\"}</span>\n      </button>",
+      "line": 14
+    },
+    {
+      "id": "ex5-d1-t2-page",
+      "type": "app",
+      "title": "D1 - T2 — On the page: the star button inside a clickable card",
+      "narration": "Before the code: this star has no inline onclick attribute and no listener attached by hand. Clicking it toggles the bookmark; clicking the rest of the card opens the detail.",
+      "exercise": 5,
+      "demo": 1,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d1-t2",
+      "type": "code",
+      "title": "D1 - T2 — No inline onclick and no addEventListener left in the new views",
+      "narration": "Checked with grep over react/features/evidence, react/features/workspace and react/shared: no 'onclick=', addEventListener, innerHTML, querySelector, getElementById or classList. The vanilla wiring needed three mechanisms: onclick attributes inside HTML strings that only work because main.ts copies the functions onto window, addEventListener calls in setupEventListeners, and a listener on the list container re-added on every render. In React the handler is a prop on the element, React owns registering and removing it. Before tab: the vanilla wiring, After tab: the React props and the empty grep result.",
+      "exercise": 5,
+      "demo": 1,
+      "file": "react/features/evidence/EvidencePage.tsx",
+      "before": "// js/main.ts (vanilla): handlers attached by hand\nel<HTMLInputElement>(\"evidenceSearch\")!.addEventListener(\"input\", handleSearchInput);\nel(\"clearFiltersBtn\")!.addEventListener(\"click\", clearFilters);\n// js/views/evidence.ts: inline attribute inside an HTML string\n'<button type=\"button\" class=\"btn btn-secondary btn-small\" onclick=\"closeEvidenceDetail()\">Close</button>'\n'<button type=\"button\" class=\"btn btn-primary btn-small\" onclick=\"saveCurrentNote()\">Save note</button>'",
+      "after": "// React: the handler is a prop, React registers and removes it\n<input id=\"evidenceSearch\" onChange={onSearchChange} />\n<button type=\"button\" onClick={onClose}>Close</button>\n<form onSubmit={handleNoteSubmit}>...</form>\n\n// $ grep -rnE \"onclick=|addEventListener|innerHTML|querySelector|getElementById|classList\" react/features/evidence react/features/workspace react/shared\n// (no matches)"
+    },
+    {
+      "id": "ex5-d1-q1-page",
+      "type": "app",
+      "title": "D1 - Q1 — On the page: the search box",
+      "narration": "Before the code: typing here fires onChange in React. The event object it receives is not the browser's native one.",
+      "exercise": 5,
+      "demo": 1,
+      "highlight": "#evidenceSearch",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d1-q1",
+      "type": "code",
+      "title": "D1 - Q1 — React handler vs inline onclick / addEventListener",
+      "narration": "Vanilla inline onclick=\"fn()\" is an HTML attribute string evaluated in global scope (that is why main.ts had to copy functions onto window); the browser calls it with its native Event. addEventListener also hands over the native Event, to a function reference, with the listener attached to that exact element. In React you write onClick={fn} on the JSX element and React calls fn with a SyntheticEvent: a cross-browser wrapper with the same API (target, currentTarget, preventDefault, stopPropagation) and a .nativeEvent field to reach the browser's object. So they are not the same kind of object: one is the DOM Event, the other React's wrapper around it. React does not attach a listener to your button at all: since React 17 it registers one listener per event type on the root container and dispatches to the handler props itself, running them in React's own bubbling order.",
+      "exercise": 5,
+      "demo": 1,
+      "file": "react/features/evidence/EvidenceToolbar.tsx",
+      "before": "// vanilla\nel<HTMLInputElement>(\"evidenceSearch\")!.addEventListener(\"input\", handleSearchInput);\nexport function handleSearchInput(event: Event): void {\n  const term = (event.target as HTMLInputElement).value; // native Event\n}",
+      "after": "// React\nfunction handleSearchChange(event: ChangeEvent<HTMLInputElement>) { // SyntheticEvent\n  setSearchTerm(event.target.value);\n}\n<input id=\"evidenceSearch\" onChange={handleSearchChange} />"
+    },
+    {
+      "id": "ex5-d1-q2-page",
+      "type": "app",
+      "title": "D1 - Q2 — On the page: the list of cards that re-renders",
+      "narration": "Before the code: the list is re-rendered on every keystroke in the search box. In the vanilla version that meant a fresh innerHTML each time.",
+      "exercise": 5,
+      "demo": 1,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex5-d1-q2",
+      "type": "code",
+      "title": "D1 - Q2 — Is event delegation still needed in React?",
+      "narration": "No. The vanilla list was rebuilt with container.innerHTML on every render, which destroys every card element and its listeners, so one listener on the stable container (checking event.target.dataset.action / closest('.evidence-card')) was the way to avoid re-attaching hundreds of listeners; as the vanilla code also shows, it re-added the container listener on each render. In React the handler is a prop of the element: when state changes React re-renders, diffs, keeps the existing DOM nodes and just points them at the new function, so nothing is re-registered by me, and removed cards drop their handlers automatically. Internally React does delegate (one listener per event type on the root), but that is its implementation detail, not something I write. The one thing delegation gave for free that I must handle: the nested star button inside the clickable card needs event.stopPropagation() so one click does not also open the detail.",
+      "exercise": 5,
+      "demo": 1,
+      "file": "react/features/evidence/EvidenceCard.tsx",
+      "before": "  container.innerHTML = html;\n\n  // Event delegation for card clicks / bookmark button.\n  container.addEventListener(\"click\", handleEvidenceListClick);\nfunction handleEvidenceListClick(event: Event): void {\n  const target = event.target as HTMLElement;\n\n  if (target.dataset && target.dataset.action === \"bookmark\") {\n    event.stopPropagation();\n    handleBookmarkClick(target.dataset.id!);\n    return;\n  }\n\n  const card = target.closest<HTMLElement>(\".evidence-card\");\n  if (card) {\n    openEvidenceDetail(card.getAttribute(\"data-id\")!);\n  }\n}",
+      "after": "    // React attaches this handler itself; there is no inline HTML attribute string\n    // and no listener on a parent container to dispatch by event.target.\n    <div className=\"evidence-card\" onClick={() => onOpen(item.id)}>\n      <button\n        type=\"button\"\n        className={isBookmarked ? \"bookmark-btn active\" : \"bookmark-btn\"}\n        aria-label={`Toggle bookmark for ${item.title}`}\n        onClick={(event) => {\n          // The button sits inside the clickable card: without this the same\n          // click would also open the detail panel.\n          event.stopPropagation();\n          onToggleBookmark(item.id);\n        }}\n      >\n        <span className=\"bookmark-icon\">{isBookmarked ? \"★\" : \"☆\"}</span>"
     }
   ]
 }

@@ -31,3 +31,10 @@ export const NAV_ITEMS: ReadonlyArray<{ path: string; label: string }> = [
   { path: PATHS.timeline, label: "Timeline" },
   { path: PATHS.workspace, label: "Workspace" },
 ];
+
+// Query parameter read by the Evidence page: ?open=E01 opens that item's detail panel.
+export const OPEN_EVIDENCE_PARAM = "open";
+
+export function openEvidencePath(evidenceId: string): string {
+  return `${PATHS.evidence}?${OPEN_EVIDENCE_PARAM}=${encodeURIComponent(evidenceId)}`;
+}

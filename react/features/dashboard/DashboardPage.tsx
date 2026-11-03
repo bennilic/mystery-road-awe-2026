@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
-import { readBookmarkCount } from "./bookmarks.ts";
+import { readBookmarkIds } from "../../shared/storage/bookmarkStorage.ts";
 import { HowToUseCard } from "./HowToUseCard.tsx";
 import { CaseSummaryCard } from "./CaseSummaryCard.tsx";
 import { StatGrid } from "./StatGrid.tsx";
@@ -14,7 +14,8 @@ function DashboardContent({ data }: { data: CaseData }) {
   // Lazy initializer: runs once per mount. The page unmounts when the user
   // navigates away, so coming back re-reads localStorage and can never show
   // a stale bookmark count.
-  const [bookmarkCount] = useState(readBookmarkCount);
+  const [bookmarkIds] = useState(readBookmarkIds);
+  const bookmarkCount = bookmarkIds.length;
 
   // Derived values are computed during render from the data, not stored in
   // state — there is no second copy that could go out of sync.

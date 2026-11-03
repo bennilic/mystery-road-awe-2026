@@ -32,7 +32,18 @@ async function loadCaseData(): Promise<CaseData> {
     fetchJson<Location[]>("data/locations.json"),
     fetchJson<TimelineEvent[]>("data/timeline.json"),
   ]);
-  return { caseInfo, evidence, people, locations, timeline };
+  return { caseInfo, evidence: normalizePersonIds(evidence, people), people, locations, timeline };
+}
+
+// evidence.json's E04 lists "Nova Byte" (a display name) where every other
+// record has a person id. Fixed once at the load boundary, as the vanilla
+// dataLoading.ts does, so filters and detail views can trust personIds.
+function normalizePersonIds(evidence: Evidence[], people: Person[]): Evidence[] {
+  const idByName = new Map(people.map((person) => [person.name, person.id]));
+  return evidence.map((item) => ({
+    ...item,
+    personIds: item.personIds.map((reference) => idByName.get(reference) ?? reference),
+  }));
 }
 
 // PLACEHOLDER ARCHITECTURE (Exercise 3): loads the same five data/*.json

@@ -1,14 +1,6 @@
-import { Badge, type BadgeVariant } from "../../shared/components/Badge.tsx";
+import { Badge } from "../../shared/components/Badge.tsx";
+import { statusVariant } from "../../shared/components/evidenceBadges.ts";
 import type { Evidence } from "../../../js/types.ts";
-
-// evidence.json has one capitalised "Reviewed", so compare case-insensitively
-// (same defence as the vanilla getStatusBadgeClass).
-function statusVariant(status: string): BadgeVariant {
-  const normalized = status.toLowerCase();
-  if (normalized === "reviewed") return "reviewed";
-  if (normalized === "flagged") return "flagged";
-  return "unreviewed";
-}
 
 export function RecentEvidenceList({ items }: { items: Evidence[] }) {
   return (
