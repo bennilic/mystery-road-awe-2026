@@ -12,7 +12,7 @@ interface EvidenceCardProps {
 export function EvidenceCard({ item, onOpen }: EvidenceCardProps) {
   // Read straight from Context: EvidencePage and EvidenceContent no longer
   // carry the bookmark props just to hand them to this component.
-  const { bookmarkedIds, toggleBookmark } = useBookmarks();
+  const { bookmarkedIds, toggleBookmark, canToggle } = useBookmarks();
   const isBookmarked = bookmarkedIds.includes(item.id);
 
   return (
@@ -23,6 +23,10 @@ export function EvidenceCard({ item, onOpen }: EvidenceCardProps) {
         type="button"
         className={isBookmarked ? "bookmark-btn active" : "bookmark-btn"}
         aria-label={`Toggle bookmark for ${item.title}`}
+        disabled={!canToggle}
+        title={
+          canToggle ? undefined : "Bookmarks are shared live and need a connection to the server."
+        }
         onClick={(event) => {
           // The button sits inside the clickable card: without this the same
           // click would also open the detail panel.

@@ -41,7 +41,12 @@ export function attachRealtime(httpServer: Server, log: LogLine): WebSocketServe
       log(`[realtime] message from ${name}: ${message.type}`);
       switch (message.type) {
         case "toggle-bookmark":
-          // Applying the toggle and broadcasting it arrives in Demo 6.
+          // The whole set goes out, not a "toggled E03" delta: a client that
+          // missed a message is fixed by the next one. The sender gets it too.
+          session.broadcast({
+            type: "bookmarks-updated",
+            bookmarks: session.toggleBookmark(message.evidenceId),
+          });
           break;
         case "request-state":
           session.send(socket, { type: "workspace-state", bookmarks: session.bookmarks });

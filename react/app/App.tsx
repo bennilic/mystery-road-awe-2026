@@ -4,7 +4,7 @@ import { Header } from "../shell/Header.tsx";
 import { Footer } from "../shell/Footer.tsx";
 import { DevPanel } from "../shell/DevPanel.tsx";
 import { CaseDataProvider } from "../shared/data/CaseDataContext.tsx";
-import { BookmarkStorageNotice, BookmarksProvider } from "../shared/bookmarks/BookmarksContext.tsx";
+import { LiveWorkspaceProvider } from "../shared/live/LiveWorkspaceContext.tsx";
 import { readNotes, writeNotes } from "../shared/storage/noteStorage.ts";
 import type { ReviewEdit, ReviewEditsByEvidenceId } from "../shared/evidence/reviewEdits.ts";
 import { describeStorageFailure } from "../shared/storage/describeStorageFailure.ts";
@@ -20,15 +20,15 @@ import { TimelinePage } from "../features/timeline/TimelinePage.tsx";
 export function App() {
   return (
     <CaseDataProvider>
-      <BookmarksProvider>
+      <LiveWorkspaceProvider>
         <AppBody />
-      </BookmarksProvider>
+      </LiveWorkspaceProvider>
     </CaseDataProvider>
   );
 }
 
 // Owns the state that is still passed down as props: notes and review edits.
-// Bookmarks moved into BookmarksProvider (Demo 8).
+// Bookmarks are shared live state from the server (Exercise 7).
 function AppBody() {
   const [notes, setNotes] = useState(readNotes);
   // In memory only, like the vanilla app: review edits are lost on reload.
@@ -59,7 +59,6 @@ function AppBody() {
       <Header />
       <main id="app" className="app-main">
         {storageNotice && <p role="alert">{storageNotice}</p>}
-        <BookmarkStorageNotice />
         <Routes>
           <Route path="/" element={<Navigate to={PATHS.dashboard} replace />} />
           <Route path={PATHS.dashboard} element={<DashboardPage reviewEdits={reviewEdits} />} />

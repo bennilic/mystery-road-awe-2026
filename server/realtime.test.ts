@@ -66,6 +66,44 @@ test("a new connection is sent the current shared bookmarks, and request-state r
   });
 });
 
+function lastBookmarks(messages: unknown[]): string[] | undefined {
+  const updates = messages.filter(
+    (message) => (message as { type: string }).type === "bookmarks-updated",
+  ) as { bookmarks: string[] }[];
+  return updates.at(-1)?.bookmarks;
+}
+
+test("a toggle from one client is broadcast to every client, including the sender", async () => {
+  await withBackend(async (socketUrl) => {
+    const first = await connect(socketUrl);
+    const second = await connect(socketUrl);
+    const toggle: ClientMessage = { type: "toggle-bookmark", evidenceId: "E03" };
+    first.socket.send(JSON.stringify(toggle));
+    await waitUntil(() => lastBookmarks(second.messages) !== undefined);
+    assert.deepEqual(lastBookmarks(second.messages), ["E03"]);
+    assert.deepEqual(lastBookmarks(first.messages), ["E03"]);
+
+    second.socket.send(JSON.stringify(toggle));
+    await waitUntil(() => lastBookmarks(first.messages)?.length === 0);
+    assert.deepEqual(lastBookmarks(first.messages), []);
+    first.socket.close();
+    second.socket.close();
+  });
+});
+
+test("a client that joins later is sent the bookmarks set before it joined", async () => {
+  await withBackend(async (socketUrl) => {
+    const early = await connect(socketUrl);
+    early.socket.send(JSON.stringify({ type: "toggle-bookmark", evidenceId: "E01" }));
+    await waitUntil(() => lastBookmarks(early.messages) !== undefined);
+    const late = await connect(socketUrl);
+    await waitUntil(() => late.messages.length >= 2);
+    assert.deepEqual(late.messages[1], { type: "workspace-state", bookmarks: ["E01"] });
+    early.socket.close();
+    late.socket.close();
+  });
+});
+
 test("presence lists every open connection and drops a closed one", async () => {
   await withBackend(async (socketUrl, log) => {
     const first = await connect(socketUrl);

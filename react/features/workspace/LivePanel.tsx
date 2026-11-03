@@ -1,7 +1,7 @@
-import { useWorkspaceSocket } from "../../shared/live/useWorkspaceSocket.ts";
+import { useLiveWorkspace } from "../../shared/live/LiveWorkspaceContext.tsx";
 
 export function LivePanel() {
-  const { status, myName, presenceNames, sharedBookmarkIds } = useWorkspaceSocket();
+  const { status, myName, presenceNames, sharedBookmarkIds } = useLiveWorkspace();
   return (
     <div className="live-panel" id="livePanel">
       <p>

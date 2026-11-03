@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import type { ServerMessage } from "../../../protocol/workspaceProtocol.ts";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ClientMessage, ServerMessage } from "../../../protocol/workspaceProtocol.ts";
 
 export type ConnectionStatus = "connecting" | "live" | "disconnected";
 
@@ -24,18 +24,23 @@ export interface WorkspaceSocket {
   presenceNames: string[];
   // The shared bookmark ids as last sent by the server.
   sharedBookmarkIds: string[];
+  // Returns false (and sends nothing) when the connection is not open.
+  sendMessage: (message: ClientMessage) => boolean;
 }
 
-// Connects, reports the status, keeps the server's name for this connection and
-// its presence list, and closes the connection when the component goes away.
+// Connects, reports the status, keeps what the server last said (own name,
+// presence, shared bookmarks), and closes the connection when the component
+// goes away.
 export function useWorkspaceSocket(): WorkspaceSocket {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [myName, setMyName] = useState<string | null>(null);
   const [presenceNames, setPresenceNames] = useState<string[]>([]);
   const [sharedBookmarkIds, setSharedBookmarkIds] = useState<string[]>([]);
+  const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const socket = new WebSocket(socketUrl());
+    socketRef.current = socket;
     // StrictMode mounts, cleans up and mounts again: the first socket's late
     // "close" must not overwrite the status of the second one.
     let isCurrent = true;
@@ -72,5 +77,12 @@ export function useWorkspaceSocket(): WorkspaceSocket {
     };
   }, []);
 
-  return { status, myName, presenceNames, sharedBookmarkIds };
+  const sendMessage = useCallback((message: ClientMessage): boolean => {
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return false;
+    socket.send(JSON.stringify(message));
+    return true;
+  }, []);
+
+  return { status, myName, presenceNames, sharedBookmarkIds, sendMessage };
 }

@@ -5810,6 +5810,126 @@
       "before": "  private readonly namesBySocket = new Map<WebSocket, string>();\n  // A Set: an evidence id is either bookmarked or not, never twice.\n  private readonly bookmarkIds = new Set<string>();",
       "after": "// production sketch (not built):\nasync toggleBookmark(sessionId: string, evidenceId: string) {\n  await db.transaction(/* toggle row */);\n  await pubsub.publish(sessionId, /* bookmarks-updated */);\n}",
       "line": 10
+    },
+    {
+      "id": "ex7-d6-t1-page",
+      "type": "app",
+      "title": "D6 - T1 — Toggle in one tab, broadcast to all tabs (page)",
+      "narration": "Before the code: click a star on this page; the same item appears in the bookmarked list of every other open tab, with no reload.",
+      "exercise": 7,
+      "demo": 6,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".bookmark-btn",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d6-t1",
+      "type": "code",
+      "title": "D6 - T1 — Toggle in one tab, broadcast to all tabs",
+      "narration": "Clicking a star now sends { type: toggle-bookmark, evidenceId } over the one app-wide WebSocket. The server flips the id in the in-memory Set and broadcasts bookmarks-updated with the complete new set to every connection, including the sender. The tab changes the star only when that message arrives: useBookmarks() simply returns the set the server last sent. Verified in two real browser tabs: with the Workspace open in tab B and never reloaded (navigation type stayed navigate), clicking the first star in tab A made tab B list E14 within the same second, and clicking it again emptied tab B again; the old localStorage key stays untouched (null). Also covered by tests: two real WebSocket clients, the toggle from one reaches both, a second toggle removes the id, and a late joiner is sent the current set. Side effects I had to decide: bookmarks are no longer persisted in the browser, because two sources of truth (localStorage and the server) would disagree; and star buttons are disabled while there is no live connection.",
+      "exercise": 7,
+      "demo": 6,
+      "file": "server/realtime.ts",
+      "before": "        case \"toggle-bookmark\":\n          // Shared bookmark state arrives in Demos 5 and 6.\n          break;",
+      "after": "        case \"toggle-bookmark\":\n          // The whole set goes out, not a \"toggled E03\" delta: a client that\n          // missed a message is fixed by the next one. The sender gets it too.\n          session.broadcast({\n            type: \"bookmarks-updated\",\n            bookmarks: session.toggleBookmark(message.evidenceId),\n          });\n          break;",
+      "line": 43
+    },
+    {
+      "id": "ex7-d6-q1-page",
+      "type": "app",
+      "title": "D6 - Q1 — Trace one toggle end to end (page)",
+      "narration": "Before the code: the first star on the page, in the first card, is where the trace starts.",
+      "exercise": 7,
+      "demo": 6,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".bookmark-btn",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d6-q1",
+      "type": "code",
+      "title": "D6 - Q1 — Trace one toggle end to end",
+      "narration": "1. Click: EvidenceCard's onClick calls toggleBookmark(item.id) from useBookmarks(). 2. Client message: useBookmarks sends { type: \"toggle-bookmark\", evidenceId: \"E14\" } through sendMessage in the app-wide LiveWorkspaceProvider, which JSON-stringifies it onto the open socket. 3. Server update: realtime.ts parses it and switch (message.type) calls session.toggleBookmark, which adds or removes the id in the Set. 4. Broadcast: session.broadcast sends { type: \"bookmarks-updated\", bookmarks: [...] } to every open connection. 5. React state update: the hook's message listener parses it and calls setSharedBookmarkIds(message.bookmarks); the provider's value changes, so useBookmarks() consumers (EvidenceCard, Dashboard count, Workspace list) re-render and the star turns active. The tab that clicked changes in step 5 as well, never earlier.",
+      "exercise": 7,
+      "demo": 6,
+      "file": "react/shared/bookmarks/BookmarksContext.tsx",
+      "before": "// updater) to any descendant without passing props through the layers between.\nexport function BookmarksProvider({ children }: { children: ReactNode }) {\n  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);\n  const [storageNotice, setStorageNotice] = useState<string | null>(null);\n\n  function toggleBookmark(evidenceId: string) {\n    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);\n    setBookmarkedIds(nextIds);\n    try {\n      writeBookmarkIds(nextIds);\n      // A later successful save means the earlier failure no longer applies.\n      setStorageNotice(null);\n    } catch (error) {\n      setStorageNotice(describeStorageFailure(\"Your bookmark\", error));\n    }\n  }\n\n  return (",
+      "after": "import { useLiveWorkspace } from \"../live/LiveWorkspaceContext.tsx\";\n\ninterface BookmarksValue {\n  // Always the latest set the server sent: this tab never keeps its own copy.\n  bookmarkedIds: string[];\n  // Asks the server to toggle; the star changes when the server's answer arrives.\n  toggleBookmark: (evidenceId: string) => void;\n  // False while there is no live connection, because a click could not reach the server.\n  canToggle: boolean;\n}\n\n// Since Exercise 7 the bookmarks are shared state owned by the server (see\n// server/workspaceSession.ts). This hook keeps the interface the components\n// already used (bookmarkedIds, toggleBookmark), so none of them had to change\n// how they read bookmarks.\nexport function useBookmarks(): BookmarksValue {\n  const { status, sharedBookmarkIds, sendMessage } = useLiveWorkspace();\n  return {\n    bookmarkedIds: sharedBookmarkIds,\n    toggleBookmark: (evidenceId) => {\n      sendMessage({ type: \"toggle-bookmark\", evidenceId });\n    },\n    canToggle: status === \"live\",\n  };\n}",
+      "line": 1
+    },
+    {
+      "id": "ex7-d6-q2-page",
+      "type": "app",
+      "title": "D6 - Q2 — Why broadcast the complete set (page)",
+      "narration": "Before the code: this list is the whole state a tab needs; there is nothing else to keep in sync.",
+      "exercise": 7,
+      "demo": 6,
+      "highlight": "#bookmarksList",
+      "waitFor": "#bookmarksList",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d6-q2",
+      "type": "code",
+      "title": "D6 - Q2 — Why broadcast the complete set",
+      "narration": "The state is a handful of ids, so the complete set is a few dozen bytes. Sending the whole set makes every message self-sufficient: a tab that applies it is correct regardless of what it saw before, a missed or duplicated message is repaired by the next one, a new or reconnected tab needs no replay of history, and the client code is one line (replace the state). A sequence of operations (E14 added, E03 removed, ...) would require every client to apply them in the same order exactly once, to track which operation it saw last, and to ask for the missed ones after a disconnect: much more machinery for no benefit at this size.",
+      "exercise": 7,
+      "demo": 6,
+      "file": "server/realtime.ts",
+      "before": "// operation-based: every client must apply every operation, in order, exactly once\nsession.broadcast({ type: \"bookmark-toggled\", evidenceId: message.evidenceId });",
+      "after": "          // The whole set goes out, not a \"toggled E03\" delta: a client that\n          // missed a message is fixed by the next one. The sender gets it too.\n          session.broadcast({\n            type: \"bookmarks-updated\",\n            bookmarks: session.toggleBookmark(message.evidenceId),\n          });",
+      "line": 44
+    },
+    {
+      "id": "ex7-d6-q3-page",
+      "type": "app",
+      "title": "D6 - Q3 — Sender gets its own broadcast, or optimistic? (page)",
+      "narration": "Before the code: when you click a star, it changes when the server's answer comes back, a few milliseconds later.",
+      "exercise": 7,
+      "demo": 6,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".bookmark-btn",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d6-q3",
+      "type": "code",
+      "title": "D6 - Q3 — Sender gets its own broadcast, or optimistic?",
+      "narration": "Choice made: the sender does receive its own broadcast and does not update optimistically. Why: the server is the source of truth, so the star should show what the server actually has; if the server rejects or loses the toggle (disconnect, an unknown id in Demo 9) an optimistic star would show a state that does not exist and would have to be rolled back. It also keeps one code path (every change arrives as a server message, whoever caused it) and makes two near-simultaneous clicks come out identical in all tabs. The cost is the round trip, around a millisecond on localhost and perceptible on a slow network; that is why the button is disabled when not connected. With a slower link I would switch to optimistic UI plus reconciliation: show the star at once and replace it with the server's set when it arrives.",
+      "exercise": 7,
+      "demo": 6,
+      "file": "react/shared/bookmarks/BookmarksContext.tsx",
+      "before": "  function toggleBookmark(evidenceId: string) {\n    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);\n    setBookmarkedIds(nextIds); // optimistic, local-only\n    ...\n  }",
+      "after": "// server/workspaceSession.ts). This hook keeps the interface the components\n// already used (bookmarkedIds, toggleBookmark), so none of them had to change\n// how they read bookmarks.\nexport function useBookmarks(): BookmarksValue {\n  const { status, sharedBookmarkIds, sendMessage } = useLiveWorkspace();\n  return {\n    bookmarkedIds: sharedBookmarkIds,\n    toggleBookmark: (evidenceId) => {\n      sendMessage({ type: \"toggle-bookmark\", evidenceId });\n    },\n    canToggle: status === \"live\",",
+      "line": 13
+    },
+    {
+      "id": "ex7-d6-q4-page",
+      "type": "app",
+      "title": "D6 - Q4 — Reducing message size for a large state (page)",
+      "narration": "Before the code: this is the full-set message; for 20 ids it is trivial.",
+      "exercise": 7,
+      "demo": 6,
+      "highlight": "#bookmarksList",
+      "waitFor": "#bookmarksList",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d6-q4",
+      "type": "code",
+      "title": "D6 - Q4 — Reducing message size for a large state",
+      "narration": "Send changes instead of the whole state once the set is big: the broadcast becomes a delta such as { type: \"bookmark-set\", evidenceId, isBookmarked: true } (still idempotent, unlike a bare \"toggle\"), and only a joining or reconnecting client gets the full snapshot. Add a version number so a client can detect that it missed a delta and then ask for the snapshot with request-state. Further: batch several changes arriving within a few milliseconds into one message, compress (permessage-deflate in ws, or a compact encoding such as ids as numbers/bitsets), and send only the part a client currently displays (for example per evidence page). Measure first: for this app the full set is smaller than the headers of one HTTP request.",
+      "exercise": 7,
+      "demo": 6,
+      "file": "server/realtime.ts",
+      "before": "          session.broadcast({\n            type: \"bookmarks-updated\",\n            bookmarks: session.toggleBookmark(message.evidenceId),\n          });",
+      "after": "// delta + version (not built): small messages, snapshot only on join/reconnect\nsession.broadcast({\n  type: \"bookmark-changed\",\n  evidenceId: message.evidenceId,\n  isBookmarked: session.bookmarks.includes(message.evidenceId),\n  version: session.version,\n});",
+      "line": 46
     }
   ]
 }

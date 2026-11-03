@@ -1,49 +1,25 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
-import { readBookmarkIds, writeBookmarkIds } from "../storage/bookmarkStorage.ts";
-import { describeStorageFailure } from "../storage/describeStorageFailure.ts";
-import { toggleBookmarkId } from "./toggleBookmarkId.ts";
+import { useLiveWorkspace } from "../live/LiveWorkspaceContext.tsx";
 
 interface BookmarksValue {
+  // Always the latest set the server sent: this tab never keeps its own copy.
   bookmarkedIds: string[];
+  // Asks the server to toggle; the star changes when the server's answer arrives.
   toggleBookmark: (evidenceId: string) => void;
-  // Set when the browser refused to save; the bookmark stays toggled on screen.
-  storageNotice: string | null;
+  // False while there is no live connection, because a click could not reach the server.
+  canToggle: boolean;
 }
 
-const BookmarksContext = createContext<BookmarksValue | null>(null);
-
-// The state is still an ordinary useState; Context only carries it (and its
-// updater) to any descendant without passing props through the layers between.
-export function BookmarksProvider({ children }: { children: ReactNode }) {
-  const [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);
-  const [storageNotice, setStorageNotice] = useState<string | null>(null);
-
-  function toggleBookmark(evidenceId: string) {
-    const nextIds = toggleBookmarkId(bookmarkedIds, evidenceId);
-    setBookmarkedIds(nextIds);
-    try {
-      writeBookmarkIds(nextIds);
-      // A later successful save means the earlier failure no longer applies.
-      setStorageNotice(null);
-    } catch (error) {
-      setStorageNotice(describeStorageFailure("Your bookmark", error));
-    }
-  }
-
-  return (
-    <BookmarksContext.Provider value={{ bookmarkedIds, toggleBookmark, storageNotice }}>
-      {children}
-    </BookmarksContext.Provider>
-  );
-}
-
+// Since Exercise 7 the bookmarks are shared state owned by the server (see
+// server/workspaceSession.ts). This hook keeps the interface the components
+// already used (bookmarkedIds, toggleBookmark), so none of them had to change
+// how they read bookmarks.
 export function useBookmarks(): BookmarksValue {
-  const value = useContext(BookmarksContext);
-  if (!value) throw new Error("useBookmarks() must be used inside <BookmarksProvider>.");
-  return value;
-}
-
-export function BookmarkStorageNotice() {
-  const { storageNotice } = useBookmarks();
-  return storageNotice ? <p role="alert">{storageNotice}</p> : null;
+  const { status, sharedBookmarkIds, sendMessage } = useLiveWorkspace();
+  return {
+    bookmarkedIds: sharedBookmarkIds,
+    toggleBookmark: (evidenceId) => {
+      sendMessage({ type: "toggle-bookmark", evidenceId });
+    },
+    canToggle: status === "live",
+  };
 }

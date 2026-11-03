@@ -23,7 +23,7 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 | 3 | Client identity and presence | ☑ |
 | 4 | Small typed message protocol | ☑ |
 | 5 | In-memory shared server state | ☑ |
-| 6 | Live bookmark updates | ☐ |
+| 6 | Live bookmark updates | ☑ |
 | 7 | Why bookmarks are easy to synchronize | ☐ |
 | 8 | Disconnect and reconnect | ☐ |
 | 9 | Validation and security boundaries | ☐ |
@@ -121,14 +121,14 @@ type ServerMessage =
 
 ### Required task
 
-- [ ] Send a bookmark toggle from one browser to the server. Update the in-memory set and broadcast the new bookmark set to every connected client. Demonstrate the change appearing in a second tab without a reload.
+- [x] Send a bookmark toggle from one browser to the server. Update the in-memory set and broadcast the new bookmark set to every connected client. Demonstrate the change appearing in a second tab without a reload.
 
 ### Questions
 
-- [ ] Trace one toggle from the button click through the client message, server update, broadcast, and React state update.
-- [ ] Why is broadcasting the complete bookmark set simpler for this small app than broadcasting a sequence of individual operations?
-- [ ] Should the sender receive its own broadcast or update optimistically? Explain the choice.
-- [ ] How would you reduce message size if the shared state became very large?
+- [x] Trace one toggle from the button click through the client message, server update, broadcast, and React state update.
+- [x] Why is broadcasting the complete bookmark set simpler for this small app than broadcasting a sequence of individual operations?
+- [x] Should the sender receive its own broadcast or update optimistically? Explain the choice.
+- [x] How would you reduce message size if the shared state became very large?
 
 ---
 
