@@ -29,7 +29,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 3 | Cleanup: timers & subscriptions | ☑ |
 | 4 | Build the read-only Node backend | ☑ |
 | 5 | Consume the backend from React | ☑ |
-| 6 | Loading, error, and empty states | ☐ |
+| 6 | Loading, error, and empty states | ☑ |
 | 7 | Request races & cancellation | ☐ |
 | 8 | Extract a reusable custom hook | ☐ |
 | 9 | Separate UI, application logic, and API access | ☐ |
@@ -125,13 +125,13 @@ didn't need before?
 
 **Tasks**
 
-- [ ] For at least one view, implement all three states explicitly: a loading indicator while the fetch is pending, a real error message if it fails (using your backend's on-demand error endpoint from Demo 4 to trigger it live), and a distinct "no data" empty state if the response is successful but contains nothing.
-- [ ] Make sure these three states are visually and structurally distinguishable from each other, not all three collapsing into "shows nothing."
+- [x] For at least one view, implement all three states explicitly: a loading indicator while the fetch is pending, a real error message if it fails (using your backend's on-demand error endpoint from Demo 4 to trigger it live), and a distinct "no data" empty state if the response is successful but contains nothing.
+- [x] Make sure these three states are visually and structurally distinguishable from each other, not all three collapsing into "shows nothing."
 
 **Questions** (depend on the tasks above)
 
-- [ ] Trigger your backend's error endpoint live and show the error state appearing. What state variable(s) are you tracking to distinguish "loading," "error," and "loaded successfully but empty" from each other?
-- [ ] The original vanilla app had a bug where a failed fetch could leave a loading spinner stuck forever because the cleanup/hide-loading step was never called on the error path. Explain specifically how your React version's state management makes that particular mistake
+- [x] Trigger your backend's error endpoint live and show the error state appearing. What state variable(s) are you tracking to distinguish "loading," "error," and "loaded successfully but empty" from each other?
+- [x] The original vanilla app had a bug where a failed fetch could leave a loading spinner stuck forever because the cleanup/hide-loading step was never called on the error path. Explain specifically how your React version's state management makes that particular mistake
 harder to make (or show that it doesn't, and fix it).
 
 ---

@@ -7,7 +7,7 @@
     // so .tsx files need no `import React` — matches @vitejs/plugin-react.
     "jsx": "react-jsx",
     // TypeScript 6 no longer loads every @types package by default; server/ needs node.
-    "types": ["node"],
+    "types": ["node", "vite/client"],
     "moduleResolution": "Bundler",
     // Vite resolves a relative "./foo.ts" specifier by its literal path,
     // not by stripping/guessing an extension the way Node's resolver does

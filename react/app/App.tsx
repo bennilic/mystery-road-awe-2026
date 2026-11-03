@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router";
 import { Header } from "../shell/Header.tsx";
 import { Footer } from "../shell/Footer.tsx";
+import { DevPanel } from "../shell/DevPanel.tsx";
 import { CaseDataProvider } from "../shared/data/CaseDataContext.tsx";
 import { BookmarkStorageNotice, BookmarksProvider } from "../shared/bookmarks/BookmarksContext.tsx";
 import { readNotes, writeNotes } from "../shared/storage/noteStorage.ts";
@@ -86,6 +87,7 @@ function AppBody() {
         </Routes>
       </main>
       <Footer />
+      {import.meta.env.DEV && <DevPanel />}
     </>
   );
 }

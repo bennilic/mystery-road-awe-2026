@@ -52,6 +52,17 @@ function EvidenceContent({
     return location ? `${location.id} - ${location.name}` : locationId;
   };
 
+  // Loaded fine, but the server holds no evidence at all. Different from
+  // "no match for the filters" below, which still shows the toolbar.
+  if (data.evidence.length === 0) {
+    return (
+      <p className="data-state-empty" role="status" data-state="empty">
+        No evidence has been recorded for this case yet: the server answered, but its evidence list
+        is empty. Reload once evidence has been added.
+      </p>
+    );
+  }
+
   return (
     <>
       <EvidenceToolbar

@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  NO_SIMULATION,
+  simulationQuery,
+  type ResourceName,
+  type Simulation,
+} from "./simulation.ts";
 import type { CaseInfo, Evidence, Location, Person, TimelineEvent } from "../../../js/types.ts";
 
 export interface CaseData {
@@ -12,9 +18,22 @@ export interface CaseData {
 type CaseDataState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; data: CaseData };
+  | { status: "ready"; data: CaseData; requestId: number };
 
-const CaseDataContext = createContext<CaseDataState | null>(null);
+// One attempt to load the case data. `id` numbers the attempts so the dev
+// panel can show which request the visible data came from.
+interface DataRequest {
+  id: number;
+  simulation: Simulation;
+}
+
+interface CaseDataContextValue {
+  state: CaseDataState;
+  // Starts a new request; without an argument it repeats the previous simulation.
+  reload: (simulation?: Simulation) => void;
+}
+
+const CaseDataContext = createContext<CaseDataContextValue | null>(null);
 
 async function fetchJson<T>(url: string): Promise<T> {
   let response: Response;
@@ -31,14 +50,18 @@ async function fetchJson<T>(url: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-async function loadCaseData(): Promise<CaseData> {
+async function loadCaseData(simulation: Simulation): Promise<CaseData> {
+  const url = (resource: ResourceName) => `api/${resource}${simulationQuery(resource, simulation)}`;
   const [caseInfo, evidence, people, locations, timeline] = await Promise.all([
-    fetchJson<CaseInfo>("api/case"),
-    fetchJson<Evidence[]>("api/evidence"),
-    fetchJson<Person[]>("api/people"),
-    fetchJson<Location[]>("api/locations"),
-    fetchJson<TimelineEvent[]>("api/timeline"),
+    fetchJson<CaseInfo>(url("case")),
+    fetchJson<Evidence[]>(url("evidence")),
+    fetchJson<Person[]>(url("people")),
+    fetchJson<Location[]>(url("locations")),
+    fetchJson<TimelineEvent[]>(url("timeline")),
   ]);
+  if (!caseInfo.caseId) {
+    throw new Error("api/case answered HTTP 200 but its body is not a case (no caseId)");
+  }
   return { caseInfo, evidence: normalizePersonIds(evidence, people), people, locations, timeline };
 }
 
@@ -61,22 +84,39 @@ function normalizePersonIds(evidence: Evidence[], people: Person[]): Evidence[] 
 // outcome, which makes React render again.
 export function CaseDataProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<CaseDataState>({ status: "loading" });
+  const [request, setRequest] = useState<DataRequest>({ id: 1, simulation: NO_SIMULATION });
 
   useEffect(() => {
-    loadCaseData().then(
-      (data) => setState({ status: "ready", data }),
+    setState({ status: "loading" });
+    loadCaseData(request.simulation).then(
+      (data) => setState({ status: "ready", data, requestId: request.id }),
       (error: unknown) => {
         const reason = error instanceof Error ? error.message : String(error);
         setState({ status: "error", message: reason });
       },
     );
+  }, [request]);
+
+  const reload = useCallback((simulation?: Simulation) => {
+    setRequest((previous) => ({
+      id: previous.id + 1,
+      simulation: simulation ?? previous.simulation,
+    }));
   }, []);
 
-  return <CaseDataContext.Provider value={state}>{children}</CaseDataContext.Provider>;
+  return <CaseDataContext.Provider value={{ state, reload }}>{children}</CaseDataContext.Provider>;
+}
+
+function useCaseDataContext(): CaseDataContextValue {
+  const value = useContext(CaseDataContext);
+  if (!value) throw new Error("useCaseData() must be used inside <CaseDataProvider>.");
+  return value;
 }
 
 export function useCaseData(): CaseDataState {
-  const state = useContext(CaseDataContext);
-  if (!state) throw new Error("useCaseData() must be used inside <CaseDataProvider>.");
-  return state;
+  return useCaseDataContext().state;
+}
+
+export function useReloadCaseData(): (simulation?: Simulation) => void {
+  return useCaseDataContext().reload;
 }

@@ -4747,6 +4747,102 @@
       "before": "// before: data present on the first render\nconst data = await loadAll(); // or an import; no waiting state",
       "after": "type CaseDataState =\n  | { status: \"loading\" }\n  | { status: \"error\"; message: string }\n  | { status: \"ready\"; data: CaseData };",
       "line": 12
+    },
+    {
+      "id": "ex6-d6-t1-page",
+      "type": "app",
+      "title": "D6 - T1 — On the page: the dev panel that drives the three states",
+      "narration": "Before the code: this strip at the bottom (development builds only) sets delay and outcome for one endpoint and reloads the case data. Live demo order: delay 2500 and Reload shows the spinner, outcome fail shows the error, outcome empty shows the empty state. All three verified with Playwright against the real backend.",
+      "exercise": 6,
+      "demo": 6,
+      "highlight": "#devPanel",
+      "waitFor": "#devPanel",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d6-t1",
+      "type": "code",
+      "title": "D6 - T1 — Loading, error and empty, each explicit",
+      "narration": "Loading: a spinner with role=\"status\" while the request is pending. Error: a red box with role=\"alert\" that says what failed (the URL and HTTP status from the server, e.g. api/evidence?fail=1 answered HTTP 500 Internal Server Error), what to do (check the backend, npm run server) and a Try again button. Empty: the request succeeded (200) but the evidence list is empty, so EvidencePage shows \"No evidence has been recorded for this case yet: the server answered, but its evidence list is empty.\" instead of a toolbar above nothing. A 200 for /api/case whose body is not a case is turned into an error at the boundary, so no page renders \"undefined\".",
+      "exercise": 6,
+      "demo": 6,
+      "file": "react/shared/data/CaseDataGate.tsx",
+      "before": "  if (caseData.status === \"loading\") return <p>Loading case file&hellip;</p>;\n  if (caseData.status === \"error\") {\n    return (\n      <p role=\"alert\">\n        The case file could not be loaded ({caseData.message}). Check that the backend is running (npm\n        run server) and reload the page.\n      </p>\n    );\n  }",
+      "after": "  if (caseData.status === \"loading\") {\n    return (\n      <div className=\"evidence-loading\" role=\"status\" data-state=\"loading\">\n        <div className=\"spinner\" aria-hidden=\"true\" />\n        Loading case file&hellip;\n      </div>\n    );\n  }\n  if (caseData.status === \"error\") {\n    return (\n      <div className=\"data-state-error\" role=\"alert\" data-state=\"error\">\n        <strong>The case file could not be loaded.</strong>\n        <p>{caseData.message}</p>\n        <p>Check that the backend is running (npm run server), then try again.</p>\n        <button type=\"button\" className=\"btn btn-primary\" onClick={() => reload()}>Try again</button>\n      </div>\n    );\n  }",
+      "line": 14
+    },
+    {
+      "id": "ex6-d6-t2-page",
+      "type": "app",
+      "title": "D6 - T2 — On the page: the Evidence view in its normal state",
+      "narration": "Before the code: for comparison, this is the loaded state with toolbar and cards. The three other states must not look like this, or like each other.",
+      "exercise": 6,
+      "demo": 6,
+      "highlight": "#evidenceList",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d6-t2",
+      "type": "code",
+      "title": "D6 - T2 — Three states that cannot be confused",
+      "narration": "Structurally: each state renders different elements with its own data-state attribute and ARIA role (status+spinner, alert+button, status+dashed box), and the empty state is decided in the page (data.evidence.length === 0), not in the gate, because \"empty\" is a successful load. Visually: spinner on plain background, red-bordered box with a button, grey dashed box with no toolbar. Also distinct from a fourth case that was already there: filters that match nothing keep the toolbar and say \"No evidence matches the current filters.\" Verified: normal, loading, error, empty and no-match produced five different DOM results.",
+      "exercise": 6,
+      "demo": 6,
+      "file": "react/features/evidence/EvidencePage.tsx",
+      "before": "  return (\n    <>\n      <EvidenceToolbar ... />\n      <div id=\"evidenceList\">\n        {visibleEvidence.length === 0 && <p>No evidence matches the current filters.</p>}",
+      "after": "  // Loaded fine, but the server holds no evidence at all.\n  if (data.evidence.length === 0) {\n    return (\n      <p className=\"data-state-empty\" role=\"status\" data-state=\"empty\">\n        No evidence has been recorded for this case yet: the server answered, but its evidence list is\n        empty. Reload once evidence has been added.\n      </p>\n    );\n  }",
+      "line": 57
+    },
+    {
+      "id": "ex6-d6-q1-page",
+      "type": "app",
+      "title": "D6 - Q1 — On the page: trigger the error endpoint live",
+      "narration": "Before the code: Endpoint evidence, Outcome fail, Reload. The page switches to the error box.",
+      "exercise": 6,
+      "demo": 6,
+      "highlight": "#devPanel",
+      "waitFor": "#devPanel",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d6-q1",
+      "type": "code",
+      "title": "D6 - Q1 — Which state tells loading, error and empty apart",
+      "narration": "One state variable with three variants: {status: \"loading\"} | {status: \"error\", message} | {status: \"ready\", data}. Loading and error are the status field. \"Loaded successfully but empty\" is not a fourth status: it is status \"ready\" whose data.evidence has length 0, which the page checks. I chose this over separate isLoading/isError booleans because two booleans allow four combinations of which two are nonsense (loading and error at once) and the third value, data, would be \"maybe present\". The status field makes the allowed states the only representable ones.",
+      "exercise": 6,
+      "demo": 6,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "const [isLoading, setIsLoading] = useState(true);\nconst [hasError, setHasError] = useState(false);\nconst [data, setData] = useState<CaseData | null>(null);\n// 4 combinations, 2 of them impossible",
+      "after": "type CaseDataState =\n  | { status: \"loading\" }\n  | { status: \"error\"; message: string }\n  | { status: \"ready\"; data: CaseData; requestId: number };",
+      "line": 12
+    },
+    {
+      "id": "ex6-d6-q2-page",
+      "type": "app",
+      "title": "D6 - Q2 — On the page: the failed load that ends in an error box, not a spinner",
+      "narration": "Before the code: with outcome fail the loading box is replaced by the error box. No spinner stays behind.",
+      "exercise": 6,
+      "demo": 6,
+      "highlight": "#devPanel",
+      "waitFor": "#devPanel",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d6-q2",
+      "type": "code",
+      "title": "D6 - Q2 — Why a stuck spinner is harder to cause now",
+      "narration": "Vanilla: the spinner was a DOM element that something had to hide, and the hide call sat on the success path only, so a failed fetch left it visible forever. React: there is no spinner to hide. The spinner is what the gate renders while status is \"loading\", and every way a request can end writes a new status: the success callback sets \"ready\", the rejection callback sets \"error\", and rendering follows the status. fetchJson turns both network failures and non-2xx statuses into a rejection, and a 200 with a wrong body is checked, so all failure shapes reach the error callback. Verified by running fail, empty, wrong-case and backend-stopped scenarios: none left the spinner. Remaining gap, stated honestly: a request that never answers at all keeps status \"loading\" (no timeout); an AbortSignal.timeout would close it.",
+      "exercise": 6,
+      "demo": 6,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "// vanilla\nfetch(url).then((res) => res.json()).then((data) => {\n  render(data);\n  hideLoading(); // success path only: a failure leaves the spinner on screen\n});",
+      "after": "loadCaseData(request.simulation).then(\n  (data) => setState({ status: \"ready\", data, requestId: request.id }),\n  (error: unknown) => setState({ status: \"error\", message: error instanceof Error ? error.message : String(error) }),\n); // both outcomes leave \"loading\"; the UI is a function of status",
+      "line": 91
     }
   ]
 }
