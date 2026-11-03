@@ -5354,6 +5354,102 @@
       "before": "// SSE: server -> client only; client actions need separate POST requests\nconst events = new EventSource(\"/events\");\nawait fetch(\"/toggle\", { method: \"POST\", body });",
       "after": "// WebSocket: one channel, both directions\nsocket.send(JSON.stringify({ type: \"toggle-bookmark\", evidenceId }));\nsocket.onmessage = (event) => apply(JSON.parse(event.data));",
       "line": 1
+    },
+    {
+      "id": "ex7-d2-t1-page",
+      "type": "app",
+      "title": "D2 - T1 — Minimal WebSocket server and client (page)",
+      "narration": "Before the code: the new box at the top of the Workspace shows the connection status and the single reply from the server. Open the browser console to see the logged open and message events.",
+      "exercise": 7,
+      "demo": 2,
+      "highlight": "#livePanel",
+      "waitFor": "#livePanel",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d2-t1",
+      "type": "code",
+      "title": "D2 - T1 — Minimal WebSocket server and client",
+      "narration": "A WebSocket server (server/realtime.ts, the ws package) answers the HTTP upgrade request on /ws of the same backend port, and the client hook opens new WebSocket(url), sends one message when open fires, and shows the one reply plus a status (connecting, live, disconnected). Each of open, message, close and error is logged on both sides (browser console prefix [live], server log prefix [realtime]); I checked them in the real browser: open then message with \"Server received: Hello from the Workspace\"; with the backend stopped, a page load shows error then close with code 1006 and the status disconnected. The cleanup function closes the socket with code 1000 so a connection never outlives its component; because of that StrictMode shows a first connection closed before it was established, and the isCurrent flag stops that stale socket's late close event from overwriting the live status of the second one. The Vite proxy entry for /ws has ws: true so the upgrade is forwarded.",
+      "exercise": 7,
+      "demo": 2,
+      "file": "react/shared/live/useWorkspaceSocket.ts",
+      "before": "(file did not exist yet)",
+      "after": "// Demo 2: the smallest complete lifecycle. Connect, send one message when the\n// connection opens, show the one reply, report the status, and close the\n// connection when the component goes away.\nexport function useWorkspaceSocket(): WorkspaceSocket {\n  const [status, setStatus] = useState<ConnectionStatus>(\"connecting\");\n  const [lastReply, setLastReply] = useState<string | null>(null);\n\n  useEffect(() => {\n    const socket = new WebSocket(socketUrl());\n    // StrictMode mounts, cleans up and mounts again: the first socket's late\n    // \"close\" must not overwrite the status of the second one.\n    let isCurrent = true;\n    socket.addEventListener(\"open\", () => {\n      logSocketEvent(\"open\");\n      if (isCurrent) setStatus(\"live\");\n      socket.send(\"Hello from the Workspace\");\n    });\n    socket.addEventListener(\"message\", (event: MessageEvent<string>) => {\n      logSocketEvent(\"message\", event.data);\n      if (isCurrent) setLastReply(event.data);\n    });\n    socket.addEventListener(\"error\", (event) => logSocketEvent(\"error\", event));\n    socket.addEventListener(\"close\", (event) => {\n      logSocketEvent(\"close\", { code: event.code, reason: event.reason, wasClean: event.wasClean });\n      if (isCurrent) setStatus(\"disconnected\");\n    });\n    // Without this the connection would outlive the page that opened it.\n    return () => {\n      isCurrent = false;\n      socket.close(1000, \"Workspace closed\");\n    };\n  }, []);\n\n  return { status, lastReply };\n}",
+      "line": 23
+    },
+    {
+      "id": "ex7-d2-q1-page",
+      "type": "app",
+      "title": "D2 - Q1 — Why the handshake is HTTP (page)",
+      "narration": "Before the code: the page and the socket share one origin; the Vite proxy forwards /ws to the backend.",
+      "exercise": 7,
+      "demo": 2,
+      "highlight": "#livePanel",
+      "waitFor": "#livePanel",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d2-q1",
+      "type": "code",
+      "title": "D2 - Q1 — Why the handshake is HTTP",
+      "narration": "A WebSocket starts as an ordinary HTTP GET with Upgrade: websocket and Connection: Upgrade headers; the server answers 101 Switching Protocols and from then on the same TCP connection carries WebSocket frames. Why: it reuses everything that already exists for HTTP on port 80/443: proxies, firewalls and load balancers let it through, TLS (wss) and cookies/origin checks work, one server port serves both the API and the socket (here /api and /ws on 3001), and a server that does not know WebSockets simply answers an ordinary error. Visible proof in this exercise: a request to /nothing as WebSocket is refused with an HTTP status, and the Vite proxy needs only ws: true to forward the same handshake.",
+      "exercise": 7,
+      "demo": 2,
+      "file": "vite.config.js",
+      "before": "  server: {\n    proxy: { \"/api\": \"http://127.0.0.1:3001\" },\n  },",
+      "after": "  server: {\n    proxy: {\n      \"/api\": \"http://127.0.0.1:3001\",\n      \"/ws\": { target: \"ws://127.0.0.1:3001\", ws: true },\n    },\n  },",
+      "line": 25
+    },
+    {
+      "id": "ex7-d2-q2-page",
+      "type": "app",
+      "title": "D2 - Q2 — Open, closed, failed attempt (page)",
+      "narration": "Before the code: the status line shows which of the three situations this tab is in.",
+      "exercise": 7,
+      "demo": 2,
+      "highlight": "#liveStatus",
+      "waitFor": "#liveStatus",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d2-q2",
+      "type": "code",
+      "title": "D2 - Q2 — Open, closed, failed attempt",
+      "narration": "Open: the handshake succeeded, readyState is OPEN, the open event fired, both sides can send. Closed: it was open (or closing) and ended, the close event fires with a code, a reason and wasClean (1000 normal, 1001 going away, 1006 abnormal with no close frame). Failed connection attempt: the handshake never completed, so there was never an open event; the browser fires error and then close with code 1006 and the reason stays empty (it deliberately gives no detail for security reasons). I saw both: backend stopped before loading the page gave error then close 1006 without any open; stopping the backend while the tab was live gave close 1006 after open and message. So the way to tell them apart in code is whether open ever fired.",
+      "exercise": 7,
+      "demo": 2,
+      "file": "react/shared/live/useWorkspaceSocket.ts",
+      "before": "// one event, no way to tell apart:\nsocket.addEventListener(\"close\", () => setStatus(\"disconnected\"));",
+      "after": "    socket.addEventListener(\"open\", () => {\n      logSocketEvent(\"open\");\n      if (isCurrent) setStatus(\"live\");\n      socket.send(\"Hello from the Workspace\");\n    });\n    socket.addEventListener(\"message\", (event: MessageEvent<string>) => {\n      logSocketEvent(\"message\", event.data);\n      if (isCurrent) setLastReply(event.data);\n    });\n    socket.addEventListener(\"error\", (event) => logSocketEvent(\"error\", event));\n    socket.addEventListener(\"close\", (event) => {\n      logSocketEvent(\"close\", { code: event.code, reason: event.reason, wasClean: event.wasClean });\n      if (isCurrent) setStatus(\"disconnected\");\n    });",
+      "line": 35
+    },
+    {
+      "id": "ex7-d2-q3-page",
+      "type": "app",
+      "title": "D2 - Q3 — Deliberate close vs. network failure (page)",
+      "narration": "Before the code: the cleanup function is the deliberate close: leaving the Workspace page closes the socket.",
+      "exercise": 7,
+      "demo": 2,
+      "highlight": "#liveStatus",
+      "waitFor": "#liveStatus",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d2-q3",
+      "type": "code",
+      "title": "D2 - Q3 — Deliberate close vs. network failure",
+      "narration": "Look at the close event: event.code, event.reason and event.wasClean. A deliberate close sends a close frame, so the code is the one the closer chose (1000 here, with the reason \"Workspace closed\", which the server also logs) and wasClean is true; the server log shows [realtime] close (code 1000) for it. A network failure (cable pulled, laptop asleep, server killed) delivers no close frame, so the browser reports 1006 with wasClean false and an empty reason, as I saw when stopping the backend. On the client I also keep my own flag (isCurrent, later also a wasDeliberate flag) because I know when I called close(). Code 1001 (going away) is what a closing tab or a shutting-down server sends.",
+      "exercise": 7,
+      "demo": 2,
+      "file": "react/shared/live/useWorkspaceSocket.ts",
+      "before": "socket.addEventListener(\"close\", () => setStatus(\"disconnected\"));",
+      "after": "    socket.addEventListener(\"close\", (event) => {\n      logSocketEvent(\"close\", { code: event.code, reason: event.reason, wasClean: event.wasClean });\n      if (isCurrent) setStatus(\"disconnected\");\n    });\n    // Without this the connection would outlive the page that opened it.\n    return () => {\n      isCurrent = false;\n      socket.close(1000, \"Workspace closed\");\n    };",
+      "line": 45
     }
   ]
 }

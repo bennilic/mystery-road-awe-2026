@@ -16,11 +16,17 @@ import react from "@vitejs/plugin-react";
 // through this proxy, so the browser sees /api/... on the same origin as the
 // page and no CORS headers are needed. `vite build` ignores `server`, and the
 // GitHub Pages deploy has no backend (see README).
+//
+// Exercise 7: /ws is proxied the same way, with ws: true so the proxy also
+// forwards the WebSocket upgrade handshake to the backend.
 export default defineConfig({
   base: "./",
   plugins: [react()],
   server: {
-    proxy: { "/api": "http://127.0.0.1:3001" },
+    proxy: {
+      "/api": "http://127.0.0.1:3001",
+      "/ws": { target: "ws://127.0.0.1:3001", ws: true },
+    },
   },
   build: {
     rollupOptions: {

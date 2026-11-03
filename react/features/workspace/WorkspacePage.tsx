@@ -4,6 +4,7 @@ import { useBookmarks } from "../../shared/bookmarks/BookmarksContext.tsx";
 import { selectBookmarkedEvidence } from "../../shared/bookmarks/selectBookmarkedEvidence.ts";
 import { BookmarkedEvidenceList } from "./BookmarkedEvidenceList.tsx";
 import { HypothesisForm } from "./HypothesisForm.tsx";
+import { LivePanel } from "./LivePanel.tsx";
 import { NotesList } from "./NotesList.tsx";
 
 interface WorkspaceStateProps {
@@ -38,6 +39,7 @@ export function WorkspacePage(props: WorkspaceStateProps) {
   return (
     <section className="view active">
       <h2>Investigator Workspace</h2>
+      <LivePanel />
       <CaseDataGate>{(data) => <WorkspaceContent data={data} {...props} />}</CaseDataGate>
     </section>
   );

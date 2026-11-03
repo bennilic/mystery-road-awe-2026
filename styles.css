@@ -914,3 +914,12 @@ a.tab-btn.active {
   border-top: 2px dashed var(--color-warn);
   font-size: 0.85rem;
 }
+
+/* Exercise 7: live connection status and presence in the Workspace. */
+.live-panel {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #f4f8ff;
+}

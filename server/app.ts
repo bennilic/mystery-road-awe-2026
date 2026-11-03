@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { attachRealtime, type LogLine } from "./realtime.ts";
 
 // Dev-only, read-only backend for Exercise 6. It serves the five files in
 // public/data/ as GET /api/<resource> and can simulate a slow or failing
@@ -14,6 +15,8 @@ export interface ServerOptions {
   dataDirectory: string;
   // Added to every request; ?delay=<ms> on a request replaces it.
   defaultDelayMs: number;
+  // Receives the WebSocket lifecycle log lines; silent when omitted (tests).
+  log?: LogLine;
 }
 
 const MAX_DELAY_MS = 30_000;
@@ -98,11 +101,13 @@ async function route(
 }
 
 export function createBackend(options: ServerOptions): Server {
-  return createServer((request, response) => {
+  const httpServer = createServer((request, response) => {
     route(request, response, options).catch((error: unknown) => {
       const reason = error instanceof Error ? error.message : String(error);
       console.error(`[backend] ${request.method} ${request.url} failed: ${reason}`);
       sendJson(response, 500, { error: `The backend could not read the data file: ${reason}` });
     });
   });
+  attachRealtime(httpServer, options.log ?? (() => {}));
+  return httpServer;
 }

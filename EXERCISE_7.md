@@ -19,7 +19,7 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 | # | Demo | Ready? |
 |---|---|---|
 | 1 | HTTP request-response vs. WebSockets | ☑ |
-| 2 | Minimal WebSocket lifecycle | ☐ |
+| 2 | Minimal WebSocket lifecycle | ☑ |
 | 3 | Client identity and presence | ☐ |
 | 4 | Small typed message protocol | ☐ |
 | 5 | In-memory shared server state | ☐ |
@@ -50,13 +50,13 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 
 ### Required task
 
-- [ ] Add a minimal WebSocket server and client. The client connects, sends one message, receives one response, and displays a connection status. Log `open`, `message`, `close`, and `error` while testing.
+- [x] Add a minimal WebSocket server and client. The client connects, sends one message, receives one response, and displays a connection status. Log `open`, `message`, `close`, and `error` while testing.
 
 ### Questions
 
-- [ ] Why does a WebSocket connection begin with an HTTP-based handshake?
-- [ ] What is the difference between an open connection, a closed connection, and a failed connection attempt in the browser?
-- [ ] How would you distinguish a deliberate client close from a network failure?
+- [x] Why does a WebSocket connection begin with an HTTP-based handshake?
+- [x] What is the difference between an open connection, a closed connection, and a failed connection attempt in the browser?
+- [x] How would you distinguish a deliberate client close from a network failure?
 
 ---
 
