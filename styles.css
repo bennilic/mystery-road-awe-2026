@@ -923,3 +923,10 @@ a.tab-btn.active {
   border-radius: 6px;
   background: #f4f8ff;
 }
+.live-panel p {
+  margin: 4px 0;
+}
+.live-me {
+  font-weight: bold;
+  border: 1px solid var(--color-accent);
+}

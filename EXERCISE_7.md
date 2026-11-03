@@ -20,7 +20,7 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 |---|---|---|
 | 1 | HTTP request-response vs. WebSockets | ☑ |
 | 2 | Minimal WebSocket lifecycle | ☑ |
-| 3 | Client identity and presence | ☐ |
+| 3 | Client identity and presence | ☑ |
 | 4 | Small typed message protocol | ☐ |
 | 5 | In-memory shared server state | ☐ |
 | 6 | Live bookmark updates | ☐ |
@@ -64,14 +64,14 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 
 ### Required task
 
-- [ ] Assign each connection a random display name, such as `Investigator-42`, and show the current name plus a list of connected names in the Workspace. Test with at least two browser tabs.
+- [x] Assign each connection a random display name, such as `Investigator-42`, and show the current name plus a list of connected names in the Workspace. Test with at least two browser tabs.
 
 ### Questions
 
-- [ ] Where does the authoritative list of connected users live?
-- [ ] What should happen to a user's presence entry when their connection closes?
-- [ ] How could a tab crash or a laptop lose power make presence temporarily inaccurate?
-- [ ] What extra information would be needed to show which evidence item someone is viewing?
+- [x] Where does the authoritative list of connected users live?
+- [x] What should happen to a user's presence entry when their connection closes?
+- [x] How could a tab crash or a laptop lose power make presence temporarily inaccurate?
+- [x] What extra information would be needed to show which evidence item someone is viewing?
 
 ---
 

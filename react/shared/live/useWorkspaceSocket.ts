@@ -15,17 +15,45 @@ function logSocketEvent(eventName: string, detail?: unknown): void {
   console.info(`[live] ${eventName}`, detail ?? "");
 }
 
-export interface WorkspaceSocket {
-  status: ConnectionStatus;
-  lastReply: string | null;
+// Hand-written checks for now; Demo 4 replaces them with one shared message type.
+function isWelcome(message: unknown): message is { type: "welcome"; name: string } {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    "type" in message &&
+    message.type === "welcome" &&
+    "name" in message &&
+    typeof message.name === "string"
+  );
 }
 
-// Demo 2: the smallest complete lifecycle. Connect, send one message when the
-// connection opens, show the one reply, report the status, and close the
-// connection when the component goes away.
+function isPresenceUpdate(
+  message: unknown,
+): message is { type: "presence-updated"; names: string[] } {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    "type" in message &&
+    message.type === "presence-updated" &&
+    "names" in message &&
+    Array.isArray(message.names)
+  );
+}
+
+export interface WorkspaceSocket {
+  status: ConnectionStatus;
+  // The name the server gave this connection; null until the welcome arrives.
+  myName: string | null;
+  // Everyone currently connected, as last reported by the server.
+  presenceNames: string[];
+}
+
+// Connects, reports the status, keeps the server's name for this connection and
+// its presence list, and closes the connection when the component goes away.
 export function useWorkspaceSocket(): WorkspaceSocket {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
-  const [lastReply, setLastReply] = useState<string | null>(null);
+  const [myName, setMyName] = useState<string | null>(null);
+  const [presenceNames, setPresenceNames] = useState<string[]>([]);
 
   useEffect(() => {
     const socket = new WebSocket(socketUrl());
@@ -35,11 +63,13 @@ export function useWorkspaceSocket(): WorkspaceSocket {
     socket.addEventListener("open", () => {
       logSocketEvent("open");
       if (isCurrent) setStatus("live");
-      socket.send("Hello from the Workspace");
     });
     socket.addEventListener("message", (event: MessageEvent<string>) => {
       logSocketEvent("message", event.data);
-      if (isCurrent) setLastReply(event.data);
+      if (!isCurrent) return;
+      const message: unknown = JSON.parse(event.data);
+      if (isWelcome(message)) setMyName(message.name);
+      else if (isPresenceUpdate(message)) setPresenceNames(message.names);
     });
     socket.addEventListener("error", (event) => logSocketEvent("error", event));
     socket.addEventListener("close", (event) => {
@@ -53,5 +83,5 @@ export function useWorkspaceSocket(): WorkspaceSocket {
     };
   }, []);
 
-  return { status, lastReply };
+  return { status, myName, presenceNames };
 }

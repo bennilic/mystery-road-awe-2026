@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, type WebSocket } from "ws";
+import { createDisplayName } from "./displayName.ts";
 
 // Exercise 7: the WebSocket side of the dev backend. It shares the HTTP
 // server (and so the port) of the REST API: a WebSocket starts life as an HTTP
@@ -11,18 +12,32 @@ export type LogLine = (line: string) => void;
 
 export function attachRealtime(httpServer: Server, log: LogLine): WebSocketServer {
   const socketServer = new WebSocketServer({ server: httpServer, path: SOCKET_PATH });
+  // The server is the authoritative list of who is connected: one entry per open socket.
+  const namesBySocket = new Map<WebSocket, string>();
+
+  function broadcastPresence(): void {
+    const message = JSON.stringify({
+      type: "presence-updated",
+      names: [...namesBySocket.values()],
+    });
+    for (const socket of namesBySocket.keys()) socket.send(message);
+  }
 
   socketServer.on("connection", (socket) => {
-    log("[realtime] open");
-    socket.on("message", (data) => {
-      const text = data.toString();
-      log(`[realtime] message: ${text}`);
-      socket.send(`Server received: ${text}`);
+    const name = createDisplayName(new Set(namesBySocket.values()));
+    namesBySocket.set(socket, name);
+    log(`[realtime] open: ${name}`);
+    socket.send(JSON.stringify({ type: "welcome", name }));
+    broadcastPresence();
+
+    socket.on("message", (data) => log(`[realtime] message from ${name}: ${data.toString()}`));
+    socket.on("close", (code, reason) => {
+      // Removing the entry on close is what keeps presence honest.
+      namesBySocket.delete(socket);
+      log(`[realtime] close: ${name} (code ${code}, reason "${reason.toString()}")`);
+      broadcastPresence();
     });
-    socket.on("close", (code, reason) =>
-      log(`[realtime] close (code ${code}, reason "${reason.toString()}")`),
-    );
-    socket.on("error", (error) => log(`[realtime] error: ${error.message}`));
+    socket.on("error", (error) => log(`[realtime] error: ${name}: ${error.message}`));
   });
 
   // http.Server.close() waits for open connections; upgraded sockets would keep

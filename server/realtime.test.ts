@@ -21,10 +21,6 @@ async function withBackend(
   }
 }
 
-function nextMessage(socket: WebSocket): Promise<string> {
-  return new Promise((resolve) => socket.once("message", (data) => resolve(data.toString())));
-}
-
 // The server notices a close a moment after the client does, so poll briefly.
 async function waitUntil(condition: () => boolean): Promise<void> {
   for (let attempt = 0; attempt < 100 && !condition(); attempt++) {
@@ -32,21 +28,44 @@ async function waitUntil(condition: () => boolean): Promise<void> {
   }
 }
 
-test("a client connects, sends one message and receives one reply", async () => {
+function collectMessages(socket: WebSocket): unknown[] {
+  const messages: unknown[] = [];
+  socket.on("message", (data) => messages.push(JSON.parse(data.toString())));
+  return messages;
+}
+
+async function connect(socketUrl: string): Promise<{ socket: WebSocket; messages: unknown[] }> {
+  const socket = new WebSocket(socketUrl);
+  const messages = collectMessages(socket);
+  await new Promise((resolve) => socket.once("open", resolve));
+  return { socket, messages };
+}
+
+test("a new connection gets a welcome with its own name and the presence list", async () => {
+  await withBackend(async (socketUrl) => {
+    const { socket, messages } = await connect(socketUrl);
+    await waitUntil(() => messages.length >= 2);
+    const [welcome, presence] = messages as [{ name: string }, { names: string[] }];
+    assert.match(welcome.name, /^Investigator-\d+$/);
+    assert.deepEqual(presence, { type: "presence-updated", names: [welcome.name] });
+    socket.close();
+  });
+});
+
+test("presence lists every open connection and drops a closed one", async () => {
   await withBackend(async (socketUrl, log) => {
-    const socket = new WebSocket(socketUrl);
-    await new Promise((resolve) => socket.once("open", resolve));
-    const reply = nextMessage(socket);
-    socket.send("hello");
-    assert.equal(await reply, "Server received: hello");
-    await new Promise<void>((resolve) => {
-      socket.once("close", () => resolve());
-      socket.close(1000);
-    });
-    await waitUntil(() => log.some((line) => line.startsWith("[realtime] close")));
-    assert.ok(log.includes("[realtime] open"));
-    assert.ok(log.includes("[realtime] message: hello"));
+    const first = await connect(socketUrl);
+    const second = await connect(socketUrl);
+    await waitUntil(() => second.messages.length >= 2);
+    const lastOf = (messages: unknown[]) => messages[messages.length - 1] as { names: string[] };
+    assert.equal(lastOf(second.messages).names.length, 2);
+    assert.notEqual(lastOf(second.messages).names[0], lastOf(second.messages).names[1]);
+
+    first.socket.close(1000);
+    await waitUntil(() => lastOf(second.messages).names.length === 1);
+    assert.equal(lastOf(second.messages).names.length, 1);
     assert.ok(log.some((line) => line.startsWith("[realtime] close")));
+    second.socket.close();
   });
 });
 

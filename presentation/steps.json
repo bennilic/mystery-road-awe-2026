@@ -5450,6 +5450,126 @@
       "before": "socket.addEventListener(\"close\", () => setStatus(\"disconnected\"));",
       "after": "    socket.addEventListener(\"close\", (event) => {\n      logSocketEvent(\"close\", { code: event.code, reason: event.reason, wasClean: event.wasClean });\n      if (isCurrent) setStatus(\"disconnected\");\n    });\n    // Without this the connection would outlive the page that opened it.\n    return () => {\n      isCurrent = false;\n      socket.close(1000, \"Workspace closed\");\n    };",
       "line": 45
+    },
+    {
+      "id": "ex7-d3-t1-page",
+      "type": "app",
+      "title": "D3 - T1 — Random display name and presence list (page)",
+      "narration": "Before the code: the box at the top of the Workspace now shows who this tab is (bold chip) and everybody who is connected. Open the Workspace in two tabs to see both names in both tabs.",
+      "exercise": 7,
+      "demo": 3,
+      "highlight": "#livePanel",
+      "waitFor": "#livePanel",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d3-t1",
+      "type": "code",
+      "title": "D3 - T1 — Random display name and presence list",
+      "narration": "On every new connection the server picks a name like Investigator-42 (server/displayName.ts, never one that is already taken), stores it next to the socket, sends the connection a welcome with its own name, and broadcasts the full list of names to everyone. When a connection closes its entry is deleted and the list is broadcast again, so the list is always \"who has an open socket right now\". Verified with two real browser tabs on the Workspace: tab 1 was Investigator-25 and listed [25, 88], tab 2 was Investigator-88 and listed the same two names; closing tab 2 made tab 1 show only Investigator-25 within half a second. Unit tests cover the name generator (format, no duplicates, rollover to three digits) and an integration test opens two real WebSocket clients against the real server.",
+      "exercise": 7,
+      "demo": 3,
+      "file": "server/realtime.ts",
+      "before": "\n  socketServer.on(\"connection\", (socket) => {\n    log(\"[realtime] open\");\n    socket.on(\"message\", (data) => {\n      const text = data.toString();\n      log(`[realtime] message: ${text}`);\n      socket.send(`Server received: ${text}`);\n    });\n    socket.on(\"close\", (code, reason) =>\n      log(`[realtime] close (code ${code}, reason \"${reason.toString()}\")`),\n    );\n    socket.on(\"error\", (error) => log(`[realtime] error: ${error.message}`));\n  });",
+      "after": "  // The server is the authoritative list of who is connected: one entry per open socket.\n  const namesBySocket = new Map<WebSocket, string>();\n\n  function broadcastPresence(): void {\n    const message = JSON.stringify({\n      type: \"presence-updated\",\n      names: [...namesBySocket.values()],\n    });\n    for (const socket of namesBySocket.keys()) socket.send(message);\n  }\n\n  socketServer.on(\"connection\", (socket) => {\n    const name = createDisplayName(new Set(namesBySocket.values()));\n    namesBySocket.set(socket, name);\n    log(`[realtime] open: ${name}`);\n    socket.send(JSON.stringify({ type: \"welcome\", name }));\n    broadcastPresence();\n\n    socket.on(\"message\", (data) => log(`[realtime] message from ${name}: ${data.toString()}`));\n    socket.on(\"close\", (code, reason) => {\n      // Removing the entry on close is what keeps presence honest.\n      namesBySocket.delete(socket);\n      log(`[realtime] close: ${name} (code ${code}, reason \"${reason.toString()}\")`);\n      broadcastPresence();\n    });\n    socket.on(\"error\", (error) => log(`[realtime] error: ${name}: ${error.message}`));\n  });",
+      "line": 15
+    },
+    {
+      "id": "ex7-d3-q1-page",
+      "type": "app",
+      "title": "D3 - Q1 — Where the authoritative list lives (page)",
+      "narration": "Before the code: the chips are only a picture of the list; the browser cannot decide who is connected.",
+      "exercise": 7,
+      "demo": 3,
+      "highlight": "#livePresence",
+      "waitFor": "#livePresence",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d3-q1",
+      "type": "code",
+      "title": "D3 - Q1 — Where the authoritative list lives",
+      "narration": "On the server, in memory: namesBySocket, a Map with one entry per open socket. Only the server sees every connection, so only it can know who is connected; each browser just renders the last presence-updated message it received. A tab could never be authoritative: it does not know about the others, and a crashed tab cannot report that it is gone. The server also owns the names, which is why it can guarantee they are unique.",
+      "exercise": 7,
+      "demo": 3,
+      "file": "server/realtime.ts",
+      "before": "// browser: only displays what the server said\nconst [presenceNames, setPresenceNames] = useState<string[]>([]);",
+      "after": "  // The server is the authoritative list of who is connected: one entry per open socket.\n  const namesBySocket = new Map<WebSocket, string>();",
+      "line": 15
+    },
+    {
+      "id": "ex7-d3-q2-page",
+      "type": "app",
+      "title": "D3 - Q2 — Presence when a connection closes (page)",
+      "narration": "Before the code: close one of two tabs and watch the chip disappear from the other.",
+      "exercise": 7,
+      "demo": 3,
+      "highlight": "#livePresence",
+      "waitFor": "#livePresence",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d3-q2",
+      "type": "code",
+      "title": "D3 - Q2 — Presence when a connection closes",
+      "narration": "It must be removed immediately, and everyone else must be told: the close handler deletes the socket's entry from the map and broadcasts the new list. Without the delete, the list would grow with ghosts of every tab ever opened; without the broadcast, the other tabs would keep showing the old list until the next unrelated change. I verified it: closing the second tab made the first tab's list shrink to one name. The error handler needs no extra delete because ws always emits close after error.",
+      "exercise": 7,
+      "demo": 3,
+      "file": "server/realtime.ts",
+      "before": "    socket.on(\"close\", (code) => log(`[realtime] close (code ${code})`));",
+      "after": "    socket.on(\"close\", (code, reason) => {\n      // Removing the entry on close is what keeps presence honest.\n      namesBySocket.delete(socket);\n      log(`[realtime] close: ${name} (code ${code}, reason \"${reason.toString()}\")`);\n      broadcastPresence();\n    });",
+      "line": 34
+    },
+    {
+      "id": "ex7-d3-q3-page",
+      "type": "app",
+      "title": "D3 - Q3 — When presence is temporarily wrong (page)",
+      "narration": "Before the code: this list is only as accurate as the server's knowledge of each connection.",
+      "exercise": 7,
+      "demo": 3,
+      "highlight": "#livePresence",
+      "waitFor": "#livePresence",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d3-q3",
+      "type": "code",
+      "title": "D3 - Q3 — When presence is temporarily wrong",
+      "narration": "A tab crash, a killed browser, a laptop losing power or a cable pull sends no close frame, and the server only learns the connection is dead when TCP gives up (it can take minutes) or a write fails. Until then the dead user stays in the list as a ghost. The opposite error also exists: a user with a flaky network is still listed although they cannot receive anything. The usual fix is a heartbeat: the server pings every few seconds and terminates connections that did not answer with a pong, which turns a ghost into a removal within seconds (named as an extension in the exercise, not built here).",
+      "exercise": 7,
+      "demo": 3,
+      "file": "server/realtime.ts",
+      "before": "    socket.on(\"close\", (code, reason) => {\n      // Removing the entry on close is what keeps presence honest.\n      namesBySocket.delete(socket);\n      log(`[realtime] close: ${name} (code ${code}, reason \"${reason.toString()}\")`);\n      broadcastPresence();\n    });",
+      "after": "// extension (not built): heartbeat\nsetInterval(() => {\n  for (const socket of socketServer.clients) {\n    if (!isAlive.get(socket)) { socket.terminate(); continue; }\n    isAlive.set(socket, false);\n    socket.ping();\n  }\n}, 15_000);",
+      "line": 34
+    },
+    {
+      "id": "ex7-d3-q4-page",
+      "type": "app",
+      "title": "D3 - Q4 — Showing which evidence someone is viewing (page)",
+      "narration": "Before the code: today the presence entry is only a name; the evidence list could carry a small marker per viewer.",
+      "exercise": 7,
+      "demo": 3,
+      "highlight": ".evidence-card",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d3-q4",
+      "type": "code",
+      "title": "D3 - Q4 — Showing which evidence someone is viewing",
+      "narration": "Each connection would need a second piece of state besides its name: which evidence item it currently has open. The client has to tell the server (a new message such as { type: \"view-evidence\", evidenceId } or null when leaving, sent when ?open= changes), the server stores it per socket and must clear it on close, and the presence message changes from a list of names to a list of { name, viewingEvidenceId } so every tab can render a marker on the right card. The id must also be validated against the case data like the bookmark ids.",
+      "exercise": 7,
+      "demo": 3,
+      "file": "server/realtime.ts",
+      "before": "names: [...namesBySocket.values()]",
+      "after": "// per connection, instead of just a name:\ninterface Participant {\n  name: string;\n  viewingEvidenceId: string | null;\n}\nconst participants = new Map<WebSocket, Participant>();\n// presence-updated: { type, participants: Participant[] }",
+      "line": 19
     }
   ]
 }
