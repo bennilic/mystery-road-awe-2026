@@ -1,3 +1,4 @@
+import { Badge } from "../../shared/components/Badge.tsx";
 import type { CaseInfo } from "../../../js/types.ts";
 
 export function CaseSummaryCard({ caseInfo }: { caseInfo: CaseInfo }) {
@@ -5,7 +6,7 @@ export function CaseSummaryCard({ caseInfo }: { caseInfo: CaseInfo }) {
     <div className="case-summary-card">
       <h3>{caseInfo.title || "Case"}</h3>
       <p>
-        <span className="badge badge-flagged">{(caseInfo.status || "unknown").toUpperCase()}</span>
+        <Badge variant="flagged">{(caseInfo.status || "unknown").toUpperCase()}</Badge>
       </p>
       <p>{caseInfo.summary}</p>
     </div>

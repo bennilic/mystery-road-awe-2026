@@ -2817,6 +2817,78 @@
       "file": "react/features/people-locations/Card.tsx vs react/shared/data/CaseDataContext.tsx",
       "before": "(react/components/Card.tsx: flat folder, same level as Header and Footer)",
       "after": "import type { ReactNode } from \"react\";\n\nexport type CardVariant = \"person\" | \"location\";\n\ninterface CardProps {\n  variant: CardVariant;\n  children: ReactNode;\n}\n\n// Composition via `children`: the card shell owns only the outer box (and the\n// variant class that styles it); what goes inside is decided by the caller.\n// A data prop would force this component to know about people AND locations.\nexport function Card({ variant, children }: CardProps) {\n  return <div className={`${variant}-card`}>{children}</div>;\n}"
+    },
+    {
+      "id": "ex4-d7-t1-page",
+      "type": "app",
+      "title": "D7 - T1 — On the page: badges in three places",
+      "narration": "Before the code: the \"OPEN\" pill in the case summary is a Badge. The same component is used for the certainty pills on the Timeline and the status pills in the Dashboard's recent evidence list.",
+      "exercise": 4,
+      "demo": 7,
+      "highlight": ".case-summary-card .badge",
+      "waitFor": ".case-summary-card",
+      "view": "dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d7-t1",
+      "type": "code",
+      "title": "D7 - T1 — Badge, one typed component reused in three places",
+      "narration": "Badge takes a closed variant union (reviewed, flagged, critical ...) and children for the label. Uses: CaseSummaryCard (Dashboard, variant flagged), RecentEvidenceList (Dashboard, variant derived from the evidence status) and TimelineItem (Timeline, variant looked up from the certainty). It lives in shared/components because it is used by two features. Because variant is a union, a typo is a compile error, and the shape is not special-cased: no per-feature props, just variant plus children. Verified in the browser: the class list and text of every badge on Dashboard and Timeline is identical to the vanilla output (6 and 15 badges).",
+      "exercise": 4,
+      "demo": 7,
+      "file": "react/shared/components/Badge.tsx",
+      "before": "(file did not exist yet)",
+      "after": "import type { ReactNode } from \"react\";\n\n// Each variant maps 1:1 to a `.badge-<variant>` rule in styles.css.\nexport type BadgeVariant =\n  \"critical\" | \"unreviewed\" | \"reviewed\" | \"flagged\" | \"relevant\" | \"relevance-unclear\";\n\ninterface BadgeProps {\n  variant: BadgeVariant;\n  children: ReactNode;\n}\n\n// What varies per use (colour variant, label) is a prop; what is fixed (the\n// pill markup and the `badge` base class) lives here once.\nexport function Badge({ variant, children }: BadgeProps) {\n  return <span className={`badge badge-${variant}`}>{children}</span>;\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d7-q1-page",
+      "type": "app",
+      "title": "D7 - Q1 — On the page: same pill, different meaning",
+      "narration": "Before the code: certainty badges on the Timeline. Same component as the Dashboard pill, different variant and label.",
+      "exercise": 4,
+      "demo": 7,
+      "highlight": ".timeline-event .badge",
+      "waitFor": ".timeline-event",
+      "view": "timeline",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d7-q1",
+      "type": "code",
+      "title": "D7 - Q1 — What varies and what stays fixed",
+      "narration": "Use 1: <Badge variant=\"flagged\">OPEN</Badge> in CaseSummaryCard. Use 2: <Badge variant={statusVariant(item.status)}>{item.status}</Badge> in RecentEvidenceList. Use 3: <Badge variant={CERTAINTY_BADGE_VARIANT[event.certainty]}>{event.certainty}</Badge> in TimelineItem. Varies via props: colour variant and label. Fixed inside: the span, the base badge class, and the badge-<variant> naming contract with styles.css. Where I drew the line: anything that is about the visual pill belongs to the Badge; anything about how a domain value maps to a variant (certainty to variant, status to variant) stays with the caller, because that is domain knowledge the Badge should not have. Otherwise it becomes a Badge that imports evidence and timeline types.",
+      "exercise": 4,
+      "demo": 7,
+      "file": "react/features/timeline/TimelineItem.tsx",
+      "before": "import { formatDate } from \"../../../js/lookup.ts\";\nimport type { TimelineCertainty, TimelineEvent } from \"../../../js/types.ts\";\n\n// Lookup technique: certainty -> badge colour class. The Record type makes the\n// compiler flag any new certainty value that has no badge yet.\nconst CERTAINTY_BADGE_CLASS: Record<TimelineCertainty, string> = {\n  confirmed: \"reviewed\",\n  contradictory: \"critical\",\n  reported: \"flagged\",\n};\n\ninterface TimelineItemProps {\n  event: TimelineEvent;\n  // Already resolved to display text by the page (\"L01 - Laboratory\"), so this\n  // component does not need to know how locations are looked up.\n  locationLabels: string[];\n}\n\nexport function TimelineItem({ event, locationLabels }: TimelineItemProps) {\n  return (\n    <div className={`timeline-event certainty-${event.certainty}`}>\n      <div className=\"timeline-time\">\n        {formatDate(event.time)}&nbsp;&middot;&nbsp;\n        <span className={`badge badge-${CERTAINTY_BADGE_CLASS[event.certainty]}`}>\n          {event.certainty}\n        </span>\n      </div>\n      <h3>{event.title}</h3>\n      <p>{event.description}</p>\n      {locationLabels.length > 0 && (\n        <p className=\"evidence-meta\">Location: {locationLabels.join(\", \")}</p>\n      )}\n      {event.evidenceIds.map((evidenceId) => (\n        <button key={evidenceId} type=\"button\" className=\"evidence-link-btn\">\n          View {evidenceId}\n        </button>\n      ))}\n    </div>\n  );\n}",
+      "after": "import { formatDate } from \"../../../js/lookup.ts\";\nimport { Badge, type BadgeVariant } from \"../../shared/components/Badge.tsx\";\nimport type { TimelineCertainty, TimelineEvent } from \"../../../js/types.ts\";\n\n// Lookup technique: certainty -> badge variant. The Record type makes the\n// compiler flag any new certainty value that has no badge yet.\nconst CERTAINTY_BADGE_VARIANT: Record<TimelineCertainty, BadgeVariant> = {\n  confirmed: \"reviewed\",\n  contradictory: \"critical\",\n  reported: \"flagged\",\n};\n\ninterface TimelineItemProps {\n  event: TimelineEvent;\n  // Already resolved to display text by the page (\"L01 - Laboratory\"), so this\n  // component does not need to know how locations are looked up.\n  locationLabels: string[];\n}\n\nexport function TimelineItem({ event, locationLabels }: TimelineItemProps) {\n  return (\n    <div className={`timeline-event certainty-${event.certainty}`}>\n      <div className=\"timeline-time\">\n        {formatDate(event.time)}&nbsp;&middot;&nbsp;\n        <Badge variant={CERTAINTY_BADGE_VARIANT[event.certainty]}>{event.certainty}</Badge>\n      </div>\n      <h3>{event.title}</h3>\n      <p>{event.description}</p>\n      {locationLabels.length > 0 && (\n        <p className=\"evidence-meta\">Location: {locationLabels.join(\", \")}</p>\n      )}\n      {event.evidenceIds.map((evidenceId) => (\n        <button key={evidenceId} type=\"button\" className=\"evidence-link-btn\">\n          View {evidenceId}\n        </button>\n      ))}\n    </div>\n  );\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d7-q2-page",
+      "type": "app",
+      "title": "D7 - Q2 — On the page: the same markup, written once",
+      "narration": "Before the code: the vanilla app wrote this pill out separately in the dashboard, timeline and evidence modules; in React it is one file.",
+      "exercise": 4,
+      "demo": 7,
+      "highlight": ".dashboard-columns",
+      "waitFor": ".mini-list-item",
+      "view": "dashboard",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d7-q2",
+      "type": "code",
+      "title": "D7 - Q2 — Component vs copy-pasted template strings",
+      "narration": "In the vanilla app the pill markup is repeated in at least five template strings across three modules, each slightly different (one hard-codes badge-flagged, another builds the class from a function, another concatenates the label). Changing the pill means finding every copy, and a typo in a string class fails silently at runtime. A component gives: one definition (change once, everywhere), a typed API (variants checked at compile time, label required), a name that shows intent in the calling code, escaping by default (JSX escapes the label; the string version concatenated raw text into innerHTML), and a single place to test. The shared Badge is also the third copy that tipped my own rule of three: used in more than two places, so extracting it was justified.",
+      "exercise": 4,
+      "demo": 7,
+      "file": "js/views/*.ts vs react/shared/components/Badge.tsx",
+      "before": "// js/views/dashboard.ts (case summary)\n'<p><span class=\"badge badge-flagged\">' + status + \"</span></p>\"\n// js/views/dashboard.ts (recent evidence)\n' <span class=\"badge ' + getStatusBadgeClass(item.status) + '\">' + item.status + \"</span>\"\n// js/views/timeline.ts\n'<span class=\"badge badge-' + certaintyBadgeClass(item.certainty) + '\">' + item.certainty + \"</span>\"\n// js/views/evidence.ts (x3 more: critical, status, relevance)\n'<span class=\"badge ' + getStatusBadgeClass(ev.status) + '\">' + ev.status + \"</span>\"",
+      "after": "import type { ReactNode } from \"react\";\n\n// Each variant maps 1:1 to a `.badge-<variant>` rule in styles.css.\nexport type BadgeVariant =\n  \"critical\" | \"unreviewed\" | \"reviewed\" | \"flagged\" | \"relevant\" | \"relevance-unclear\";\n\ninterface BadgeProps {\n  variant: BadgeVariant;\n  children: ReactNode;\n}\n\n// What varies per use (colour variant, label) is a prop; what is fixed (the\n// pill markup and the `badge` base class) lives here once.\nexport function Badge({ variant, children }: BadgeProps) {\n  return <span className={`badge badge-${variant}`}>{children}</span>;\n}",
+      "line": 1
     }
   ]
 }

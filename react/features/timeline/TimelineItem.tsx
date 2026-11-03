@@ -1,9 +1,10 @@
 import { formatDate } from "../../../js/lookup.ts";
+import { Badge, type BadgeVariant } from "../../shared/components/Badge.tsx";
 import type { TimelineCertainty, TimelineEvent } from "../../../js/types.ts";
 
-// Lookup technique: certainty -> badge colour class. The Record type makes the
+// Lookup technique: certainty -> badge variant. The Record type makes the
 // compiler flag any new certainty value that has no badge yet.
-const CERTAINTY_BADGE_CLASS: Record<TimelineCertainty, string> = {
+const CERTAINTY_BADGE_VARIANT: Record<TimelineCertainty, BadgeVariant> = {
   confirmed: "reviewed",
   contradictory: "critical",
   reported: "flagged",
@@ -21,9 +22,7 @@ export function TimelineItem({ event, locationLabels }: TimelineItemProps) {
     <div className={`timeline-event certainty-${event.certainty}`}>
       <div className="timeline-time">
         {formatDate(event.time)}&nbsp;&middot;&nbsp;
-        <span className={`badge badge-${CERTAINTY_BADGE_CLASS[event.certainty]}`}>
-          {event.certainty}
-        </span>
+        <Badge variant={CERTAINTY_BADGE_VARIANT[event.certainty]}>{event.certainty}</Badge>
       </div>
       <h3>{event.title}</h3>
       <p>{event.description}</p>
