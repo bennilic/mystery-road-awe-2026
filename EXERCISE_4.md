@@ -36,7 +36,7 @@ These checkboxes are for self-checking. Don't forget to do the actual checking o
 | 6 | Feature-oriented folder structure | ☑ |
 | 7 | Reusable UI elements | ☑ |
 | 8 | Routing: People & Locations as real routes | ☑ |
-| 9 | Route parameters | ☐ |
+| 9 | Route parameters | ☑ |
 | 10 | Query parameters as URL state + migration wrap-up | ☐ |
 
 ---
@@ -162,13 +162,13 @@ component state) matter for the user? Name a concrete capability the user gains.
 
 **Tasks**
 
-- [ ] Add at least one route that takes a parameter (e.g. a person or location id in the URL, such as `/team/people/:personId`), and use that parameter inside the corresponding component to determine what to render.
-- [ ] Make at least one place in the app link to that parameterized route (not just typing the URL by hand). For example, a person's name in a related-evidence context, or a "view on team page" link.
+- [x] Add at least one route that takes a parameter (e.g. a person or location id in the URL, such as `/team/people/:personId`), and use that parameter inside the corresponding component to determine what to render.
+- [x] Make at least one place in the app link to that parameterized route (not just typing the URL by hand). For example, a person's name in a related-evidence context, or a "view on team page" link.
 
 **Questions** (depend on the tasks above)
 
-- [ ] How do you read a route parameter's value inside your component, and what type is it as far as TypeScript is concerned by default? What did you have to do to use it safely (e.g. what if the id in the URL doesn't match any real person)?
-- [ ] What's the practical difference, for the user, between `/team/people/nova-byte` (a route
+- [x] How do you read a route parameter's value inside your component, and what type is it as far as TypeScript is concerned by default? What did you have to do to use it safely (e.g. what if the id in the URL doesn't match any real person)?
+- [x] What's the practical difference, for the user, between `/team/people/nova-byte` (a route
 param) and `/team/people?person=nova-byte` (a query param)? Why is one more appropriate than
 the other for this specific case?
 

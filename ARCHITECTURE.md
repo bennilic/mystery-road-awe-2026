@@ -16,7 +16,7 @@ react/
       DashboardPage.tsx  StatGrid.tsx  CaseSummaryCard.tsx  ReviewProgress.tsx
       RecentEvidenceList.tsx  RecentTimelineList.tsx  HowToUseCard.tsx  bookmarks.ts
     people-locations/
-      PeoplePage.tsx (feature)  PeopleLocationsView.tsx (presentational)
+      PeoplePage.tsx PersonDetailPage.tsx (feature)  PeopleLocationsView.tsx PersonDetailView.tsx (presentational)
       PersonCard.tsx  LocationCard.tsx  Card.tsx  TabBar.tsx  ResponsibilityList.tsx
     timeline/
       TimelinePage.tsx (feature)  TimelineView.tsx (presentational)

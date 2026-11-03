@@ -11,6 +11,11 @@ export const PATHS = {
   workspace: "/workspace",
 } as const;
 
+// encodeURIComponent: an id with "/" or "?" in it must not change the route's shape.
+export function personPath(personId: string): string {
+  return `${PATHS.people}/${encodeURIComponent(personId)}`;
+}
+
 export const NAV_ITEMS: ReadonlyArray<{ path: string; label: string }> = [
   { path: PATHS.dashboard, label: "Dashboard" },
   { path: PATHS.evidence, label: "Evidence" },

@@ -872,3 +872,13 @@ a.nav-btn.active,
 a.tab-btn.active {
   color: #fff;
 }
+
+/* Exercise 4 / Demo 9: a person's name in the list is a link to the profile. */
+.person-card h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.person-card h3 a:hover {
+  text-decoration: underline;
+}

@@ -1,17 +1,7 @@
 import { useCaseData, type CaseData } from "../../shared/data/CaseDataContext.tsx";
 import { PeopleLocationsView } from "./PeopleLocationsView.tsx";
 import type { PeopleTab } from "./TabBar.tsx";
-import type { Evidence, Person } from "../../../js/types.ts";
-import { evidenceMentionsPerson } from "../../../js/lookup.ts";
-
-// E04 stores "Nova Byte" (a display name) in personIds instead of the id; the
-// vanilla app repairs that once at load time (normalizePersonIds). The React
-// provider does not, so the count accepts either to stay identical.
-function countEvidenceForPerson(evidence: Evidence[], person: Person): number {
-  return evidence.filter(
-    (item) => evidenceMentionsPerson(item, person) || item.personIds.includes(person.name),
-  ).length;
-}
+import { countEvidenceForPerson } from "./countEvidenceForPerson.ts";
 
 // Feature component: knows where the data lives (case-data context), how the
 // URL picks the tab, and how evidence is matched to people.

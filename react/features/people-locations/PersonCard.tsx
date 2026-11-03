@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+import { personPath } from "../../shared/routing/paths.ts";
 import type { Person } from "../../../js/types.ts";
 import { Card } from "./Card.tsx";
 import { ResponsibilityList } from "./ResponsibilityList.tsx";
@@ -13,7 +15,9 @@ export function PersonCard({ person, relatedEvidenceCount }: PersonCardProps) {
       <div className="person-card-header">
         <img className="person-avatar" src={person.avatar} alt={`Portrait of ${person.name}`} />
         <div>
-          <h3>{person.name}</h3>
+          <h3>
+            <Link to={personPath(person.id)}>{person.name}</Link>
+          </h3>
           <div className="person-role">{person.role}</div>
         </div>
       </div>

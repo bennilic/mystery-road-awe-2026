@@ -6,6 +6,7 @@ import { CaseDataProvider } from "../shared/data/CaseDataContext.tsx";
 import { PATHS } from "../shared/routing/paths.ts";
 import { DashboardPage } from "../features/dashboard/DashboardPage.tsx";
 import { PeoplePage } from "../features/people-locations/PeoplePage.tsx";
+import { PersonDetailPage } from "../features/people-locations/PersonDetailPage.tsx";
 import { TimelinePage } from "../features/timeline/TimelinePage.tsx";
 
 export function App() {
@@ -24,6 +25,7 @@ export function App() {
           />
           <Route path={PATHS.team} element={<Navigate to={PATHS.people} replace />} />
           <Route path={PATHS.people} element={<PeoplePage tab="people" />} />
+          <Route path={`${PATHS.people}/:personId`} element={<PersonDetailPage />} />
           <Route path={PATHS.locations} element={<PeoplePage tab="locations" />} />
           <Route path={PATHS.timeline} element={<TimelinePage />} />
           <Route

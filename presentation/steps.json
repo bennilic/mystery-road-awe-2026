@@ -3008,6 +3008,102 @@
       "before": "// js/navigation.ts: handleHashChange()\nconst hash: ViewName = isViewName(rawHash) ? rawHash : \"dashboard\";",
       "after": "<Route path=\"*\" element={<Navigate to={PATHS.dashboard} replace />} />",
       "line": 45
+    },
+    {
+      "id": "ex4-d9-t1-page",
+      "type": "app",
+      "title": "D9 - T1 — On the page: a profile route",
+      "narration": "Before the code: this is /team/people/nova-byte. The part after the last slash is the route parameter, and it decides which person is shown.",
+      "exercise": 4,
+      "demo": 9,
+      "highlight": ".person-card",
+      "waitFor": ".person-statement",
+      "view": "/team/people/nova-byte",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d9-t1",
+      "type": "code",
+      "title": "D9 - T1 — /team/people/:personId",
+      "narration": "The route path contains :personId, a placeholder. PersonDetailPage reads it with useParams and looks the person up in the case data: data.people.find(p => p.id === personId). Nothing about Nova Byte is hard-coded, so the same component serves all six people and any id that does not exist. Because the profile is a route rather than a modal or local state, it has its own URL that can be bookmarked. Verified in the browser for nova-byte and signal-scholar, and for an unknown id.",
+      "exercise": 4,
+      "demo": 9,
+      "file": "react/features/people-locations/PersonDetailPage.tsx",
+      "before": "(file did not exist yet)",
+      "after": "import { Link, useParams } from \"react-router\";\nimport { useCaseData, type CaseData } from \"../../shared/data/CaseDataContext.tsx\";\nimport { PATHS } from \"../../shared/routing/paths.ts\";\nimport { countEvidenceForPerson } from \"./countEvidenceForPerson.ts\";\nimport { PersonDetailView } from \"./PersonDetailView.tsx\";\n\nfunction PersonDetailContent({ data, personId }: { data: CaseData; personId: string | undefined }) {\n  const person = data.people.find((candidate) => candidate.id === personId);\n\n  // The URL is user input: any string can arrive here, so \"no such person\" is\n  // a normal outcome, not an exception.\n  if (!person) {\n    return (\n      <div className=\"intro-card\">\n        <p>\n          No person with the id &ldquo;{personId ?? \"\"}&rdquo; exists in this case. Pick someone\n          from the <Link to={PATHS.people}>people list</Link>.\n        </p>\n      </div>\n    );\n  }\n\n  return (\n    <div className=\"people-grid\">\n      <PersonDetailView\n        person={person}\n        relatedEvidenceCount={countEvidenceForPerson(data.evidence, person)}\n      />\n    </div>\n  );\n}\n\nexport function PersonDetailPage() {\n  // useParams types every param as `string | undefined`: TypeScript cannot know\n  // the URL matched a pattern that contains :personId.\n  const { personId } = useParams<{ personId: string }>();\n  const caseData = useCaseData();\n\n  return (\n    <section className=\"view active\">\n      <h2>Person profile</h2>\n      {caseData.status === \"loading\" && <p>Loading case file&hellip;</p>}\n      {caseData.status === \"error\" && (\n        <p role=\"alert\">\n          The case file could not be loaded ({caseData.message}). Check that the dev server is\n          running and reload the page.\n        </p>\n      )}\n      {caseData.status === \"ready\" && (\n        <PersonDetailContent data={caseData.data} personId={personId} />\n      )}\n    </section>\n  );\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d9-t2-page",
+      "type": "app",
+      "title": "D9 - T2 — On the page: the link",
+      "narration": "Before the code: each person's name on the people list is a link to their profile.",
+      "exercise": 4,
+      "demo": 9,
+      "highlight": ".person-card h3",
+      "waitFor": ".person-card",
+      "view": "/team/people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d9-t2",
+      "type": "code",
+      "title": "D9 - T2 — Linking with <Link>",
+      "narration": "In PersonCard the name is now <Link to={personPath(person.id)}>. personPath builds \"/team/people/\" plus the id (URL-encoded) in one shared place, so no component hand-writes the URL. Link renders a real anchor with the right href: it works with middle-click, open-in-new-tab and copy-link, and a normal click navigates without reloading the page (the router just swaps the rendered route). The profile links back to the list the same way. Verified by clicking: hash changes to #/team/people/nova-byte, the nav item stays active, and the back link returns to the list.",
+      "exercise": 4,
+      "demo": 9,
+      "file": "react/features/people-locations/PersonCard.tsx",
+      "before": "import type { Person } from \"../../../js/types.ts\";\nimport { Card } from \"./Card.tsx\";\nimport { ResponsibilityList } from \"./ResponsibilityList.tsx\";\n\ninterface PersonCardProps {\n  person: Person;\n  relatedEvidenceCount: number;\n}\n\nexport function PersonCard({ person, relatedEvidenceCount }: PersonCardProps) {\n  return (\n    <Card variant=\"person\">\n      <div className=\"person-card-header\">\n        <img className=\"person-avatar\" src={person.avatar} alt={`Portrait of ${person.name}`} />\n        <div>\n          <h3>{person.name}</h3>\n          <div className=\"person-role\">{person.role}</div>\n        </div>\n      </div>\n      <p>\n        <strong>Speciality:</strong> {person.speciality}\n      </p>\n      <ResponsibilityList responsibilities={person.responsibilities} />\n      <div className=\"person-statement\">&ldquo;{person.statement}&rdquo;</div>\n      <p>\n        {relatedEvidenceCount} related evidence item{relatedEvidenceCount === 1 ? \"\" : \"s\"}\n      </p>\n    </Card>\n  );\n}",
+      "after": "import { Link } from \"react-router\";\nimport { personPath } from \"../../shared/routing/paths.ts\";\nimport type { Person } from \"../../../js/types.ts\";\nimport { Card } from \"./Card.tsx\";\nimport { ResponsibilityList } from \"./ResponsibilityList.tsx\";\n\ninterface PersonCardProps {\n  person: Person;\n  relatedEvidenceCount: number;\n}\n\nexport function PersonCard({ person, relatedEvidenceCount }: PersonCardProps) {\n  return (\n    <Card variant=\"person\">\n      <div className=\"person-card-header\">\n        <img className=\"person-avatar\" src={person.avatar} alt={`Portrait of ${person.name}`} />\n        <div>\n          <h3>\n            <Link to={personPath(person.id)}>{person.name}</Link>\n          </h3>\n          <div className=\"person-role\">{person.role}</div>\n        </div>\n      </div>\n      <p>\n        <strong>Speciality:</strong> {person.speciality}\n      </p>\n      <ResponsibilityList responsibilities={person.responsibilities} />\n      <div className=\"person-statement\">&ldquo;{person.statement}&rdquo;</div>\n      <p>\n        {relatedEvidenceCount} related evidence item{relatedEvidenceCount === 1 ? \"\" : \"s\"}\n      </p>\n    </Card>\n  );\n}",
+      "line": 15
+    },
+    {
+      "id": "ex4-d9-q1-page",
+      "type": "app",
+      "title": "D9 - Q1 — On the page: an id that does not exist",
+      "narration": "Before the code: /team/people/nobody. The page says which id was not found and offers a way back instead of crashing or showing blank.",
+      "exercise": 4,
+      "demo": 9,
+      "highlight": ".intro-card",
+      "waitFor": ".intro-card",
+      "view": "/team/people/nobody",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d9-q1",
+      "type": "code",
+      "title": "D9 - Q1 — Reading a param and its type",
+      "narration": "useParams<{ personId: string }>() returns an object whose values are typed string | undefined, regardless of what I pass in: TypeScript cannot know that the current URL matched a pattern with :personId, and the value is always a plain string coming from the URL, never a typed Person or a number. To use it safely: (1) handle undefined, (2) look the person up in the data and handle \"not found\", which is a normal case because the URL is user input, and only then render. My PersonDetailContent does find(), and if nothing matches it renders a message that names the id and links back, rather than throwing or rendering an empty card. Avoid the shortcut personId! or as string, which would turn a user typo into a runtime crash.",
+      "exercise": 4,
+      "demo": 9,
+      "file": "react/features/people-locations/PersonDetailPage.tsx",
+      "before": "// possible but wrong:\nconst personId = useParams().personId as string;\nconst person = data.people.find((p) => p.id === personId)!;  // crashes on /team/people/nobody",
+      "after": "import { Link, useParams } from \"react-router\";\nimport { useCaseData, type CaseData } from \"../../shared/data/CaseDataContext.tsx\";\nimport { PATHS } from \"../../shared/routing/paths.ts\";\nimport { countEvidenceForPerson } from \"./countEvidenceForPerson.ts\";\nimport { PersonDetailView } from \"./PersonDetailView.tsx\";\n\nfunction PersonDetailContent({ data, personId }: { data: CaseData; personId: string | undefined }) {\n  const person = data.people.find((candidate) => candidate.id === personId);\n\n  // The URL is user input: any string can arrive here, so \"no such person\" is\n  // a normal outcome, not an exception.\n  if (!person) {\n    return (\n      <div className=\"intro-card\">\n        <p>\n          No person with the id &ldquo;{personId ?? \"\"}&rdquo; exists in this case. Pick someone\n          from the <Link to={PATHS.people}>people list</Link>.\n        </p>\n      </div>\n    );\n  }\n\n  return (\n    <div className=\"people-grid\">\n      <PersonDetailView\n        person={person}\n        relatedEvidenceCount={countEvidenceForPerson(data.evidence, person)}\n      />\n    </div>\n  );\n}\n\nexport function PersonDetailPage() {\n  // useParams types every param as `string | undefined`: TypeScript cannot know\n  // the URL matched a pattern that contains :personId.\n  const { personId } = useParams<{ personId: string }>();\n  const caseData = useCaseData();\n\n  return (\n    <section className=\"view active\">\n      <h2>Person profile</h2>\n      {caseData.status === \"loading\" && <p>Loading case file&hellip;</p>}\n      {caseData.status === \"error\" && (\n        <p role=\"alert\">\n          The case file could not be loaded ({caseData.message}). Check that the dev server is\n          running and reload the page.\n        </p>\n      )}\n      {caseData.status === \"ready\" && (\n        <PersonDetailContent data={caseData.data} personId={personId} />\n      )}\n    </section>\n  );\n}",
+      "line": 33
+    },
+    {
+      "id": "ex4-d9-q2-page",
+      "type": "app",
+      "title": "D9 - Q2 — On the page: path param in the address",
+      "narration": "Before the code: the person is part of the path. The alternative would be /team/people?person=nova-byte, which is still the people list page.",
+      "exercise": 4,
+      "demo": 9,
+      "highlight": ".person-card",
+      "waitFor": ".person-statement",
+      "view": "/team/people/nova-byte",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d9-q2",
+      "type": "code",
+      "title": "D9 - Q2 — Route param vs query param",
+      "narration": "/team/people/nova-byte says WHICH resource this page is: it is a distinct page (its own title, content, history entry) with a clean, shareable, hierarchical URL, and it is required: without the segment it is a different page (the list). /team/people?person=nova-byte says \"the people page, with an option applied\": the page stays the same and the parameter is optional, can be combined with others (&order=desc), is ignored when absent, and fits filters, sorting, search and pagination. For this case a profile is a single identified entity, so the path is the right form (REST-like /collection/:id). A filter such as \"timeline events for this person\" is the opposite: the Timeline page is the same, only narrowed, so that belongs in a query parameter, which is what Demo 10 does (/timeline?person=nova-byte).",
+      "exercise": 4,
+      "demo": 9,
+      "file": "react/app/App.tsx",
+      "before": "import { Navigate, Route, Routes } from \"react-router\";\nimport { Header } from \"../shell/Header.tsx\";\nimport { Footer } from \"../shell/Footer.tsx\";\nimport { StubPage } from \"../shell/StubPage.tsx\";\nimport { CaseDataProvider } from \"../shared/data/CaseDataContext.tsx\";\nimport { PATHS } from \"../shared/routing/paths.ts\";\nimport { DashboardPage } from \"../features/dashboard/DashboardPage.tsx\";\nimport { PeoplePage } from \"../features/people-locations/PeoplePage.tsx\";\nimport { TimelinePage } from \"../features/timeline/TimelinePage.tsx\";\n\nexport function App() {\n  return (\n    <CaseDataProvider>\n      <Header />\n      <main id=\"app\" className=\"app-main\">\n        <Routes>\n          <Route path=\"/\" element={<Navigate to={PATHS.dashboard} replace />} />\n          <Route path={PATHS.dashboard} element={<DashboardPage />} />\n          <Route\n            path={PATHS.evidence}\n            element={\n              <StubPage title=\"Evidence Catalogue\" migratedInExercise={5} vanillaView=\"evidence\" />\n            }\n          />\n          <Route path={PATHS.team} element={<Navigate to={PATHS.people} replace />} />\n          <Route path={PATHS.people} element={<PeoplePage tab=\"people\" />} />\n          <Route path={PATHS.locations} element={<PeoplePage tab=\"locations\" />} />\n          <Route path={PATHS.timeline} element={<TimelinePage />} />\n          <Route\n            path={PATHS.workspace}\n            element={\n              <StubPage\n                title=\"Investigator Workspace\"\n                migratedInExercise={5}\n                vanillaView=\"workspace\"\n              />\n            }\n          />\n          {/* Old Exercise 3 hashes (#people) keep working as bookmarks. */}\n          <Route path=\"/people\" element={<Navigate to={PATHS.people} replace />} />\n          {/* Anything else: same fallback as the vanilla handleHashChange(), but explicit. */}\n          <Route path=\"*\" element={<Navigate to={PATHS.dashboard} replace />} />\n        </Routes>\n      </main>\n      <Footer />\n    </CaseDataProvider>\n  );\n}",
+      "after": "import { Navigate, Route, Routes } from \"react-router\";\nimport { Header } from \"../shell/Header.tsx\";\nimport { Footer } from \"../shell/Footer.tsx\";\nimport { StubPage } from \"../shell/StubPage.tsx\";\nimport { CaseDataProvider } from \"../shared/data/CaseDataContext.tsx\";\nimport { PATHS } from \"../shared/routing/paths.ts\";\nimport { DashboardPage } from \"../features/dashboard/DashboardPage.tsx\";\nimport { PeoplePage } from \"../features/people-locations/PeoplePage.tsx\";\nimport { PersonDetailPage } from \"../features/people-locations/PersonDetailPage.tsx\";\nimport { TimelinePage } from \"../features/timeline/TimelinePage.tsx\";\n\nexport function App() {\n  return (\n    <CaseDataProvider>\n      <Header />\n      <main id=\"app\" className=\"app-main\">\n        <Routes>\n          <Route path=\"/\" element={<Navigate to={PATHS.dashboard} replace />} />\n          <Route path={PATHS.dashboard} element={<DashboardPage />} />\n          <Route\n            path={PATHS.evidence}\n            element={\n              <StubPage title=\"Evidence Catalogue\" migratedInExercise={5} vanillaView=\"evidence\" />\n            }\n          />\n          <Route path={PATHS.team} element={<Navigate to={PATHS.people} replace />} />\n          <Route path={PATHS.people} element={<PeoplePage tab=\"people\" />} />\n          <Route path={`${PATHS.people}/:personId`} element={<PersonDetailPage />} />\n          <Route path={PATHS.locations} element={<PeoplePage tab=\"locations\" />} />\n          <Route path={PATHS.timeline} element={<TimelinePage />} />\n          <Route\n            path={PATHS.workspace}\n            element={\n              <StubPage\n                title=\"Investigator Workspace\"\n                migratedInExercise={5}\n                vanillaView=\"workspace\"\n              />\n            }\n          />\n          {/* Old Exercise 3 hashes (#people) keep working as bookmarks. */}\n          <Route path=\"/people\" element={<Navigate to={PATHS.people} replace />} />\n          {/* Anything else: same fallback as the vanilla handleHashChange(), but explicit. */}\n          <Route path=\"*\" element={<Navigate to={PATHS.dashboard} replace />} />\n        </Routes>\n      </main>\n      <Footer />\n    </CaseDataProvider>\n  );\n}",
+      "line": 28
     }
   ]
 }
