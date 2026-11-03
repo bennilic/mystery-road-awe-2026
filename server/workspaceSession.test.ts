@@ -46,3 +46,22 @@ test("broadcast reaches every open connection and skips one that is closing", ()
   assert.deepEqual(open.sent, [{ type: "bookmarks-updated", bookmarks: ["E01"] }]);
   assert.deepEqual(closing.sent, []);
 });
+
+test("bookmarks behave like a set: order of different toggles does not matter", () => {
+  const forwards = new WorkspaceSession();
+  forwards.toggleBookmark("E01");
+  forwards.toggleBookmark("E02");
+  const backwards = new WorkspaceSession();
+  backwards.toggleBookmark("E02");
+  backwards.toggleBookmark("E01");
+  assert.deepEqual([...forwards.bookmarks].sort(), [...backwards.bookmarks].sort());
+});
+
+test("toggling the same id twice returns to the starting set", () => {
+  const session = new WorkspaceSession();
+  session.toggleBookmark("E01");
+  const startingSet = session.bookmarks;
+  session.toggleBookmark("E07");
+  session.toggleBookmark("E07");
+  assert.deepEqual(session.bookmarks, startingSet);
+});

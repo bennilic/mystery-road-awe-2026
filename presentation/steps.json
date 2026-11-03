@@ -5930,6 +5930,126 @@
       "before": "          session.broadcast({\n            type: \"bookmarks-updated\",\n            bookmarks: session.toggleBookmark(message.evidenceId),\n          });",
       "after": "// delta + version (not built): small messages, snapshot only on join/reconnect\nsession.broadcast({\n  type: \"bookmark-changed\",\n  evidenceId: message.evidenceId,\n  isBookmarked: session.bookmarks.includes(message.evidenceId),\n  version: session.version,\n});",
       "line": 46
+    },
+    {
+      "id": "ex7-d7-t1-page",
+      "type": "app",
+      "title": "D7 - T1 — Bookmarks are a set, and the UI derives from the server's set (page)",
+      "narration": "Before the code: the stars on the cards. Each is simply \"is my id in the set the server last sent?\"; nothing here is stored per card or per tab.",
+      "exercise": 7,
+      "demo": 7,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".bookmark-btn",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d7-t1",
+      "type": "code",
+      "title": "D7 - T1 — Bookmarks are a set, and the UI derives from the server's set",
+      "narration": "A bookmark is present or absent, nothing more, so the whole shared state is a Set of evidence ids (WorkspaceSession) and a toggle flips one membership. Demonstrated: with the Evidence page open and no local click, a plain Node WebSocket client (not the app) toggled E01 and E05, and the two stars turned active in the open tab within 300 ms; toggling them again switched them off; localStorage stayed empty the whole time. Confirmed in the code: the browser has exactly one bookmark state, sharedBookmarkIds, and the only setter call is in the handler for workspace-state and bookmarks-updated (grep for useState/localStorage near \"bookmark\" in react/ finds nothing else). Everything on screen is derived during render from it: the star with bookmarkedIds.includes(item.id), the Dashboard count and the Workspace list with selectBookmarkedEvidence. Tests added for the set properties: order of different toggles does not matter, toggling twice returns to the start, two clients toggling the same id at once end in one agreed state.",
+      "exercise": 7,
+      "demo": 7,
+      "file": "react/shared/live/useWorkspaceSocket.ts",
+      "before": "// Exercise 5/6: a local copy, written by this tab's own clicks\nconst [bookmarkedIds, setBookmarkedIds] = useState(readBookmarkIds);",
+      "after": "  const [sharedBookmarkIds, setSharedBookmarkIds] = useState<string[]>([]);\n// ...the only place it is ever set:\n        case \"workspace-state\":\n        case \"bookmarks-updated\":\n          setSharedBookmarkIds(message.bookmarks);\n          break;\n\n// EvidenceCard.tsx, derived during render:\nconst isBookmarked = bookmarkedIds.includes(item.id);",
+      "line": 38
+    },
+    {
+      "id": "ex7-d7-q1-page",
+      "type": "app",
+      "title": "D7 - Q1 — Conflict avoided for different items (page)",
+      "narration": "Before the code: two cards, two stars, two independent facts.",
+      "exercise": 7,
+      "demo": 7,
+      "highlight": ".evidence-card",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d7-q1",
+      "type": "code",
+      "title": "D7 - Q1 — Conflict avoided for different items",
+      "narration": "The write-write conflict on the same data. E01 and E05 are different members of the set: adding one neither reads nor depends on the other, so the operations commute (the result is the same in either order) and neither user's change can overwrite the other's. I tested that order does not matter (E01 then E02 equals E02 then E01). Nobody has to \"win\", and no merge step is needed.",
+      "exercise": 7,
+      "demo": 7,
+      "file": "docs/exercise-7/07-set-like-state.md",
+      "before": "// two users, two different ids\nuserA: toggle E01\nuserB: toggle E05",
+      "after": "// either order gives the same set\n{E01, E05}",
+      "line": 1
+    },
+    {
+      "id": "ex7-d7-q2-page",
+      "type": "app",
+      "title": "D7 - Q2 — Why a set is simpler than a shared note (page)",
+      "narration": "Before the code: the Personal Notes column on this page is the contrast: text that several people could edit at once.",
+      "exercise": 7,
+      "demo": 7,
+      "highlight": ".workspace-col + .workspace-col",
+      "waitFor": ".workspace-col + .workspace-col",
+      "view": "/workspace",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d7-q2",
+      "type": "code",
+      "title": "D7 - Q2 — Why a set is simpler than a shared note",
+      "narration": "The unit of change is one whole, independent fact (id present or not), the state is tiny, and the complete value fits into every message, so the latest message simply replaces the state. A shared note is long, ordered text edited in the middle by several people at once: \"insert at position 40\" and \"delete characters 30 to 45\" depend on each other and on what the text looked like when they were made, so the same keystrokes applied in a different order give different text. Replacing the whole note loses someone's typing, which means a merge strategy (operational transformation, a CRDT), locking, or at least last-write-wins with a warning.",
+      "exercise": 7,
+      "demo": 7,
+      "file": "docs/exercise-7/07-set-like-state.md",
+      "before": "// set: replace the state with the newest message\nsetSharedBookmarkIds(message.bookmarks);",
+      "after": "// text: whose edit wins?\nA: insert(40, \"calibration \")\nB: delete(30, 45)   // both made against the SAME old text",
+      "line": 1
+    },
+    {
+      "id": "ex7-d7-q3-page",
+      "type": "app",
+      "title": "D7 - Q3 — Two users toggle the same item at once (page)",
+      "narration": "Before the code: this is the whole conflict rule: whichever toggle the server handles first goes first.",
+      "exercise": 7,
+      "demo": 7,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".bookmark-btn",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d7-q3",
+      "type": "code",
+      "title": "D7 - Q3 — Two users toggle the same item at once",
+      "narration": "Node handles the messages one at a time, in the order they arrive, so there is no race inside the server: the first toggle adds the id, the second removes it again, and the final state is \"absent\". Both tabs receive both broadcasts in the same order and end on the same set (tested with two real clients: both saw the same two updates and the final set was empty). The surprise is for the users: both wanted \"bookmark it\" but got a net no-op, because a toggle is relative to the current state. An idempotent message such as set-bookmark { evidenceId, isBookmarked: true } would make both end with the item bookmarked.",
+      "exercise": 7,
+      "demo": 7,
+      "file": "server/workspaceSession.ts",
+      "before": "    // a toggle is relative to whatever the state is when it arrives",
+      "after": "  /** Adds the id when absent, removes it when present; returns the new set. */\n  toggleBookmark(evidenceId: string): string[] {\n    if (!this.bookmarkIds.delete(evidenceId)) this.bookmarkIds.add(evidenceId);\n    return this.bookmarks;\n  }",
+      "line": 33
+    },
+    {
+      "id": "ex7-d7-q4-page",
+      "type": "app",
+      "title": "D7 - Q4 — A version number to detect stale writes (page)",
+      "narration": "Before the code: today the star works from whatever set the tab last received; it cannot tell if that is out of date.",
+      "exercise": 7,
+      "demo": 7,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".bookmark-btn",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d7-q4",
+      "type": "code",
+      "title": "D7 - Q4 — A version number to detect stale writes",
+      "narration": "Keep a counter in WorkspaceSession and increase it on every change; send it with every state message (version: 12). The client remembers the last version it saw and sends it with its write ({ type: \"toggle-bookmark\", evidenceId, baseVersion: 12 }). If baseVersion is older than the server's current version, the write was made against stale state: the server rejects it (or applies it and flags it) and answers with the current state so the client can warn the user. The same counter also lets a client notice that it missed a message (a gap in versions) and ask for request-state.",
+      "exercise": 7,
+      "demo": 7,
+      "file": "server/workspaceSession.ts",
+      "before": "  /** Adds the id when absent, removes it when present; returns the new set. */\n  toggleBookmark(evidenceId: string): string[] {\n    if (!this.bookmarkIds.delete(evidenceId)) this.bookmarkIds.add(evidenceId);\n    return this.bookmarks;\n  }",
+      "after": "export class WorkspaceSession {\n  private version = 0;\n  toggleBookmark(evidenceId: string, baseVersion: number): string[] | \"stale\" {\n    if (baseVersion !== this.version) return \"stale\";\n    if (!this.bookmarkIds.delete(evidenceId)) this.bookmarkIds.add(evidenceId);\n    this.version += 1;\n    return this.bookmarks;\n  }\n}",
+      "line": 33
     }
   ]
 }

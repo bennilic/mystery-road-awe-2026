@@ -91,6 +91,27 @@ test("a toggle from one client is broadcast to every client, including the sende
   });
 });
 
+test("two clients toggling the same id at once end in one agreed state", async () => {
+  await withBackend(async (socketUrl) => {
+    const first = await connect(socketUrl);
+    const second = await connect(socketUrl);
+    const toggle = JSON.stringify({ type: "toggle-bookmark", evidenceId: "E03" });
+    first.socket.send(toggle);
+    second.socket.send(toggle);
+    // Each toggle is answered with a broadcast to both, so each client sees two updates.
+    const updatesIn = (messages: unknown[]) =>
+      messages.filter((message) => (message as { type: string }).type === "bookmarks-updated");
+    await waitUntil(
+      () => updatesIn(first.messages).length >= 2 && updatesIn(second.messages).length >= 2,
+    );
+    assert.deepEqual(updatesIn(first.messages), updatesIn(second.messages));
+    assert.deepEqual(lastBookmarks(first.messages), []);
+    assert.deepEqual(lastBookmarks(second.messages), []);
+    first.socket.close();
+    second.socket.close();
+  });
+});
+
 test("a client that joins later is sent the bookmarks set before it joined", async () => {
   await withBackend(async (socketUrl) => {
     const early = await connect(socketUrl);

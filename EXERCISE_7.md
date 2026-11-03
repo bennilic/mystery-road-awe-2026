@@ -24,7 +24,7 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 | 4 | Small typed message protocol | ☑ |
 | 5 | In-memory shared server state | ☑ |
 | 6 | Live bookmark updates | ☑ |
-| 7 | Why bookmarks are easy to synchronize | ☐ |
+| 7 | Why bookmarks are easy to synchronize | ☑ |
 | 8 | Disconnect and reconnect | ☐ |
 | 9 | Validation and security boundaries | ☐ |
 | 10 | Data-flow explanation and limitations | ☐ |
@@ -136,14 +136,14 @@ type ServerMessage =
 
 ### Required task
 
-- [ ] Explain and demonstrate that bookmarks are set-like state: each evidence id is either present or absent. Confirm that the local React UI derives its bookmark display from the latest server-provided set.
+- [x] Explain and demonstrate that bookmarks are set-like state: each evidence id is either present or absent. Confirm that the local React UI derives its bookmark display from the latest server-provided set.
 
 ### Questions
 
-- [ ] What kind of conflict is structurally avoided when two users bookmark different evidence items?
-- [ ] Why is synchronizing a set of ids simpler than synchronizing the contents of a shared text note?
-- [ ] What happens if two users toggle the same evidence item at nearly the same time?
-- [ ] How could the server attach a version number if the application later needed to detect stale writes?
+- [x] What kind of conflict is structurally avoided when two users bookmark different evidence items?
+- [x] Why is synchronizing a set of ids simpler than synchronizing the contents of a shared text note?
+- [x] What happens if two users toggle the same evidence item at nearly the same time?
+- [x] How could the server attach a version number if the application later needed to detect stale writes?
 
 ---
 
