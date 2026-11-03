@@ -4522,8 +4522,8 @@
       "narration": "Before the code: I am on the Timeline. Without the cleanup, pressing Esc here would send me to the Evidence page.",
       "exercise": 6,
       "demo": 3,
-      "highlight": ".timeline-list",
-      "waitFor": ".timeline-item",
+      "highlight": ".timeline-container",
+      "waitFor": ".timeline-container",
       "view": "/timeline",
       "page": "react.html"
     },
@@ -5130,6 +5130,102 @@
       "before": "// one effect, one fetch, in the provider\nuseEffect(() => { fetch(url).then(...) }, []);",
       "after": "export function useAsyncResource<T>(\n  load: (signal: AbortSignal) => Promise<T>,\n  loadKey: string,\n): FetchResult<T> { /* status, effect, abort, reload */ }",
       "line": 19
+    },
+    {
+      "id": "ex6-d10-t1-page",
+      "type": "app",
+      "title": "D10 - T1 — On the page: the end of the chain",
+      "narration": "Before the code: this card, Morning calibration failure report (E01), is what the user sees. Everything before it is the chain shown on the next slide.",
+      "exercise": 6,
+      "demo": 10,
+      "highlight": ".evidence-card",
+      "waitFor": ".evidence-card",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d10-t1",
+      "type": "code",
+      "title": "D10 - T1 — Data flow of E01, file to screen",
+      "narration": "public/data/evidence.json -> GET /api/evidence (server/app.ts reads the file and sends it unchanged) -> Vite proxy (browser stays same-origin) -> fetchEvidence in caseApi.ts (the only fetch; throws readable errors) -> useAsyncResource (loading/error/ready, AbortController) -> CaseDataProvider (combines the five resources, fixes E04's person reference, puts it in context) -> CaseDataGate (spinner, error box, or children) -> EvidencePage (empty state, filters, derived list) -> EvidenceCard -> the card on screen. Same diagram with file paths and a \"what if this step stopped\" table: docs/exercise-6/10-data-flow.md. Verified: the card E01 with that title is on the page and curl on the endpoint returns the same title.",
+      "exercise": 6,
+      "demo": 10,
+      "file": "docs/exercise-6/10-data-flow.md",
+      "before": "public/data/evidence.json  ->  <React reads it from a static file, one fetch in the provider>",
+      "after": "public/data/evidence.json\n  -> GET /api/evidence            server/app.ts\n  -> Vite proxy /api -> :3001\n  -> fetchEvidence()              shared/api/caseApi.ts\n  -> useAsyncResource()           shared/data/useAsyncResource.ts\n  -> CaseDataProvider             shared/data/CaseDataContext.tsx\n  -> CaseDataGate / EvidencePage  loading | error | empty | list\n  -> EvidenceCard                 -> on screen",
+      "line": 1
+    },
+    {
+      "id": "ex6-d10-t2-page",
+      "type": "app",
+      "title": "D10 - T2 — On the page: where the three states live for the user",
+      "narration": "Before the code: the Evidence page is where all three states are visible; use the dev panel (fail, empty, delay) to show them.",
+      "exercise": 6,
+      "demo": 10,
+      "highlight": "#devPanel",
+      "waitFor": "#devPanel",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d10-t2",
+      "type": "code",
+      "title": "D10 - T2 — One UX decision and what I would change",
+      "narration": "Decision: the error state states what failed, why and what to do, and offers a Try again button, instead of a bare \"Something went wrong\". It uses the server's own words (api/evidence?fail=1 answered HTTP 500 Internal Server Error), tells the user that the backend must be running (npm run server), and the button repeats the request with the same settings. Why: during this exercise the most common cause of failure was a stopped backend, and a message with the url and status shortens finding that from minutes to seconds; a retry button avoids a full page reload that would also throw away the open view. The empty state is deliberately a different kind of message (dashed box, no toolbar, \"the server answered, but its evidence list is empty\") so empty is never mistaken for broken. With more time I would: (1) show the loading spinner only after about 300 ms so fast loads do not flash it, and keep old data visible while reloading instead of switching to a spinner; (2) add a request timeout, because a server that never answers still leaves the spinner forever; (3) show errors per resource, not \"the case file could not be loaded\" for any of five failures; (4) the first line still says \"case file\" even when only evidence failed.",
+      "exercise": 6,
+      "demo": 10,
+      "file": "react/shared/data/CaseDataGate.tsx",
+      "before": "  if (caseData.status === \"error\") {\n    return (\n      <p role=\"alert\">\n        The case file could not be loaded ({caseData.message}). Check that the backend is running (npm\n        run server) and reload the page.\n      </p>\n    );\n  }",
+      "after": "  if (caseData.status === \"error\") {\n    return (\n      <div className=\"data-state-error\" role=\"alert\" data-state=\"error\">\n        <strong>The case file could not be loaded.</strong>\n        <p>{caseData.message}</p>\n        <p>Check that the backend is running (npm run server), then try again.</p>\n        <button type=\"button\" className=\"btn btn-primary\" onClick={() => reload()}>Try again</button>\n      </div>\n    );\n  }",
+      "line": 24
+    },
+    {
+      "id": "ex6-d10-q1-page",
+      "type": "app",
+      "title": "D10 - Q1 — On the page: the person filter that depends on one silent step",
+      "narration": "Before the code: filter by Nova Byte. E04 is in the list only because one step in the chain quietly fixes its data.",
+      "exercise": 6,
+      "demo": 10,
+      "highlight": "#filterPerson",
+      "waitFor": "#filterPerson",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d10-q1",
+      "type": "code",
+      "title": "D10 - Q1 — Walk through the flow, and what a silent stop breaks",
+      "narration": "Walkthrough (see the diagram slide and docs/exercise-6/10-data-flow.md): file, endpoint, proxy, fetchEvidence, hook, provider, gate, page, card. For the provider step normalizePersonIds: evidence.json lists \"Nova Byte\" (a display name) in E04 where all other records have person ids. If that step silently stopped, nothing would crash and no error would show; the page would simply be slightly wrong: filtering by Nova Byte would leave out E04 (today it returns E04, E18, E05, E06, E17, verified) and the detail panel would show a raw name instead of a link. I would notice only by comparing with the vanilla app or a test, which is why silent data fixes are the most dangerous kind and why this one has a comment and sits at one boundary. Loud steps by contrast: with the proxy or backend stopped the page shows the error box at once (HTTP 502, seen in Demo 5), and a stopped AbortController shows up as the request counter going backwards in the dev panel.",
+      "exercise": 6,
+      "demo": 10,
+      "file": "react/shared/data/CaseDataContext.tsx",
+      "before": "      evidence: evidence.state.data, // E04 still says \"Nova Byte\"",
+      "after": "      evidence: normalizePersonIds(evidence.state.data, people.state.data),",
+      "line": 73
+    },
+    {
+      "id": "ex6-d10-q2-page",
+      "type": "app",
+      "title": "D10 - Q2 — On the page: the three states in one view",
+      "narration": "Before the code: the same page is now one of four things: loading, error, empty, loaded.",
+      "exercise": 6,
+      "demo": 10,
+      "highlight": "#devPanel",
+      "waitFor": "#devPanel",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex6-d10-q2",
+      "type": "code",
+      "title": "D10 - Q2 — What reading from a real server forced me to add",
+      "narration": "Needed only because of a real server: the loading state (the first render has no data), the error state (fetch can fail, and does not reject on HTTP 500, so response.ok must be checked), the empty state as a separate success case, retry, cancellation and ignoring stale responses (requests overlap), a hook and an API layer to keep that logic in one place, and a proxy for the origin question (CORS). The simulated delay, failure and empty controls exist only to make these visible. Needed conceptually even with static files: separating \"data\" from \"view of the data\" (derived values in render, Exercise 5), a state shape that says whether data exists (a file import hid this, but the vanilla app already had loading overlay and the stuck-spinner bug), error handling at the load boundary (the E04 normalisation, the 404 of a missing file), and the question of who owns the data and how consumers find out when it changes. A static file only made these invisible: it was always instant and always there.",
+      "exercise": 6,
+      "demo": 10,
+      "file": "react/shared/data/useAsyncResource.ts",
+      "before": "// static file: data is there on the first render\nconst data = staticImport;",
+      "after": "// real server: every consumer must live with three outcomes\ntype FetchState<T> =\n  | { status: \"loading\" }\n  | { status: \"error\"; message: string }\n  | { status: \"ready\"; data: T };",
+      "line": 3
     }
   ]
 }
