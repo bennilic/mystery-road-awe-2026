@@ -17,7 +17,7 @@
   "scripts": {
     "dev": "vite",
     "server": "node server/index.ts",
-    "test": "node --test \"server/**/*.test.ts\"",
+    "test": "node --test \"server/**/*.test.ts\" \"react/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",

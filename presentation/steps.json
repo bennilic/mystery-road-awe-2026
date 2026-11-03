@@ -6050,6 +6050,102 @@
       "before": "  /** Adds the id when absent, removes it when present; returns the new set. */\n  toggleBookmark(evidenceId: string): string[] {\n    if (!this.bookmarkIds.delete(evidenceId)) this.bookmarkIds.add(evidenceId);\n    return this.bookmarks;\n  }",
       "after": "export class WorkspaceSession {\n  private version = 0;\n  toggleBookmark(evidenceId: string, baseVersion: number): string[] | \"stale\" {\n    if (baseVersion !== this.version) return \"stale\";\n    if (!this.bookmarkIds.delete(evidenceId)) this.bookmarkIds.add(evidenceId);\n    this.version += 1;\n    return this.bookmarks;\n  }\n}",
       "line": 33
+    },
+    {
+      "id": "ex7-d8-t1-page",
+      "type": "app",
+      "title": "D8 - T1 — Visible status, one automatic reconnect, request-state again (page)",
+      "narration": "Before the code: the new badge in the header is visible on every page. It reads Live, Reconnecting… or Disconnected, and after a failed retry it offers a Reconnect button.",
+      "exercise": 7,
+      "demo": 8,
+      "highlight": "#liveStatusBadge",
+      "waitFor": "#liveStatusBadge",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d8-t1",
+      "type": "code",
+      "title": "D8 - T1 — Visible status, one automatic reconnect, request-state again",
+      "narration": "ReconnectingSocket (plain TypeScript, no React) wraps the WebSocket: on an unexpected close it sets Reconnecting…, waits 2 seconds, and tries exactly once more. If that works the status is Live again and the hook sends request-state because this open is a reconnect; if it fails the status is Disconnected, with the close code and what to do (check that the backend is running, press Reconnect) and a Reconnect button for a manual attempt. A deliberate close (leaving the page) causes neither status change nor retry. Verified in the browser: (1) simulated loss, the badge changed to Reconnecting… within 300 ms and the stars were disabled; while it waited I changed a bookmark from an outside client (E03), and after 2 s the tab was Live again and showed E03, and the server log shows request-state from the new connection; (2) backend stopped: Reconnecting…, 2.8 s later Disconnected with the message and button, stars disabled but still showing the last known E03; backend restarted and the button pressed: Live, star set refreshed to the server's (empty) set. Five automated tests with Node's WebSocket against a real ws server cover the status sequence, the reconnect flag, the failed retry plus manual retry, the deliberate stop and send() on a closed socket.",
+      "exercise": 7,
+      "demo": 8,
+      "file": "react/shared/live/ReconnectingSocket.ts",
+      "before": "// Demo 2-7: a lost connection set the status to \"disconnected\" and that was the end\nsocket.addEventListener(\"close\", (event) => {\n  if (isCurrent) setStatus(\"disconnected\");\n});",
+      "after": "  retryNow(): void {\n    if (this.isStopped) return;\n    clearTimeout(this.retryTimer);\n    this.hasRetried = true; // a failure of this attempt ends in \"disconnected\", not another retry\n    this.options.onStatusChange(\"reconnecting\", null);\n    this.connect(true);\n  }\n\n  private handleLoss(closeCode: number): void {\n    const problem = `The connection closed (code ${closeCode}).`;\n    if (this.hasRetried) {\n      this.options.onStatusChange(\"disconnected\", problem);\n      return;\n    }\n    this.hasRetried = true;\n    this.options.onStatusChange(\"reconnecting\", problem);\n    this.retryTimer = setTimeout(() => this.connect(true), this.options.retryDelayMs);\n  }\n}\n",
+      "line": 44
+    },
+    {
+      "id": "ex7-d8-q1-page",
+      "type": "app",
+      "title": "D8 - Q1 — Why a reconnect must request the current state (page)",
+      "narration": "Before the code: after a reconnect the stars must show what the server has now, not what this tab last saw.",
+      "exercise": 7,
+      "demo": 8,
+      "highlight": "#liveStatusBadge",
+      "waitFor": "#liveStatusBadge",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d8-q1",
+      "type": "code",
+      "title": "D8 - Q1 — Why a reconnect must request the current state",
+      "narration": "While the connection was down the server kept broadcasting, and none of it reached this tab: TCP only guarantees order and delivery inside one connection, and this was a new one. So the tab's copy may be stale in either direction (items bookmarked or un-bookmarked by others meanwhile). Assuming nothing was missed shows a wrong state with no sign of it. Because every state message carries the complete set (Demo 6), one request-state fixes everything at once; no history has to be replayed. I saw it: E03 was bookmarked from outside during the outage and appeared after the reconnect. In this server a new connection is also sent the state on join, so the explicit request-state is a second, belt-and-braces refresh; it is what makes the client correct against servers that resume a session without pushing state.",
+      "exercise": 7,
+      "demo": 8,
+      "file": "react/shared/live/useWorkspaceSocket.ts",
+      "before": "      },\n      onOpen: (isReconnect) => {\n        // The server also sends the state to every new connection; asking\n        // explicitly makes the reconnect correct even for a server that does not.\n        if (isReconnect) {\n          const request: ClientMessage = { type: \"request-state\" };\n          connection.send(JSON.stringify(request));\n        }\n      },",
+      "after": "onOpen: (isReconnect) => {\n  // messages sent while we were gone were missed: ask for the current state\n  if (isReconnect) connection.send(JSON.stringify({ type: \"request-state\" }));\n}",
+      "line": 60
+    },
+    {
+      "id": "ex7-d8-q2-page",
+      "type": "app",
+      "title": "D8 - Q2 — What the user sees while disconnected, and local clicks (page)",
+      "narration": "Before the code: while down, the stars are greyed out and the badge explains why; they keep showing the last known set.",
+      "exercise": 7,
+      "demo": 8,
+      "highlight": ".bookmark-btn",
+      "waitFor": ".bookmark-btn",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d8-q2",
+      "type": "code",
+      "title": "D8 - Q2 — What the user sees while disconnected, and local clicks",
+      "narration": "The user sees a coloured badge (Reconnecting… / Disconnected) on every page with the reason (close code), the consequence (bookmarks are shown as last received and cannot be changed) and the next step (check the backend, press Reconnect). The stars are disabled with a tooltip. Why click handling must be deliberate: a click made offline could be (a) dropped silently, which is the worst option because the user believes it worked, (b) shown optimistically and then rolled back, which makes the UI lie, or (c) queued and replayed, which is dangerous because a toggle is relative: replaying \"toggle E03\" after someone else already toggled it undoes their change. I chose to block it visibly: the buttons are disabled, nothing is queued, and nothing is lost that the user thinks was saved. Bookmark clicks are tiny, so asking the user to click again after reconnecting costs almost nothing.",
+      "exercise": 7,
+      "demo": 8,
+      "file": "react/shell/LiveStatus.tsx",
+      "before": "// Exercise 5/6: a click always worked, it only wrote to this tab's own state\n<button className=\"bookmark-btn\" onClick={() => toggleBookmark(item.id)}>",
+      "after": "export function LiveStatus() {\n  const { status, problem, reconnect } = useLiveWorkspace();\n  const isDown = status === \"reconnecting\" || status === \"disconnected\";\n  return (\n    <div className={`live-status live-status-${status}`} role=\"status\" id=\"liveStatusBadge\">\n      <strong>{STATUS_LABELS[status]}</strong>\n      {isDown && (\n        <span className=\"live-status-detail\">\n          {\" \"}\n          {problem} Bookmarks are shown as last received and cannot be changed until the connection\n          is back.\n          {status === \"disconnected\" &&\n            \" Check that the backend is running (npm run server), then press Reconnect.\"}\n        </span>\n      )}\n      {status === \"disconnected\" && (\n        <button type=\"button\" className=\"btn btn-small\" id=\"liveReconnect\" onClick={reconnect}>\n          Reconnect\n        </button>\n      )}\n    </div>\n  );\n}",
+      "line": 13
+    },
+    {
+      "id": "ex7-d8-q3-page",
+      "type": "app",
+      "title": "D8 - Q3 — What a heartbeat detects that close and error may not (page)",
+      "narration": "Before the code: the badge says Live only as long as the browser believes the connection is open.",
+      "exercise": 7,
+      "demo": 8,
+      "highlight": "#liveStatusBadge",
+      "waitFor": "#liveStatusBadge",
+      "view": "/evidence",
+      "page": "react.html"
+    },
+    {
+      "id": "ex7-d8-q3",
+      "type": "code",
+      "title": "D8 - Q3 — What a heartbeat detects that close and error may not",
+      "narration": "A half-open connection: the other end vanished without a close frame (Wi-Fi dropped, laptop slept, a NAT or proxy silently discarded the idle connection, the server host froze). TCP can take minutes to notice, so the browser fires neither close nor error and the badge still says Live while nothing arrives and sent messages disappear. A heartbeat (ping every N seconds, expect a pong within a few seconds) turns silence into a detectable event: no pong means treat the connection as dead, close it and reconnect. On the server it also removes ghosts from the presence list (Demo 3). It also keeps idle connections open through proxies that time them out. Not built here, named in the exercise as an extension.",
+      "exercise": 7,
+      "demo": 8,
+      "file": "react/shared/live/ReconnectingSocket.ts",
+      "before": "    socket.addEventListener(\"open\", () => {\n      log(\"open\");\n      if (!isCurrent()) return;\n      this.hasRetried = false;\n      this.options.onStatusChange(\"live\", null);\n      this.options.onOpen(isReconnect);\n    });\n    socket.addEventListener(\"message\", (event: MessageEvent<string>) => {\n      log(\"message\", event.data);\n      if (isCurrent()) this.options.onMessage(event.data);\n    });\n    socket.addEventListener(\"error\", (event) => log(\"error\", event));\n    socket.addEventListener(\"close\", (event) => {\n      log(\"close\", { code: event.code, reason: event.reason, wasClean: event.wasClean });\n      if (isCurrent()) this.handleLoss(event.code);\n    });\n  }",
+      "after": "// heartbeat (not built): silence becomes an event\nsetInterval(() => {\n  if (Date.now() - lastPongAt > 2 * PING_INTERVAL_MS) socket.close(4001, \"no pong\");\n  else socket.send(JSON.stringify({ type: \"ping\" }));\n}, PING_INTERVAL_MS);",
+      "line": 67
     }
   ]
 }

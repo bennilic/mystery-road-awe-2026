@@ -1,3 +1,4 @@
+import { LiveStatus } from "./LiveStatus.tsx";
 import { NavBar } from "./NavBar.tsx";
 
 export function Header() {
@@ -14,6 +15,7 @@ export function Header() {
           </div>
         </div>
         <NavBar />
+        <LiveStatus />
       </div>
     </header>
   );

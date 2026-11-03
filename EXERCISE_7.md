@@ -25,7 +25,7 @@ The exercise has 10 required tasks. The optional extension questions are for tho
 | 5 | In-memory shared server state | ☑ |
 | 6 | Live bookmark updates | ☑ |
 | 7 | Why bookmarks are easy to synchronize | ☑ |
-| 8 | Disconnect and reconnect | ☐ |
+| 8 | Disconnect and reconnect | ☑ |
 | 9 | Validation and security boundaries | ☐ |
 | 10 | Data-flow explanation and limitations | ☐ |
 
@@ -151,13 +151,13 @@ type ServerMessage =
 
 ### Required task
 
-- [ ] Show a visible `Live`, `Disconnected`, or `Reconnecting…` status. After a connection loss, attempt one automatic reconnect after a short delay and request the current bookmark state again.
+- [x] Show a visible `Live`, `Disconnected`, or `Reconnecting…` status. After a connection loss, attempt one automatic reconnect after a short delay and request the current bookmark state again.
 
 ### Questions
 
-- [ ] Why must a reconnect request the current state instead of assuming the browser did not miss anything?
-- [ ] What should the user see while the app is disconnected, and why should local bookmark clicks be handled deliberately during that period?
-- [ ] What would a heartbeat detect that browser `close` and `error` events might not detect promptly?
+- [x] Why must a reconnect request the current state instead of assuming the browser did not miss anything?
+- [x] What should the user see while the app is disconnected, and why should local bookmark clicks be handled deliberately during that period?
+- [x] What would a heartbeat detect that browser `close` and `error` events might not detect promptly?
 
 ---
 
