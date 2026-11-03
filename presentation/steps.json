@@ -2201,6 +2201,158 @@
       "file": "js/views/dashboard.ts vs react/pages/DashboardPage.tsx",
       "before": "  let reviewedCount = 0;\n  for (const item of state.allEvidence) {\n    if ((item.status || \"\").toLowerCase() === \"reviewed\") reviewedCount++;\n  }\n\n  const progressPct =\n    state.allEvidence.length === 0\n      ? 0\n      : Math.round((reviewedCount / state.allEvidence.length) * 100);",
       "after": "  const reviewedCount = data.evidence.filter(\n    (item) => (item.status || \"\").toLowerCase() === \"reviewed\",\n  ).length;\n  const progressPercent =\n    data.evidence.length === 0 ? 0 : Math.round((reviewedCount / data.evidence.length) * 100);"
+    },
+    {
+      "id": "exercise-4-intro",
+      "type": "app",
+      "title": "Exercise 4 — React UI & Component Design",
+      "narration": "Section marker: from here on the deck is Exercise 4 — migrating People & Locations and Timeline to React as presentational-first components (typed props, children, conditional rendering, keyed lists), organising them by feature, and then adding real routes, route parameters and a query parameter. No useState or interactivity yet: that is Exercise 5. Evidence and Workspace stay stubs. Open http://localhost:8080/react.html next to the vanilla app to compare.",
+      "exercise": 4,
+      "demo": -1
+    },
+    {
+      "id": "ex4-d1-t1-page",
+      "type": "app",
+      "title": "D1 - T1 — On the page: the new components",
+      "narration": "Before the code: this is People & Locations rendered by React. The card on the left is a PersonCard, the one below it a LocationCard, and both sit inside a Card shell. For now one of each is shown; whole lists come in Demo 3.",
+      "exercise": 4,
+      "demo": 1,
+      "highlight": ".person-card",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d1-t1",
+      "type": "code",
+      "title": "D1 - T1 — Three components with explicitly typed props",
+      "narration": "PersonCard, LocationCard and Card are plain function components. Each declares an interface for its props (PersonCardProps, LocationCardProps, CardProps) that reuses the domain types from js/types.ts, so there is no any and no untyped prop. Why: the props interface is the component contract. A caller cannot forget relatedEvidenceCount or hand over half a Person, and the compiler, not the browser, finds the mistake. Compare with renderPeople(), where every field was glued into an HTML string and nothing checked the shape.",
+      "exercise": 4,
+      "demo": 1,
+      "file": "react/components/PersonCard.tsx",
+      "before": "export function renderPeople(): void {\n  const container = el<HTMLElement>(\"peoplePanel\")!;\n  let html = \"\";\n  for (const person of state.allPeople) {\n    const count = countEvidenceForPerson(person);\n\n    html += '<div class=\"person-card\">';\n    html += '<div class=\"person-card-header\">';\n    html +=\n      '<img class=\"person-avatar\" src=\"' +\n      person.avatar +\n      '\" alt=\"Portrait of ' +\n      person.name +\n      '\">';\n    html +=\n      \"<div><h3>\" + person.name + '</h3><div class=\"person-role\">' + person.role + \"</div></div>\";\n    html += \"</div>\";\n    html += \"<p><strong>Speciality:</strong> \" + person.speciality + \"</p>\";\n    html += \"<ul>\";\n    for (const responsibility of person.responsibilities) {\n      html += \"<li>\" + responsibility + \"</li>\";\n    }\n    html += \"</ul>\";\n    html += '<div class=\"person-statement\">&ldquo;' + person.statement + \"&rdquo;</div>\";\n    html += \"<p>\" + count + \" related evidence item\" + (count === 1 ? \"\" : \"s\") + \" &mdash; \";\n    html +=\n      '<button type=\"button\" class=\"evidence-count-link\" data-person-id=\"' +\n      person.id +\n      '\">view</button></p>';\n    html += \"</div>\";",
+      "after": "import type { Person } from \"../../js/types.ts\";\nimport { Card } from \"./Card.tsx\";\n\ninterface PersonCardProps {\n  person: Person;\n  relatedEvidenceCount: number;\n}\n\nexport function PersonCard({ person, relatedEvidenceCount }: PersonCardProps) {\n  return (\n    <Card variant=\"person\">\n      <div className=\"person-card-header\">\n        <img className=\"person-avatar\" src={person.avatar} alt={`Portrait of ${person.name}`} />\n        <div>\n          <h3>{person.name}</h3>\n          <div className=\"person-role\">{person.role}</div>\n        </div>\n      </div>\n      <p>\n        <strong>Speciality:</strong> {person.speciality}\n      </p>\n      <ul>\n        {person.responsibilities.map((responsibility) => (\n          <li key={responsibility}>{responsibility}</li>\n        ))}\n      </ul>\n      <div className=\"person-statement\">&ldquo;{person.statement}&rdquo;</div>\n      <p>\n        {relatedEvidenceCount} related evidence item{relatedEvidenceCount === 1 ? \"\" : \"s\"}\n      </p>\n    </Card>\n  );\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d1-t2-page",
+      "type": "app",
+      "title": "D1 - T2 — On the page: the Card shell",
+      "narration": "Before the code: the highlighted box is the Card wrapper. Its border, padding and shadow come from the shell; the header, speciality, responsibilities and statement inside it are supplied by the caller.",
+      "exercise": 4,
+      "demo": 1,
+      "highlight": ".person-card",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d1-t2",
+      "type": "code",
+      "title": "D1 - T2 — Card takes children, not data",
+      "narration": "Card has no idea what a person or a location is: it renders a div with a variant class and puts whatever it is given inside. It is used for real, by both PersonCard and LocationCard. Why children: the shell is the same for both, the contents are not, so the contents are passed in as JSX instead of the shell knowing every possible data shape.",
+      "exercise": 4,
+      "demo": 1,
+      "file": "react/components/Card.tsx",
+      "before": "(file did not exist yet)",
+      "after": "import type { ReactNode } from \"react\";\n\nexport type CardVariant = \"person\" | \"location\";\n\ninterface CardProps {\n  variant: CardVariant;\n  children: ReactNode;\n}\n\n// Composition via `children`: the card shell owns only the outer box (and the\n// variant class that styles it); what goes inside is decided by the caller.\n// A data prop would force this component to know about people AND locations.\nexport function Card({ variant, children }: CardProps) {\n  return <div className={`${variant}-card`}>{children}</div>;\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d1-q1-page",
+      "type": "app",
+      "title": "D1 - Q1 — On the page: embedded values",
+      "narration": "Before the code: the person name, the role, the avatar alt text and the \"3 related evidence items\" line are all values computed from data, not static markup.",
+      "exercise": 4,
+      "demo": 1,
+      "highlight": ".person-card-header",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d1-q1",
+      "type": "code",
+      "title": "D1 - Q1 — What can go inside {...}",
+      "narration": "Examples in PersonCard: {person.name}, alt={`Portrait of ${person.name}`} and {relatedEvidenceCount === 1 ? \"\" : \"s\"}. Inside braces goes any JavaScript EXPRESSION, i.e. anything that evaluates to a value: property access, a function call, a ternary, a template literal, .map(...) returning JSX. Statements do not fit: no if, for, const or switch, because JSX compiles to a call to jsx(...) and a statement cannot be an argument. For branching you use a ternary or &&; for loops, .map. Objects are also not valid as a child (React cannot render a plain object), whereas strings, numbers and elements are, and null, undefined, true and false render nothing. Before, the same thing needed string concatenation: \"<h3>\" + person.name + \"</h3>\".",
+      "exercise": 4,
+      "demo": 1,
+      "file": "react/components/PersonCard.tsx vs js/views/people.ts",
+      "before": "export function renderPeople(): void {\n  const container = el<HTMLElement>(\"peoplePanel\")!;\n  let html = \"\";\n  for (const person of state.allPeople) {\n    const count = countEvidenceForPerson(person);\n\n    html += '<div class=\"person-card\">';\n    html += '<div class=\"person-card-header\">';\n    html +=\n      '<img class=\"person-avatar\" src=\"' +\n      person.avatar +\n      '\" alt=\"Portrait of ' +\n      person.name +\n      '\">';\n    html +=\n      \"<div><h3>\" + person.name + '</h3><div class=\"person-role\">' + person.role + \"</div></div>\";\n    html += \"</div>\";\n    html += \"<p><strong>Speciality:</strong> \" + person.speciality + \"</p>\";\n    html += \"<ul>\";\n    for (const responsibility of person.responsibilities) {\n      html += \"<li>\" + responsibility + \"</li>\";\n    }\n    html += \"</ul>\";\n    html += '<div class=\"person-statement\">&ldquo;' + person.statement + \"&rdquo;</div>\";\n    html += \"<p>\" + count + \" related evidence item\" + (count === 1 ? \"\" : \"s\") + \" &mdash; \";\n    html +=\n      '<button type=\"button\" class=\"evidence-count-link\" data-person-id=\"' +\n      person.id +\n      '\">view</button></p>';\n    html += \"</div>\";",
+      "after": "import type { Person } from \"../../js/types.ts\";\nimport { Card } from \"./Card.tsx\";\n\ninterface PersonCardProps {\n  person: Person;\n  relatedEvidenceCount: number;\n}\n\nexport function PersonCard({ person, relatedEvidenceCount }: PersonCardProps) {\n  return (\n    <Card variant=\"person\">\n      <div className=\"person-card-header\">\n        <img className=\"person-avatar\" src={person.avatar} alt={`Portrait of ${person.name}`} />\n        <div>\n          <h3>{person.name}</h3>\n          <div className=\"person-role\">{person.role}</div>\n        </div>\n      </div>\n      <p>\n        <strong>Speciality:</strong> {person.speciality}\n      </p>\n      <ul>\n        {person.responsibilities.map((responsibility) => (\n          <li key={responsibility}>{responsibility}</li>\n        ))}\n      </ul>\n      <div className=\"person-statement\">&ldquo;{person.statement}&rdquo;</div>\n      <p>\n        {relatedEvidenceCount} related evidence item{relatedEvidenceCount === 1 ? \"\" : \"s\"}\n      </p>\n    </Card>\n  );\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d1-q2-page",
+      "type": "app",
+      "title": "D1 - Q2 — On the page: the typed component",
+      "narration": "Before the code: this card is typed by PersonCardProps. The next slide shows what the compiler says if we feed it the wrong data.",
+      "exercise": 4,
+      "demo": 1,
+      "highlight": ".person-card",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d1-q2",
+      "type": "code",
+      "title": "D1 - Q2 — A real type error, on purpose",
+      "narration": "I temporarily passed {name: \"Nova\"} as the person and the string \"3\" as the count, then ran npx tsc --noEmit (the real output is appended to the After tab, and I reverted the change). TypeScript reports that the object is missing id, role, speciality, responsibilities and three more properties, and that string is not assignable to number. Without types this would only show at runtime as an undefined avatar, or as the text \"3 related evidence items\" hiding a bug. With types the build (npm run build runs typecheck first) fails before it can ship. One caveat to say out loud: this only protects compile time. The JSON that arrives from fetch() is cast, not validated, which was the Exercise 2 lesson.",
+      "exercise": 4,
+      "demo": 1,
+      "file": "react/pages/PeoplePage.tsx",
+      "before": "<PersonCard person={firstPerson} relatedEvidenceCount={relatedEvidenceCount} />",
+      "after": "<PersonCard\n  person={{ name: \"Nova\" }}\n  relatedEvidenceCount=\"3\"\n/>\n\n// npx tsc --noEmit\n// react/pages/PeoplePage.tsx(13,9): error TS6133: 'relatedEvidenceCount' is declared but its value is never read.\n// react/pages/PeoplePage.tsx(20,21): error TS2740: Type '{ name: string; }' is missing the following properties from type 'Person': id, role, speciality, responsibilities, and 3 more.\n// react/pages/PeoplePage.tsx(20,47): error TS2322: Type 'string' is not assignable to type 'number'.",
+      "line": 20
+    },
+    {
+      "id": "ex4-d1-q3-page",
+      "type": "app",
+      "title": "D1 - Q3 — On the page: shell vs content",
+      "narration": "Before the code: the outer box is a prop-less shell (children); the person data inside is passed as named props to PersonCard.",
+      "exercise": 4,
+      "demo": 1,
+      "highlight": ".person-card",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d1-q3",
+      "type": "code",
+      "title": "D1 - Q3 — Named prop vs children",
+      "narration": "A named prop is a value the component reads by name and decides how to render: person={...}. children is whatever JSX the caller nests between the opening and closing tag, and the component only decides where to put it. I chose children for Card because its job is layout (the box) and it must work for people and locations alike. A person prop would couple it to Person; a render-everything config object would turn it into a mini template language. The rule of thumb: data the component needs to understand goes in props, content it merely wraps goes in children.",
+      "exercise": 4,
+      "demo": 1,
+      "file": "react/components/Card.tsx",
+      "before": "// vanilla: two separate string templates repeat the shell\nhtml += '<div class=\"person-card\">' + ... + \"</div>\";\nhtml += '<div class=\"location-card\">' + ... + \"</div>\";",
+      "after": "import type { ReactNode } from \"react\";\n\nexport type CardVariant = \"person\" | \"location\";\n\ninterface CardProps {\n  variant: CardVariant;\n  children: ReactNode;\n}\n\n// Composition via `children`: the card shell owns only the outer box (and the\n// variant class that styles it); what goes inside is decided by the caller.\n// A data prop would force this component to know about people AND locations.\nexport function Card({ variant, children }: CardProps) {\n  return <div className={`${variant}-card`}>{children}</div>;\n}",
+      "line": 1
+    },
+    {
+      "id": "ex4-d1-q4-page",
+      "type": "app",
+      "title": "D1 - Q4 — On the page: who owns this DOM",
+      "narration": "Before the code: everything inside the highlighted card is produced by React from data. Nothing on this page was created by hand.",
+      "exercise": 4,
+      "demo": 1,
+      "highlight": ".people-grid",
+      "waitFor": ".person-card",
+      "view": "people",
+      "page": "react.html"
+    },
+    {
+      "id": "ex4-d1-q4",
+      "type": "code",
+      "title": "D1 - Q4 — Why direct DOM manipulation conflicts with React",
+      "narration": "React assumes it owns the DOM under its root: the component tree is the single description of what should be on screen, and on each render React diffs the new description against its last one and patches only the difference. If code outside React does innerHTML, appendChild or classList.add, React does not know. Its picture of the DOM is now wrong, so the next patch can target nodes that no longer exist, overwrite your change, or keep stale nodes, and event listeners attached to replaced nodes vanish. Vanilla renderPeople did the opposite: it rebuilt a string, replaced all children with innerHTML, and then re-attached listeners by hand. In React you describe the result for the current data and let React do the DOM work. This is why this exercise has the hard rules: no innerHTML, no createElement.",
+      "exercise": 4,
+      "demo": 1,
+      "file": "js/views/people.ts vs react/components/PersonCard.tsx",
+      "before": "export function renderPeople(): void {\n  const container = el<HTMLElement>(\"peoplePanel\")!;\n  let html = \"\";\n  for (const person of state.allPeople) {\n    const count = countEvidenceForPerson(person);\n\n    html += '<div class=\"person-card\">';\n    html += '<div class=\"person-card-header\">';\n    html +=\n      '<img class=\"person-avatar\" src=\"' +\n      person.avatar +\n      '\" alt=\"Portrait of ' +\n      person.name +\n      '\">';\n    html +=\n      \"<div><h3>\" + person.name + '</h3><div class=\"person-role\">' + person.role + \"</div></div>\";\n    html += \"</div>\";\n    html += \"<p><strong>Speciality:</strong> \" + person.speciality + \"</p>\";\n    html += \"<ul>\";\n    for (const responsibility of person.responsibilities) {\n      html += \"<li>\" + responsibility + \"</li>\";\n    }\n    html += \"</ul>\";\n    html += '<div class=\"person-statement\">&ldquo;' + person.statement + \"&rdquo;</div>\";\n    html += \"<p>\" + count + \" related evidence item\" + (count === 1 ? \"\" : \"s\") + \" &mdash; \";\n    html +=\n      '<button type=\"button\" class=\"evidence-count-link\" data-person-id=\"' +\n      person.id +\n      '\">view</button></p>';\n    html += \"</div>\";",
+      "after": "import type { Person } from \"../../js/types.ts\";\nimport { Card } from \"./Card.tsx\";\n\ninterface PersonCardProps {\n  person: Person;\n  relatedEvidenceCount: number;\n}\n\nexport function PersonCard({ person, relatedEvidenceCount }: PersonCardProps) {\n  return (\n    <Card variant=\"person\">\n      <div className=\"person-card-header\">\n        <img className=\"person-avatar\" src={person.avatar} alt={`Portrait of ${person.name}`} />\n        <div>\n          <h3>{person.name}</h3>\n          <div className=\"person-role\">{person.role}</div>\n        </div>\n      </div>\n      <p>\n        <strong>Speciality:</strong> {person.speciality}\n      </p>\n      <ul>\n        {person.responsibilities.map((responsibility) => (\n          <li key={responsibility}>{responsibility}</li>\n        ))}\n      </ul>\n      <div className=\"person-statement\">&ldquo;{person.statement}&rdquo;</div>\n      <p>\n        {relatedEvidenceCount} related evidence item{relatedEvidenceCount === 1 ? \"\" : \"s\"}\n      </p>\n    </Card>\n  );\n}",
+      "line": 1
     }
   ]
 }
