@@ -16,9 +16,29 @@
       }
     },
     {
+      "label": "Backend",
+      "type": "shell",
+      "command": "NO_COLOR=1 npm run server",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "node server/index.ts",
+          "endsPattern": "\\[backend\\] read-only API on"
+        }
+      }
+    },
+    {
+      "label": "Serve all",
+      "dependsOn": ["Backend", "Serve"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
       "label": "Stop server",
       "type": "shell",
-      "command": "pkill -f 'vite --port 8080' || true",
+      "command": "pkill -f 'vite --port 8080' || true; pkill -f 'node server/index.ts' || true",
       "problemMatcher": []
     },
     {
@@ -34,7 +54,7 @@
     },
     {
       "label": "Run in Chrome (no debug)",
-      "dependsOn": "Serve",
+      "dependsOn": "Serve all",
       "type": "shell",
       "command": "open -a 'Google Chrome' http://localhost:8080",
       "problemMatcher": []
